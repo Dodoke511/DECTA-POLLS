@@ -1,26 +1,171 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-decta-text: #f1f0f3;
+  --color-decta-brand: #9686f8;
+  --color-decta-bg: #231638;
+  --color-decta-accent: #5D44F8;
+  --color-decta-black: #000000;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-montserrat: var(--font-montserrat);
+  --font-source-sans: var(--font-source-sans);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-decta-black);
+  color: var(--color-decta-text);
+  font-family: var(--font-source-sans), sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6, .title-font, button, .btn {
+  font-family: var(--font-montserrat), sans-serif;
+}
+
+/* Custom Glassmorphism per User Design */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Button Hover & Active States Container */
+
+.btn-build, .btn-login {
+  transition: all 0.3s ease;
+}
+
+/* Explicit Base states for Build/Login buttons */
+.btn-build {
+  background: var(--color-decta-accent);
+  border: 1px solid transparent;
+}
+/* Login keeps glass-card defaults */
+
+/* -- Individual Hover States -- */
+.btn-build:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(11px) !important;
+  -webkit-backdrop-filter: blur(11px) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 
+    0 0 25px rgba(150, 134, 248, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2) !important;
+}
+
+.btn-login:hover {
+  background: var(--color-decta-accent) !important;
+  border-color: transparent !important;
+  box-shadow: 0 0 20px rgba(93, 68, 248, 0.5) !important;
+}
+
+/* ACTIVE SCALES */
+.btn-build:active {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.5) !important;
+  transform: scale(0.98);
+}
+.btn-login:active {
+  background: #3c2a96 !important; /* darker accent shade */
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.3) !important;
+  transform: scale(0.98);
+}
+
+/* Feature Grid Components */
+.feature-icon {
+  width: 6rem;
+  height: 6rem;
+  color: white;
+  filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.6));
+  transition: all 0.3s ease;
+}
+.glass-card:hover .feature-icon {
+  filter: drop-shadow(0 0 25px rgba(255, 255, 255, 1));
+}
+
+.glass-pill {
+  width: max-content;
+  max-width: 90%;
+  text-align: center;
+  padding: 0.75rem 1.25rem;
+  border-radius: 9999px;
+  background-color: white;
+  color: #1a1433;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  font-size: 11.5px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid transparent;
+}
+.glass-card:hover .glass-pill {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.7);
+}
+
+/* 
+ * Animated Grainy Background (Pure CSS equivalent of the Grainient React Component)
+ * Colors: #6d37be, #000000, #B19EEF 
+ */
+.animated-grainy-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000000;
+  overflow: hidden;
+  z-index: -50;
+}
+
+.animated-grainy-bg::before {
+  content: "";
+  position: absolute;
+  top: -10%;
+  left: -10%;
+  width: 120%;
+  height: 120%;
+  background: 
+    radial-gradient(ellipse at 10% 50%, rgba(109, 55, 190, 0.4) 0%, transparent 35%),
+    radial-gradient(ellipse at 90% 50%, rgba(177, 158, 239, 0.35) 0%, transparent 35%);
+  filter: blur(140px);
+  animation: warp-gradient 25s infinite alternate ease-in-out;
+  pointer-events: none;
+}
+
+/* SVG Noise Filter for Grain Amount */
+.animated-grainy-bg::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+@keyframes warp-gradient {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33% { transform: translate(1%, 2%) scale(1.05) rotate(2deg); }
+  66% { transform: translate(-1%, 3%) scale(1.02) rotate(-2deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
 }
