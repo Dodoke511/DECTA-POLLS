@@ -138,19 +138,25 @@ const PlanCard: React.FC<{
   );
 };
 
-export default function Registration() {
+export default function PlanSubscription({ onContinue }: { onContinue: (plan: string) => void }) {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
-  const handleSelectPlan = (planName: string) => {
-    setSelectedPlan(planName);
-    console.log(`Selected plan: ${planName}`);
+  const handleContinue = () => {
+    if (selectedPlan) {
+      onContinue(selectedPlan); // This triggers the switch in page.tsx
+    }
+  };
+
+  const handleSelectPlan = (plan: string) => {
+    setSelectedPlan(plan);
+    console.log(`Selected plan: ${plan}`);
   };
 
   return (
     <div
       className="relative flex flex-col items-center justify-center min-h-screen w-full p-6 md:p-10"
       style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+        background: 'radial-gradient(circle at top, #3641b5 0%, #0a0f2c 45%, #03070f 100%)',
         fontFamily: "'Inter', sans-serif",
       }}
     >
@@ -199,19 +205,17 @@ export default function Registration() {
       {/* Global Continue Button */}
       <button
         disabled={!selectedPlan}
+        onClick={handleContinue}
         style={{
-          // Your exact requested Layout properties
           display: 'flex',
           width: '300px',
           padding: '20px 10px',
           justifyContent: 'center',
           alignItems: 'center',
           gap: '10px',
-          // Your exact requested Style properties
           borderRadius: '20px',
           border: '1px solid #372892',
-          background: selectedPlan ? '#5D44F8' : '#334155', // Greyed out if nothing selected
-          // Additional Polish
+          background: selectedPlan ? '#5D44F8' : '#334155', 
           color: '#FFFFFF',
           fontSize: '16px',
           fontWeight: '500',
