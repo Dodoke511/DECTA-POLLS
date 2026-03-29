@@ -1,0 +1,12 @@
+{
+  "name": "decta-polls",
+  "private": true,
+  "description": "Root helpers — the Next.js app lives in decta_polls_voting",
+  "scripts": {
+    "dev": "npm run dev --prefix decta_polls_voting",
+    "build": "npm run build --prefix decta_polls_voting",
+    "start": "npm run start --prefix decta_polls_voting",
+    "lint": "npm run lint --prefix decta_polls_voting",
+    "install:app": "npm install --prefix decta_polls_voting"
+  }
+}
