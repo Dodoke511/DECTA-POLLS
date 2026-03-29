@@ -101,8 +101,8 @@ export default function Home() {
             if (orgData.verificationFile) formData.append('verification', orgData.verificationFile);
             formData.append('isVerified', 'false');
             formData.append('slug', orgData.tenantSlug);
-            formData.append('main_color', "#FFFFFF");
-            formData.append('second_color', "#000000");
+            formData.append('main_color', orgData.main_Color);
+            formData.append('second_color', orgData.secondary_Color);
             if (orgData.logoFile) formData.append('logo_url', orgData.logoFile);
             formData.append('first_name', adminData.firstName);
             if (adminData.middleName) formData.append('middle_name', adminData.middleName);
