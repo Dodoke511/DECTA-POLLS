@@ -21,6 +21,8 @@ export default function RegisterOrganization({ plan, onBack, onContinue }: Regis
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [verificationFile, setVerificationFile] = useState<File | null>(null);
+  const [main_Color, setMainColor] = useState('');
+  const [secondary_Color, setSecondaryColor] = useState('');
   const [error, setError] = useState('');
 
   const isFormValid =
@@ -72,6 +74,8 @@ export default function RegisterOrganization({ plan, onBack, onContinue }: Regis
       plan,
       verificationFile,
       tenantSlug,
+      main_Color,
+      secondary_Color,
       password,
       logoFile,
     };
@@ -175,22 +179,83 @@ export default function RegisterOrganization({ plan, onBack, onContinue }: Regis
                       {verificationFile ? <RiCheckLine /> : <RiFileUploadLine />}
                     </span>
                     <span className="text-sm text-white/70 truncate">
-                      {verificationFile ? verificationFile.name : "Upload Verification Document (PDF/Image)"}
+                      {verificationFile ? verificationFile.name : "Upload Proof of Payment Document (PDF/Image)"}
                     </span>
                   </label>
                   <input id="verification-upload" type="file" accept=".pdf,image/*" className="hidden" onChange={handleVerificationUpload} />
                 </div>
               </div>
 
-              {/* Vertical Color Swatch Controls - (Keep as is) */}
+              {/* Vertical Color Swatch Controls */}
               <div className="flex flex-col gap-3 mt-0">
-                <div className="flex items-center gap-2">
-                  <input type="text" placeholder="#FFFFFF" className="w-28 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs text-white outline-none" />
-                  <div className="h-10 w-10 shrink-0 rounded-lg border border-white/30 bg-[#ffffff] cursor-pointer" />
+                <div className="flex items-center gap-2 relative">
+                  <input
+                    id="color-value-1"
+                    type="text"
+                    className="w-28 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs text-white outline-none"
+                    required value={main_Color} onChange={(e) => {
+                      setMainColor (e.target.value);
+                      const normalized = main_Color.startsWith('#') ? main_Color : `#${main_Color}`;
+                      const swatch = document.getElementById('swatch-1') as HTMLDivElement | null;
+                      const picker = document.getElementById('color-picker-1') as HTMLInputElement | null;
+                      if (/^#?[0-9A-Fa-f]{6}$/.test(main_Color.replace('#', '')) && swatch) {
+                        swatch.style.backgroundColor = normalized;
+                        if (picker) picker.value = normalized;
+                      }
+                    }}
+                  />
+                  <div
+                    id="swatch-1"
+                    className="h-10 w-10 shrink-0 rounded-lg border border-white/30 bg-[#5f1b1b] cursor-pointer"
+                    onClick={() => document.getElementById('color-picker-1')?.click()}
+                  />
+                  <input 
+                    id="color-picker-1" 
+                    type="color" 
+                    className="absolute right-0 opacity-0 pointer-events-none w-10 h-10" 
+                    required value={main_Color} onChange={(e) => {
+                      setMainColor (e.target.value);
+                      const swatch = document.getElementById('swatch-1') as HTMLDivElement | null;
+                      const text = document.getElementById('color-value-1') as HTMLInputElement | null;
+                      if (swatch) swatch.style.backgroundColor = main_Color;
+                      if (text) text.value = main_Color;
+                    }} 
+                  />
                 </div>
-                <div className="flex items-center gap-2">
-                  <input type="text" placeholder="#000000" className="w-28 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs text-white outline-none" />
-                  <div className="h-10 w-10 shrink-0 rounded-lg border border-white/30 bg-[#000000] cursor-pointer" />
+
+                <div className="flex items-center gap-2 relative">
+                  <input
+                    id="color-value-2"
+                    type="text"
+                    className="w-28 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs text-white outline-none"
+                    required value={secondary_Color} onChange={(e) => {
+                      setSecondaryColor (e.target.value);
+                      const normalized = secondary_Color.startsWith('#') ? secondary_Color : `#${secondary_Color}`;
+                      const swatch = document.getElementById('swatch-2') as HTMLDivElement | null;
+                      const picker = document.getElementById('color-picker-2') as HTMLInputElement | null;
+                      if (/^#?[0-9A-Fa-f]{6}$/.test(secondary_Color.replace('#', '')) && swatch) {
+                        swatch.style.backgroundColor = normalized;
+                        if (picker) picker.value = normalized;
+                      }
+                    }}
+                  />
+                  <div
+                    id="swatch-2"
+                    className="h-10 w-10 shrink-0 rounded-lg border border-white/30 bg-[#000000] cursor-pointer"
+                    onClick={() => document.getElementById('color-picker-2')?.click()}
+                  />
+                  <input 
+                    id="color-picker-2" 
+                    type="color" 
+                    className="absolute right-0 opacity-0 pointer-events-none w-10 h-10" 
+                    required value={secondary_Color} onChange={(e) => {
+                      setSecondaryColor (e.target.value);
+                      const swatch = document.getElementById('swatch-2') as HTMLDivElement | null;
+                      const text = document.getElementById('color-value-2') as HTMLInputElement | null;
+                      if (swatch) swatch.style.backgroundColor = secondary_Color;
+                      if (text) text.value = secondary_Color;
+                    }} 
+                  />
                 </div>
               </div>
             </div>
