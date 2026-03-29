@@ -77,7 +77,7 @@ export default function LogInPage() {
                 <div className="flex w-full md:w-1/2 justify-center">
                     <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.03] p-8 md:p-10 shadow-2xl backdrop-blur-3xl">
                         <Link
-                            href="#"
+                            href="/"
                             className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors mb-8"
                         >
                             ← Back

@@ -7,6 +7,7 @@ import GradientText from './ui/GradientText';
 import SplitText from './ui/SplitText';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useRouter } from 'next/navigation';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -21,9 +22,10 @@ export default function LandingPage() {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unmountTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationsInitialized = useRef(false);
+  const router = useRouter();
 
   // Memoized gradient colors to prevent re-renders
-  const gradientColors = useMemo(() => ["#5227FF","#FF9FFC","#B19EEF"], []);
+  const gradientColors = useMemo(() => ["#5227FF", "#FF9FFC", "#B19EEF"], []);
 
   // Debounced copy function to prevent rapid clicks
   const copyToClipboard = useCallback(async (text: string, type: string) => {
@@ -48,7 +50,7 @@ export default function LandingPage() {
   // Optimized scroll animations with reduced frequency and better performance
   useEffect(() => {
     if (animationsInitialized.current) return;
-    
+
     const ctx = gsap.context(() => {
       // Use will-change and transform3d for better performance
       const animationConfig = {
@@ -164,8 +166,8 @@ export default function LandingPage() {
             opacity: 1, y: 0,
             duration: 0.8,
             stagger: 0.12, // Reduced stagger
-            scrollTrigger: { 
-              trigger: heroTitleContainer, 
+            scrollTrigger: {
+              trigger: heroTitleContainer,
               start: 'top 90%',
               end: 'bottom 10%',
               toggleActions: 'play reverse play reverse',
@@ -208,11 +210,11 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-3">
-          <Image 
-            src="/DECTAPolls_Logo.png" 
-            alt="D.E.C.T.A Polls Logo" 
-            width={40} 
-            height={40} 
+          <Image
+            src="/DECTAPolls_Logo.png"
+            alt="D.E.C.T.A Polls Logo"
+            width={40}
+            height={40}
             className="object-contain"
           />
           <span className="font-montserrat font-bold text-lg tracking-wide">D.E.C.T.A Polls</span>
@@ -226,7 +228,7 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative px-8 pt-8 pb-24 max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12 lg:gap-16">
-        
+
         <div className="md:w-[45%] lg:w-[42%] flex flex-col items-start z-10 text-left">
           <h1 className="font-montserrat font-bold text-6xl lg:text-7xl leading-[1.05] mb-4 tracking-tight hero-title-container">
             <span className="block hero-line">Your Rules.</span>
@@ -237,10 +239,14 @@ export default function LandingPage() {
             A dynamic white-label voting engine designed for seamless branding and ironclad data isolation across every tenant.
           </p>
           <div className="button-group">
-            <button className="btn-build">
+            <button
+              onClick={() => router.push('/auth/register_form')}
+              className="btn-build">
               Build your Election &rarr;
             </button>
-            <button className="btn-login glass-card">
+            <button
+              onClick={() => router.push('/auth/login_form')}
+              className="btn-login glass-card">
               Login
             </button>
           </div>
@@ -249,7 +255,7 @@ export default function LandingPage() {
         {/* Hero Image / Graphic Mockup */}
         <div className="md:w-[55%] lg:w-[58%] flex justify-center relative z-10 w-full mt-10 md:mt-0 fade-right">
           <div className="glass-card w-full max-w-[38rem] aspect-[4/3] p-8 md:p-10 flex flex-col justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)] fade-scale">
-            
+
             {/* Top Bar MacOS dots */}
             <div className="flex items-center gap-2 mb-3 fade-down">
               <div className="w-4 h-4 rounded-full bg-[#ff5f56]"></div>
@@ -268,14 +274,14 @@ export default function LandingPage() {
 
             {/* Middle Section: Donut + Bars (inside glass) */}
             <div className="flex items-stretch gap-6 mb-8 w-full fade-up">
-              
+
               {/* Donut Chart (Number of Users) inside Glass */}
               <div className="bg-opacity-50 border border-[#8fa4f8]/20 rounded-2xl p-5 flex items-center justify-center backdrop-blur-md shadow-lg shrink-0 fade-scale" style={{ backgroundColor: 'rgba(26, 20, 51, 0.5)' }}>
                 <div className="w-28 h-28 md:w-32 md:h-32 rounded-full border-[10px] md:border-[12px] border-[#2a204d] border-t-decta-brand border-r-[#8fa4f8] transform -rotate-45 relative flex items-center justify-center shadow-[0_0_20px_rgba(93,68,248,0.3)] shrink-0">
-                   <div className="w-[70px] h-[70px] md:w-[80px] md:h-[80px] rounded-full absolute flex flex-col items-center justify-center transform rotate-45" style={{ backgroundColor: '#1a1433' }}>
-                      <span className="text-white font-bold text-lg md:text-xl leading-tight">10k+</span>
-                      <span className="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-widest mt-1">Users</span>
-                   </div>
+                  <div className="w-[70px] h-[70px] md:w-[80px] md:h-[80px] rounded-full absolute flex flex-col items-center justify-center transform rotate-45" style={{ backgroundColor: '#1a1433' }}>
+                    <span className="text-white font-bold text-lg md:text-xl leading-tight">10k+</span>
+                    <span className="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-widest mt-1">Users</span>
+                  </div>
                 </div>
               </div>
 
@@ -295,10 +301,10 @@ export default function LandingPage() {
       {/* Core Election Services */}
       {/* Core Election Services */}
       <section id="features" className="relative px-4 sm:px-8 py-20 w-full flex justify-center text-center md:text-left">
-        
+
         {/* The Giant Glassmorphism Container */}
         <div className="max-w-6xl mx-auto flex flex-col items-center md:items-start w-full relative z-10 glass-card p-10 md:p-16 my-10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] fade-scale">
-          
+
           <h2 className="font-montserrat font-bold text-5xl md:text-6xl mb-6 tracking-tight text-white drop-shadow-[0_4px_15px_rgba(255,255,255,0.05)] text-center md:text-left">
             <MemoizedSplitText
               text="Core Election"
@@ -313,7 +319,7 @@ export default function LandingPage() {
               rootMargin="-100px"
               textAlign="center"
               tag="span"
-              onLetterAnimationComplete={() => {}}
+              onLetterAnimationComplete={() => { }}
             />
             <br />
             <MemoizedGradientText colors={gradientColors} animationSpeed={8}>Services</MemoizedGradientText>
@@ -331,60 +337,60 @@ export default function LandingPage() {
             rootMargin="-50px"
             textAlign="left"
             tag="p"
-            onLetterAnimationComplete={() => {}}
+            onLetterAnimationComplete={() => { }}
           />
 
           {/* Icons Grid: Centered exactly as requested, independently of left-aligned text */}
           <div className="animate-cards-container flex flex-wrap items-center justify-center gap-x-14 gap-y-16 w-full max-w-5xl mx-auto mt-6">
-            
+
             {/* Rule execution engine */}
             <div className="animate-card flex flex-col items-center justify-start gap-6 transition-transform duration-500 hover:-translate-y-2 cursor-pointer group shrink-0 w-[200px]">
-               <svg className="w-[88px] h-[88px] text-[#e2ddea] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
-               </svg>
-               <div className="w-auto px-6 py-[0.95rem] rounded-[18px] bg-white text-[#1a1433] font-bold tracking-wide text-[15px] whitespace-nowrap transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-transparent group-hover:bg-white/10 group-hover:backdrop-blur-xl group-hover:text-white group-hover:border-white/30 group-hover:shadow-[0_0_25px_rgba(150,134,248,0.7)] relative">
-                  Rule execution engine
-               </div>
+              <svg className="w-[88px] h-[88px] text-[#e2ddea] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+              </svg>
+              <div className="w-auto px-6 py-[0.95rem] rounded-[18px] bg-white text-[#1a1433] font-bold tracking-wide text-[15px] whitespace-nowrap transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-transparent group-hover:bg-white/10 group-hover:backdrop-blur-xl group-hover:text-white group-hover:border-white/30 group-hover:shadow-[0_0_25px_rgba(150,134,248,0.7)] relative">
+                Rule execution engine
+              </div>
             </div>
 
             {/* Pre-election engine */}
             <div className="animate-card flex flex-col items-center justify-start gap-6 transition-transform duration-500 hover:-translate-y-2 cursor-pointer group shrink-0 w-[200px]">
-               <svg className="w-[88px] h-[88px] text-[#e2ddea] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/>
-               </svg>
-               <div className="w-auto px-6 py-[0.95rem] rounded-[18px] bg-white text-[#1a1433] font-bold tracking-wide text-[15px] whitespace-nowrap transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-transparent group-hover:bg-white/10 group-hover:backdrop-blur-xl group-hover:text-white group-hover:border-white/30 group-hover:shadow-[0_0_25px_rgba(150,134,248,0.7)] relative">
-                  Pre-election engine
-               </div>
+              <svg className="w-[88px] h-[88px] text-[#e2ddea] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
+              </svg>
+              <div className="w-auto px-6 py-[0.95rem] rounded-[18px] bg-white text-[#1a1433] font-bold tracking-wide text-[15px] whitespace-nowrap transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-transparent group-hover:bg-white/10 group-hover:backdrop-blur-xl group-hover:text-white group-hover:border-white/30 group-hover:shadow-[0_0_25px_rgba(150,134,248,0.7)] relative">
+                Pre-election engine
+              </div>
             </div>
-            
+
             {/* Vote processing logic */}
             <div className="animate-card flex flex-col items-center justify-start gap-6 transition-transform duration-500 hover:-translate-y-2 cursor-pointer group shrink-0 w-[200px]">
-               <svg className="w-[88px] h-[88px] text-[#e2ddea] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
-               </svg>
-               <div className="w-auto px-6 py-[0.95rem] rounded-[18px] bg-white text-[#1a1433] font-bold tracking-wide text-[15px] whitespace-nowrap transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-transparent group-hover:bg-white/10 group-hover:backdrop-blur-xl group-hover:text-white group-hover:border-white/30 group-hover:shadow-[0_0_25px_rgba(150,134,248,0.7)] relative">
-                  Vote processing logic
-               </div>
+              <svg className="w-[88px] h-[88px] text-[#e2ddea] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z" />
+              </svg>
+              <div className="w-auto px-6 py-[0.95rem] rounded-[18px] bg-white text-[#1a1433] font-bold tracking-wide text-[15px] whitespace-nowrap transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-transparent group-hover:bg-white/10 group-hover:backdrop-blur-xl group-hover:text-white group-hover:border-white/30 group-hover:shadow-[0_0_25px_rgba(150,134,248,0.7)] relative">
+                Vote processing logic
+              </div>
             </div>
 
             {/* Security and Encryption */}
             <div className="animate-card flex flex-col items-center justify-start gap-6 transition-transform duration-500 hover:-translate-y-2 cursor-pointer group shrink-0 w-[200px]">
-               <svg className="w-[88px] h-[88px] text-[#e2ddea] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
-               </svg>
-               <div className="w-auto px-6 py-[0.95rem] rounded-[18px] bg-white text-[#1a1433] font-bold tracking-wide text-[15px] whitespace-nowrap transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-transparent group-hover:bg-white/10 group-hover:backdrop-blur-xl group-hover:text-white group-hover:border-white/30 group-hover:shadow-[0_0_25px_rgba(150,134,248,0.7)] relative">
-                  Security and Encryption
-               </div>
+              <svg className="w-[88px] h-[88px] text-[#e2ddea] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+              </svg>
+              <div className="w-auto px-6 py-[0.95rem] rounded-[18px] bg-white text-[#1a1433] font-bold tracking-wide text-[15px] whitespace-nowrap transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-transparent group-hover:bg-white/10 group-hover:backdrop-blur-xl group-hover:text-white group-hover:border-white/30 group-hover:shadow-[0_0_25px_rgba(150,134,248,0.7)] relative">
+                Security and Encryption
+              </div>
             </div>
 
             {/* Result computation logic */}
             <div className="animate-card flex flex-col items-center justify-start gap-6 transition-transform duration-500 hover:-translate-y-2 cursor-pointer group shrink-0 w-[200px]">
-               <svg className="w-[88px] h-[88px] text-[#e2ddea] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
-               </svg>
-               <div className="w-auto px-6 py-[0.95rem] rounded-[18px] bg-white text-[#1a1433] font-bold tracking-wide text-[15px] whitespace-nowrap transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-transparent group-hover:bg-white/10 group-hover:backdrop-blur-xl group-hover:text-white group-hover:border-white/30 group-hover:shadow-[0_0_25px_rgba(150,134,248,0.7)] relative">
-                  Result computation logic
-               </div>
+              <svg className="w-[88px] h-[88px] text-[#e2ddea] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
+              </svg>
+              <div className="w-auto px-6 py-[0.95rem] rounded-[18px] bg-white text-[#1a1433] font-bold tracking-wide text-[15px] whitespace-nowrap transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)] border border-transparent group-hover:bg-white/10 group-hover:backdrop-blur-xl group-hover:text-white group-hover:border-white/30 group-hover:shadow-[0_0_25px_rgba(150,134,248,0.7)] relative">
+                Result computation logic
+              </div>
             </div>
 
           </div>
@@ -407,7 +413,7 @@ export default function LandingPage() {
             rootMargin="-100px"
             textAlign="left"
             tag="h2"
-            onLetterAnimationComplete={() => {}}
+            onLetterAnimationComplete={() => { }}
           />
           <MemoizedSplitText
             text="D.E.C.T.A Polls is a web-based voting service developed by third-year students from the Cebu Institute of Technology - University (CIT-U). The platform was created to provide a more convenient and organized way for organizations to conduct elections online. It allows administrators to manage elections efficiently while enabling voters to participate in a secure and accessible voting process. By using this system, organizations can simplify election management, reduce manual work, and ensure that the voting process remains transparent and reliable. D.E.C.T.A Polls aims to support fair and efficient digital voting through a user-friendly and structured platform."
@@ -422,7 +428,7 @@ export default function LandingPage() {
             rootMargin="-50px"
             textAlign="justify"
             tag="p"
-            onLetterAnimationComplete={() => {}}
+            onLetterAnimationComplete={() => { }}
           />
         </div>
       </section>
@@ -445,7 +451,7 @@ export default function LandingPage() {
           rootMargin="-50px"
           textAlign="center"
           tag="p"
-          onLetterAnimationComplete={() => {}}
+          onLetterAnimationComplete={() => { }}
         />
 
         {/* Outer wrapper — relative anchor for the toast */}
