@@ -14,23 +14,40 @@ export default function RegisterAdmin({ onBack, onContinue }: RegisterOrganizati
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [middleName, setMiddleName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [email, setEmail] = useState('');
   const [contactNumber, setContactNumber] = useState('');
+  const [error, setError] = useState('');
+  const today = new Date();
+  const eighteenYearsAgo = new Date();
+  eighteenYearsAgo.setFullYear(today.getFullYear() - 18);
 
   const isFormValid =
     firstName.trim() &&
     lastName.trim() &&
+    birthDate.trim() &&
     email.trim() &&
     contactNumber.trim();
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isFormValid) return;
+    if (birthDate > eighteenYearsAgo.toISOString().split('T')[0]) {
+      setError('You must be at least 18 years old');
+      return;
+    }
+    if (contactNumber.length <= 10) {
+      setError('Contact Number must be at least 11 digits');
+      return;
+    }
+    else {
+      setError('');
+    }
 
     const payload = {
       firstName,
       lastName,
       middleName,
+      birthDate,
       email,
       contactNumber,
     };
@@ -48,11 +65,11 @@ export default function RegisterAdmin({ onBack, onContinue }: RegisterOrganizati
     >
       {/* Header */}
       <div className="flex items-center gap-4 mb-10 lg:absolute lg:top-10 lg:left-10 lg:mb-0">
-        <Image 
-          src="/DECTALogo/DECTAPolls_Logo.svg" 
-          alt="DECTA Polls Logo" 
-          width={60} 
-          height={60} 
+        <Image
+          src="/DECTALogo/DECTAPolls_Logo.svg"
+          alt="DECTA Polls Logo"
+          width={60}
+          height={60}
         />
         <h1 className="text-[#F1F0F3] font-montserrat text-2xl font-medium m-0">
           D.E.C.T.A Polls
@@ -60,10 +77,10 @@ export default function RegisterAdmin({ onBack, onContinue }: RegisterOrganizati
       </div>
 
       {/* Title */}
-      <h2 
+      <h2
         className="text-white font-light text-center tracking-tight max-w-2xl"
         style={{
-          fontSize: '30px', 
+          fontSize: '30px',
           color: '#ffffff',
           marginBottom: '30px',
           fontFamily: 'Montserrat, sans-serif',
@@ -103,7 +120,7 @@ export default function RegisterAdmin({ onBack, onContinue }: RegisterOrganizati
               />
             </label>
           </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <label className="block text-white/90 text-sm font-medium">
               <input
                 type="text"
@@ -112,6 +129,16 @@ export default function RegisterAdmin({ onBack, onContinue }: RegisterOrganizati
                 placeholder="Middle Name"
                 required
                 className="mt-2 w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-white outline-none transition focus:border-[#5D44F8]"
+              />
+            </label>
+            <label className="block text-white/90 text-sm font-medium">
+              <input
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                required
+                className="mt-2 w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-white outline-none transition focus:border-[#5D44F8]"
+                style={{ color: birthDate ? 'white' : 'rgba(255,255,255,0.5)' }}
               />
             </label>
           </div>
@@ -136,6 +163,9 @@ export default function RegisterAdmin({ onBack, onContinue }: RegisterOrganizati
               className="mt-2 w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-white outline-none transition focus:border-[#5D44F8]"
             />
           </label>
+          {error && (
+            <p className="text-red-500 text-sm">{error}</p>
+          )}
         </div>
       </form>
       {/* Button Container */}

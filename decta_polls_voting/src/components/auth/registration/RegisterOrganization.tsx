@@ -11,7 +11,7 @@ interface RegisterOrganizationProps {
   onContinue: (data: any) => void; // NEW: Handler for the continue button
 }
 
-export default function RegisterOrganization({ onBack, onContinue }: RegisterOrganizationProps) {
+export default function RegisterOrganization({ plan, onBack, onContinue }: RegisterOrganizationProps) {
   const [organizationName, setOrganizationName] = useState('');
   const [organizationType, setOrganizationType] = useState('');
   const [email, setEmail] = useState('');
@@ -21,6 +21,7 @@ export default function RegisterOrganization({ onBack, onContinue }: RegisterOrg
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [verificationFile, setVerificationFile] = useState<File | null>(null);
+  const [error, setError] = useState('');
 
   const isFormValid =
     organizationName &&
@@ -29,8 +30,8 @@ export default function RegisterOrganization({ onBack, onContinue }: RegisterOrg
     tenantSlug &&
     verificationFile &&
     password &&
-    confirmPassword &&
-    password === confirmPassword;
+    confirmPassword;
+
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -46,23 +47,35 @@ export default function RegisterOrganization({ onBack, onContinue }: RegisterOrg
 
   const handleVerificationUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) setVerificationFile(file);
+    if (!file) return;
+    setVerificationFile(file);
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isFormValid) return;
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    if (!isFormValid) {
+      setError('Please fill in all the required fields with the appropriate information');
+      return;
+    }
+    else {
+      setError('');
+    }
 
     const payload = {
       organizationName,
       organizationType,
       email,
-      tenantSlug,
+      plan,
       verificationFile,
+      tenantSlug,
       password,
       logoFile,
     };
-    
+
     onContinue(payload);
   };
 
@@ -76,11 +89,11 @@ export default function RegisterOrganization({ onBack, onContinue }: RegisterOrg
     >
       {/* Header */}
       <div className="flex items-center gap-4 mb-10 lg:absolute lg:top-10 lg:left-10 lg:mb-0">
-        <Image 
-          src="/DECTALogo/DECTAPolls_Logo.svg" 
-          alt="DECTA Polls Logo" 
-          width={60} 
-          height={60} 
+        <Image
+          src="/DECTALogo/DECTAPolls_Logo.svg"
+          alt="DECTA Polls Logo"
+          width={60}
+          height={60}
         />
         <h1 className="text-[#F1F0F3] font-montserrat text-2xl font-medium m-0">
           D.E.C.T.A Polls
@@ -88,10 +101,10 @@ export default function RegisterOrganization({ onBack, onContinue }: RegisterOrg
       </div>
 
       {/* Title */}
-      <h2 
+      <h2
         className="text-white font-light text-center tracking-tight max-w-2xl"
         style={{
-          fontSize: '30px', 
+          fontSize: '30px',
           color: '#ffffff',
           marginBottom: '30px',
           fontFamily: 'Montserrat, sans-serif',
@@ -123,7 +136,7 @@ export default function RegisterOrganization({ onBack, onContinue }: RegisterOrg
                   width={180}
                   height={180}
                   // Ensure the image inside also remains a perfect circle
-                  className="h-full w-full rounded-full object-cover" 
+                  className="h-full w-full rounded-full object-cover"
                 />
               ) : (
                 <span className="text-5xl"><RiImageAddLine /></span>
@@ -151,11 +164,11 @@ export default function RegisterOrganization({ onBack, onContinue }: RegisterOrg
               <div className="flex flex-col gap-4 w-full">
                 {/* Tenant Slug Input */}
                 <input required value={tenantSlug} onChange={(e) => setTenantSlug(e.target.value)} placeholder="Tenant Slug" className="w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-white outline-none focus:border-[#5D44F8]" />
-                
+
                 {/* NEW: Verification Document Field */}
                 <div className="flex flex-col gap-2">
-                  <label 
-                    htmlFor="verification-upload" 
+                  <label
+                    htmlFor="verification-upload"
                     className={`flex items-center gap-3 w-full rounded-lg border border-dashed px-4 py-3 cursor-pointer transition ${verificationFile ? 'border-green-500 bg-green-500/10' : 'border-white/30 bg-white/5 hover:bg-white/10'}`}
                   >
                     <span className={`text-xl ${verificationFile ? 'text-green-400' : 'text-white/70'}`}>
@@ -189,6 +202,11 @@ export default function RegisterOrganization({ onBack, onContinue }: RegisterOrg
                 <input required type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm Password" className="mt-2 w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-white outline-none transition focus:border-[#5D44F8]" />
               </label>
             </div>
+            {error && (
+              <div className="mt-4 text-red-500 text-center">
+                {error}
+              </div>
+            )}
           </div>
         </div>
       </form>
@@ -247,7 +265,6 @@ export default function RegisterOrganization({ onBack, onContinue }: RegisterOrg
         <button
           type="submit"
           form="registration-form"
-          disabled={!isFormValid}
           style={{
             display: 'flex',
             width: '340px',
@@ -257,20 +274,20 @@ export default function RegisterOrganization({ onBack, onContinue }: RegisterOrg
             gap: '10px',
             borderRadius: '20px',
             border: '1px solid #372892',
-            background: isFormValid ? '#5D44F8' : '#334155',
+            background: '#5D44F8',
             color: '#FFFFFF',
             fontSize: '16px',
             fontWeight: '500',
-            cursor: isFormValid ? 'pointer' : 'not-allowed',
+            cursor: 'pointer',
             transition: 'all 0.3s ease',
-            opacity: isFormValid ? 1 : 0.6,
-            boxShadow: isFormValid ? '0 10px 25px -5px rgba(93, 68, 248, 0.4)' : 'none'
+            opacity: 1,
+            boxShadow: '0 10px 25px -5px rgba(93, 68, 248, 0.4)'
           }}
           onMouseEnter={(e) => {
-            if (isFormValid) e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.transform = 'translateY(-2px)';
           }}
           onMouseLeave={(e) => {
-            if (isFormValid) e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.transform = 'translateY(0)';
           }}
         >
           Continue →
