@@ -455,7 +455,7 @@ export default function LandingPage() {
           {copiedText && (
             <div className="toast-container">
               <div
-                className="toast-notification glass-card text-white rounded-xl shadow-xl whitespace-nowrap"
+                className="toast-notification"
                 style={{
                   transition: 'opacity 300ms ease, transform 300ms ease',
                   opacity: toastVisible ? 1 : 0,
