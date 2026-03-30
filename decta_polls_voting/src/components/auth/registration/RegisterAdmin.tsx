@@ -5,11 +5,12 @@ import Image from 'next/image';
 
 // Interface for admin registration
 interface RegisterAdminProps {
+  plan: string | null;
   onBack: () => void;
   onContinue: (data: any) => void; // Handler for the continue button
 }
 
-export default function RegisterAdmin({ onBack, onContinue }: RegisterAdminProps) {
+export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdminProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [middleName, setMiddleName] = useState('');
