@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f1f0f3;
+  --foreground: #231638;
+
+  --decta-bg: #231638;
+  --decta-surface: rgba(241, 240, 243, 0.06);
+  --decta-surface-strong: rgba(241, 240, 243, 0.10);
+  --decta-border: rgba(241, 240, 243, 0.12);
+  --decta-text: #f1f0f3;
+  --decta-text-muted: rgba(241, 240, 243, 0.62);
+  --decta-primary: #5d44f8;
+  --decta-secondary: #9686f8;
 }
 
 @theme inline {
@@ -14,8 +23,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #231638;
+    --foreground: #f1f0f3;
   }
 }
 

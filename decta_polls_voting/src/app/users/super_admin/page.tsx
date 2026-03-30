@@ -1,1 +1,5 @@
-//modify or delete this file. Pampa setup lang to sa file structure
+import { redirect } from "next/navigation";
+
+export default function SuperAdminRoot() {
+  redirect("/users/super_admin/tenants");
+}
