@@ -19,6 +19,8 @@ const MemoizedSplitText = memo(SplitText);
 export default function LandingPage() {
   const [copiedText, setCopiedText] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const [buildLoading, setBuildLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unmountTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationsInitialized = useRef(false);
@@ -26,6 +28,19 @@ export default function LandingPage() {
 
   // Memoized gradient colors to prevent re-renders
   const gradientColors = useMemo(() => ["#5227FF", "#FF9FFC", "#B19EEF"], []);
+
+  // Handle button clicks with loading states
+  const handleBuildClick = async () => {
+    setBuildLoading(true);
+    // Navigate to loading page with build parameters
+    router.push('/loading?destination=/auth/tenant_reg&type=build');
+  };
+
+  const handleLoginClick = async () => {
+    setLoginLoading(true);
+    // Navigate to loading page with login parameters
+    router.push('/loading?destination=/auth/login_form&type=login');
+  };
 
   // Debounced copy function to prevent rapid clicks
   const copyToClipboard = useCallback(async (text: string, type: string) => {
@@ -240,12 +255,14 @@ export default function LandingPage() {
           </p>
           <div className="button-group">
             <button
-              onClick={() => router.push('/auth/register_form')}
+              onClick={handleBuildClick}
+              disabled={buildLoading}
               className="btn-build">
               Build your Election &rarr;
             </button>
             <button
-              onClick={() => router.push('/auth/login_form')}
+              onClick={handleLoginClick}
+              disabled={loginLoading}
               className="btn-login glass-card">
               Login
             </button>
