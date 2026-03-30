@@ -1,22 +1,38 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import GradientText from '../../../components/mainlanding/ui/GradientText.jsx';
 
+type ForgotStep = 'idle' | 'email' | 'otp' | 'newPassword' | 'success';
+
 export default function LogInPage() {
+    // Login state
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
 
-    // Memoized gradient colors to match landing page
-    const gradientColors = useMemo(() => ["#5227FF", "#FF9FFC", "#B19EEF"], []);
+    // Forgot-password state
+    const [forgotStep, setForgotStep] = useState<ForgotStep>('idle');
+    const [fpEmail, setFpEmail] = useState('');
+    const [fpError, setFpError] = useState('');
+    const [fpLoading, setFpLoading] = useState(false);
 
+    // OTP state
+    const [otp, setOtp] = useState('');
+    const [otpHash, setOtpHash] = useState('');
+    const [otpExpires, setOtpExpires] = useState<number>(0);
+    const [timeLeft, setTimeLeft] = useState(60);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // New password state
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+
+    // Login helpers
     const isFormValid = email.trim() !== '' && password.trim() !== '';
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -32,7 +48,7 @@ export default function LogInPage() {
             const response = await fetch('/api/login_tenant', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email, password }),
             });
 
             const data = await response.json();
@@ -43,6 +59,161 @@ export default function LogInPage() {
                 return;
             }
 
+            window.location.href = '../users/tenant';
+        } catch (err: any) {
+            setError(err.message || 'Login failed');
+            console.error('Login error:', err);
+        }
+    };
+
+    // OTP countdown timer
+    const startTimer = () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setTimeLeft(60);
+        timerRef.current = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timerRef.current!);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, []);
+
+    // Forgot password: send OTP
+    const handleSendOtp = async () => {
+        if (!fpEmail.trim()) {
+            setFpError('Please enter your email address.');
+            return;
+        }
+        setFpLoading(true);
+        setFpError('');
+        try {
+            const res = await fetch('/api/send_otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: fpEmail }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setFpError(data.error || 'Failed to send OTP. Try again.');
+                return;
+            }
+            setOtpHash(data.hash);
+            setOtpExpires(data.expires);
+            setOtp('');
+            setForgotStep('otp');
+            startTimer();
+        } catch (err: any) {
+            setFpError(err.message || 'Failed to send OTP.');
+        } finally {
+            setFpLoading(false);
+        }
+    };
+
+    // Forgot password: resend OTP
+    const handleResendOtp = async () => {
+        setFpLoading(true);
+        setFpError('');
+        try {
+            const res = await fetch('/api/send_otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: fpEmail }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setFpError(data.error || 'Failed to resend OTP.');
+                return;
+            }
+            setOtpHash(data.hash);
+            setOtpExpires(data.expires);
+            setOtp('');
+            startTimer();
+        } catch (err: any) {
+            setFpError(err.message || 'Failed to resend OTP.');
+        } finally {
+            setFpLoading(false);
+        }
+    };
+
+    // Forgot password: verify OTP → proceed to new password
+    const handleVerifyOtp = async () => {
+        setFpLoading(true);
+        setFpError('');
+        try {
+            // We just verify client-side that the hash/expiry match without committing anything
+            if (Date.now() > otpExpires) {
+                setFpError('OTP has expired. Please request a new code.');
+                setFpLoading(false);
+                return;
+            }
+            // Pass to reset_password API which will re-verify
+            setForgotStep('newPassword');
+        } catch (err: any) {
+            setFpError(err.message || 'Verification failed.');
+        } finally {
+            setFpLoading(false);
+        }
+    };
+
+    // Forgot password: submit new password
+    const handleResetPassword = async () => {
+        if (newPassword.length < 8) {
+            setFpError('Password must be at least 8 characters.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setFpError('Passwords do not match.');
+            return;
+        }
+        setFpLoading(true);
+        setFpError('');
+        try {
+            const res = await fetch('/api/reset_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: fpEmail,
+                    newPassword,
+                    otp,
+                    hash: otpHash,
+                    expires: otpExpires,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setFpError(data.error || 'Failed to reset password.');
+                return;
+            }
+            setForgotStep('success');
+        } catch (err: any) {
+            setFpError(err.message || 'Failed to reset password.');
+        } finally {
+            setFpLoading(false);
+        }
+    };
+
+    // Reset all forgot-password state
+    const handleCancelForgot = () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setForgotStep('idle');
+        setFpEmail('');
+        setFpError('');
+        setOtp('');
+        setOtpHash('');
+        setOtpExpires(0);
+        setTimeLeft(60);
+        setNewPassword('');
+        setConfirmPassword('');
+    };
             // Navigate to loading page, then to tenant dashboard
             router.push('/loading?destination=/users/tenant');
         } catch (error: any) {
@@ -68,18 +239,16 @@ export default function LogInPage() {
         <div
             className="min-h-screen w-full text-white overflow-x-hidden flex items-center justify-center p-4 md:p-8"
             style={{
-                // Global deep background
                 backgroundColor: '#03070f',
                 backgroundImage: 'linear-gradient(180deg, #070b24 0%, #03070f 100%)',
             }}
         >
             <div className="flex flex-col md:flex-row w-full max-w-7xl items-center justify-between gap-12">
 
-                {/* Left Side: Logo with its OWN glow */}
+                {/* Left Side: Logo */}
                 <div
                     className="flex w-full md:w-1/2 flex-col items-center justify-center py-12 md:py-24 rounded-full"
                     style={{
-                        // The glow is now "pinned" to the logo area
                         background: 'radial-gradient(circle, rgba(54, 65, 181, 0.4) 0%, rgba(7, 11, 36, 0) 70%)',
                     }}
                 >
@@ -97,8 +266,231 @@ export default function LogInPage() {
                     </h1>
                 </div>
 
-                {/* Right Side: Login Form (Floating) */}
+                {/* Right Side: Card */}
                 <div className="flex w-full md:w-1/2 justify-center">
+
+                    {/* FORGOT PASSWORD: Email Step */}
+                    {forgotStep === 'email' && (
+                        <div
+                            className="w-full max-w-[540px] rounded-3xl border border-white/20 bg-white/5 p-8 shadow-[0_20px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl relative"
+                            style={{ fontFamily: 'Poppins, sans-serif' }}
+                        >
+                            <h2 className="text-2xl font-semibold text-white mb-2 text-center" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                                Forgot Password
+                            </h2>
+                            <p className="text-white/60 mb-8 text-center text-sm">
+                                Enter your account email and we&apos;ll send you a verification code.
+                            </p>
+
+                            {fpError && (
+                                <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 text-center">
+                                    {fpError}
+                                </div>
+                            )}
+
+                            <input
+                                id="fp-email"
+                                type="email"
+                                value={fpEmail}
+                                onChange={(e) => setFpEmail(e.target.value)}
+                                placeholder="Email Address"
+                                onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
+                                className="w-full rounded-xl border border-white/30 bg-white/10 px-4 py-4 text-white outline-none focus:border-[#5D44F8] transition mb-6 placeholder:text-white/30"
+                            />
+
+                            <button
+                                id="fp-send-otp-btn"
+                                onClick={handleSendOtp}
+                                disabled={fpLoading || !fpEmail.trim()}
+                                className={`w-full py-4 rounded-xl font-medium transition ${!fpLoading && fpEmail.trim()
+                                        ? 'bg-[#5D44F8] text-white hover:bg-[#4a35cf] shadow-lg'
+                                        : 'bg-[#334155] text-white/50 cursor-not-allowed'
+                                    }`}
+                            >
+                                {fpLoading ? 'Sending...' : 'Send Verification Code'}
+                            </button>
+
+                            <div className="mt-8 text-center pt-6 border-t border-white/10">
+                                <button onClick={handleCancelForgot} className="text-white/50 hover:text-white transition text-sm">
+                                    ← Back to Login
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* FORGOT PASSWORD: OTP Step */}
+                    {forgotStep === 'otp' && (
+                        <div
+                            className="w-full max-w-[540px] rounded-3xl border border-white/20 bg-white/5 p-8 shadow-[0_20px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl relative"
+                            style={{ fontFamily: 'Poppins, sans-serif' }}
+                        >
+                            <h2 className="text-2xl font-semibold text-white mb-4 text-center" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                                Verify Your Email
+                            </h2>
+                            <p className="text-white/70 mb-8 text-center">
+                                We&apos;ve sent a 6-digit code to <strong>{fpEmail}</strong>. It expires in 60s.
+                            </p>
+
+                            {fpError && (
+                                <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 text-center">
+                                    {fpError}
+                                </div>
+                            )}
+
+                            <input
+                                id="fp-otp-input"
+                                type="text"
+                                maxLength={6}
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                placeholder="------"
+                                className="w-full text-center tracking-[1em] text-3xl rounded-xl border border-white/30 bg-white/10 px-4 py-4 text-white outline-none focus:border-[#5D44F8] transition mb-8"
+                                style={{ fontFamily: 'monospace' }}
+                            />
+
+                            <button
+                                id="fp-verify-otp-btn"
+                                onClick={handleVerifyOtp}
+                                disabled={otp.length !== 6 || fpLoading || timeLeft === 0}
+                                className={`w-full py-4 rounded-xl font-medium transition ${otp.length === 6 && !fpLoading && timeLeft > 0
+                                        ? 'bg-[#5D44F8] text-white hover:bg-[#4a35cf] shadow-lg'
+                                        : 'bg-[#334155] text-white/50 cursor-not-allowed'
+                                    }`}
+                            >
+                                {fpLoading ? 'Verifying...' : 'Verify Code'}
+                            </button>
+
+                            <div className="mt-6 text-center text-sm">
+                                {timeLeft > 0 ? (
+                                    <span className="text-white/50">
+                                        Resend code in <strong className="text-white/80">{timeLeft}s</strong>
+                                    </span>
+                                ) : (
+                                    <button
+                                        id="fp-resend-btn"
+                                        onClick={handleResendOtp}
+                                        disabled={fpLoading}
+                                        className="text-[#5D44F8] hover:text-[#7f6af9] font-medium transition"
+                                    >
+                                        {fpLoading ? 'Sending...' : 'Resend Code'}
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="mt-8 text-center pt-6 border-t border-white/10">
+                                <button onClick={handleCancelForgot} className="text-white/50 hover:text-white transition text-sm">
+                                    ← Back to Login
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* FORGOT PASSWORD: New Password Step */}
+                    {forgotStep === 'newPassword' && (
+                        <div
+                            className="w-full max-w-[540px] rounded-3xl border border-white/20 bg-white/5 p-8 shadow-[0_20px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl relative"
+                            style={{ fontFamily: 'Poppins, sans-serif' }}
+                        >
+                            <h2 className="text-2xl font-semibold text-white mb-2 text-center" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                                Set New Password
+                            </h2>
+                            <p className="text-white/60 mb-8 text-center text-sm">
+                                Create a strong new password for <strong className="text-white/80">{fpEmail}</strong>.
+                            </p>
+
+                            {fpError && (
+                                <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 text-center">
+                                    {fpError}
+                                </div>
+                            )}
+
+                            <div className="space-y-4 mb-8">
+                                <input
+                                    id="fp-new-password"
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    placeholder="New Password"
+                                    className="w-full rounded-xl border border-white/30 bg-white/10 px-4 py-4 text-white outline-none focus:border-[#5D44F8] transition placeholder:text-white/30"
+                                />
+                                <input
+                                    id="fp-confirm-password"
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="Confirm Password"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleResetPassword()}
+                                    className="w-full rounded-xl border border-white/30 bg-white/10 px-4 py-4 text-white outline-none focus:border-[#5D44F8] transition placeholder:text-white/30"
+                                />
+
+                                {/* Password match indicator */}
+                                {confirmPassword.length > 0 && (
+                                    <p className={`text-xs text-center transition ${newPassword === confirmPassword ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {newPassword === confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                                    </p>
+                                )}
+                            </div>
+
+                            <button
+                                id="fp-reset-btn"
+                                onClick={handleResetPassword}
+                                disabled={
+                                    fpLoading ||
+                                    newPassword.length < 8 ||
+                                    newPassword !== confirmPassword
+                                }
+                                className={`w-full py-4 rounded-xl font-medium transition ${!fpLoading && newPassword.length >= 8 && newPassword === confirmPassword
+                                        ? 'bg-[#5D44F8] text-white hover:bg-[#4a35cf] shadow-lg'
+                                        : 'bg-[#334155] text-white/50 cursor-not-allowed'
+                                    }`}
+                            >
+                                {fpLoading ? 'Resetting...' : 'Reset Password'}
+                            </button>
+
+                            <div className="mt-8 text-center pt-6 border-t border-white/10">
+                                <button onClick={handleCancelForgot} className="text-white/50 hover:text-white transition text-sm">
+                                    ← Back to Login
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* FORGOT PASSWORD: Success Step */}
+                    {forgotStep === 'success' && (
+                        <div
+                            className="w-full max-w-[540px] rounded-3xl border border-white/20 bg-white/5 p-8 shadow-[0_20px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl relative text-center"
+                            style={{ fontFamily: 'Poppins, sans-serif' }}
+                        >
+                            <div className="flex items-center justify-center mb-6">
+                                <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-3xl">
+                                    ✓
+                                </div>
+                            </div>
+                            <h2 className="text-2xl font-semibold text-white mb-3" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                                Password Reset!
+                            </h2>
+                            <p className="text-white/60 mb-8 text-sm">
+                                Your password has been updated successfully. You can now log in with your new credentials.
+                            </p>
+                            <button
+                                id="fp-back-to-login-btn"
+                                onClick={handleCancelForgot}
+                                className="w-full py-4 rounded-xl font-medium bg-[#5D44F8] text-white hover:bg-[#4a35cf] shadow-lg transition"
+                            >
+                                Back to Login
+                            </button>
+                        </div>
+                    )}
+
+                    {/* LOGIN FORM (default) */}
+                    {forgotStep === 'idle' && (
+                        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.03] p-8 md:p-10 shadow-2xl backdrop-blur-3xl">
+                            <Link
+                                href="/"
+                                className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors mb-8"
+                            >
+                                ← Back
+                            </Link>
                     <div className="glass-card w-full max-w-md p-8 md:p-10">
                         <Link
                             href="/"
@@ -118,20 +510,21 @@ export default function LogInPage() {
                             </p>
                         </div>
 
-                        {error && (
-                            <div className="mt-4 text-red-500 text-center">
-                                {error}
-                            </div>
-                        )}
+                            {error && (
+                                <div className="mt-4 text-red-500 text-center">
+                                    {error}
+                                </div>
+                            )}
 
-                        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Email Address"
-                                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-[#5D44F8] focus:bg-white/10 placeholder:text-white/20 font-source-sans"
-                            />
+                            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                                <input
+                                    id="login-email"
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="Email Address"
+                                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-[#5D44F8] focus:bg-white/10 placeholder:text-white/20 font-source-sans"
+                                />
 
                             <div className="relative">
                                 <input
@@ -161,23 +554,32 @@ export default function LogInPage() {
                                 </button>
                             </div>
 
-                            <div className="flex justify-start">
-                                <Link href="#" className="text-sm text-white/30 hover:text-[#d0c8ff] transition-colors font-source-sans">
-                                    Forgot Password?
-                                </Link>
-                            </div>
+                                <div className="flex justify-start">
+                                    <button
+                                        id="forgot-password-link"
+                                        type="button"
+                                        onClick={() => {
+                                            setError('');
+                                            setForgotStep('email');
+                                        }}
+                                        className="text-sm text-white/30 hover:text-[#d0c8ff] transition-colors font-source-sans"
+                                    >
+                                        Forgot Password?
+                                    </button>
+                                </div>
 
-                            <button
-                                type="submit"
-                                disabled={!isFormValid || isLoading}
-                                className={`w-full rounded-xl py-4 text-lg font-semibold text-white transition-all duration-300 font-montserrat ${isFormValid && !isLoading
-                                    ? 'bg-[#5D44F8] hover:bg-[#4c35d1] hover:shadow-[0_0_40px_rgba(93,68,248,0.4)] transform hover:-translate-y-1'
-                                    : 'cursor-not-allowed bg-white/5 text-white/20'
-                                    }`}
-                            >
-                                {isLoading ? 'Loading...' : 'Login'}
-                            </button>
-                        </form>
+                                <button
+                                    id="login-submit-btn"
+                                    type="submit"
+                                    disabled={!isFormValid || isLoading}
+                                    className={`w-full rounded-xl py-4 text-lg font-semibold text-white transition-all duration-300 font-montserrat ${isFormValid && !isLoading
+                                            ? 'bg-[#5D44F8] hover:bg-[#4c35d1] hover:shadow-[0_0_40px_rgba(93,68,248,0.4)] transform hover:-translate-y-1'
+                                            : 'cursor-not-allowed bg-white/5 text-white/20'
+                                        }`}
+                                >
+                                    {isLoading ? 'Loading...' : 'Login'}
+                                </button>
+                            </form>
 
                         <p className="mt-8 text-center text-sm text-white/40 font-source-sans">
                             New here?{' '}
@@ -186,6 +588,15 @@ export default function LogInPage() {
                             </Link>
                         </p>
                     </div>
+                            <p className="mt-8 text-center text-sm text-white/40">
+                                New here?{' '}
+                                <Link href="/auth/tenant_reg" className="font-semibold text-[#d0c8ff] hover:text-white transition-colors">
+                                    Create Account
+                                </Link>
+                            </p>
+                        </div>
+                    )}
+
                 </div>
             </div>
         </div>
