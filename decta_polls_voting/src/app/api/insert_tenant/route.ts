@@ -1,1 +1,6 @@
-//modify or delete this file. Pampa setup lang to sa file structure
+export async function POST() {
+  return new Response(JSON.stringify({ message: "Not Implemented" }), {
+    status: 501,
+    headers: { "content-type": "application/json" },
+  });
+}
