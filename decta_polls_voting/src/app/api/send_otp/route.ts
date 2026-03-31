@@ -15,8 +15,8 @@ export async function POST(request: Request) {
         // Generate 6-digit cryptographically secure OTP
         const otp = crypto.randomInt(100000, 1000000).toString();
 
-        // Expire in 60 seconds
-        const expires = Date.now() + 60 * 1000;
+        // Expire in 90 seconds
+        const expires = Date.now() + 90 * 1000;
 
         // Hash the OTP to return to the client securely
         const secret = process.env.OTP_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'default_otp_secret_key';

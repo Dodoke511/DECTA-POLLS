@@ -50,8 +50,22 @@ export default function LogInPage() {
         }
 
         setIsLoading(true);
+        setError('');
 
         try {
+            // Check super admin credentials via server-side API (env vars are not accessible client-side)
+            const superAdminRes = await fetch('/api/login_super_admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+
+            if (superAdminRes.ok) {
+                router.push('/users/super_admin');
+                return;
+            }
+
+            // Not super admin — try tenant login
             const response = await fetch('/api/login_tenant', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
