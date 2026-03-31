@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import SystemMonitoring from './users/super_admin/monitoring';
 
 export default function Home() {
-  redirect("/users/super_admin/Dashoard");
+  return <SystemMonitoring />;
 }
