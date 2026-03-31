@@ -172,7 +172,10 @@ function LogoMark() {
     <img
       src="/decta-logo.png"
       alt="D.E.C.T.A Polls"
-      className="h-9 w-9 shrink-0 rounded-full object-contain shadow-[0_0_20px_rgba(93,68,248,0.25)]"
+      className="h-9 w-9 shrink-0 rounded-full object-contain"
+      style={{
+        boxShadow: "0 0 20px rgba(93,68,248,0.25)"
+      }}
     />
   );
 }
@@ -191,8 +194,8 @@ export default async function SuperAdminDashboardPage() {
     : [];
 
   return (
-    <div className="min-h-screen bg-[#231638] bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(150,134,248,0.22),transparent_50%),radial-gradient(ellipse_80%_50%_at_100%_50%,rgba(93,68,248,0.12),transparent_55%),radial-gradient(ellipse_60%_40%_at_0%_80%,rgba(93,68,248,0.08),transparent_50%)] text-[#f1f0f3]">
-      <header className="flex items-center gap-3 border-b border-white/[0.06] bg-[#231638]/90 px-6 py-3.5 backdrop-blur-md">
+    <div className="min-h-screen text-[#f1f0f3]" style={{ background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)" }}>
+      <header className="flex items-center gap-3 border-b border-white/[0.06] px-6 py-3.5 backdrop-blur-md" style={{ background: "linear-gradient(90deg, #160C38 0%, #1b1050 50%, rgba(120,100,240,0.90) 100%)" }}>
         <LogoMark />
         <span className="text-sm font-medium tracking-wide text-white/95">
           D.E.C.T.A Polls <span className="text-white/45">|</span> Tenant Admin
@@ -200,7 +203,13 @@ export default async function SuperAdminDashboardPage() {
       </header>
 
       <div className="flex min-h-[calc(100vh-53px)] flex-col gap-4 p-4 md:flex-row md:p-6">
-        <aside className="flex w-full shrink-0 flex-col rounded-3xl border border-white/[0.08] bg-[rgba(35,22,56,0.55)] py-8 pl-5 pr-4 shadow-[0_0_50px_rgba(93,68,248,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl md:w-[260px] md:rounded-r-3xl md:rounded-l-none">
+        <aside className="flex w-full shrink-0 flex-col rounded-3xl border md:w-[260px] md:rounded-r-3xl md:rounded-l-none py-8 pl-5 pr-4" style={{
+          background: "rgba(217,217,217,0.13)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          border: "1px solid rgba(203,191,255,0.10)",
+          boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
+        }}>
           <div className="mb-10 px-2">
             <p className="text-2xl font-bold tracking-tight text-[#9686f8]" style={{ textShadow: "0 0 24px rgba(93,68,248,0.35)" }}>
               WELCOME!
@@ -211,46 +220,81 @@ export default async function SuperAdminDashboardPage() {
           <nav className="flex flex-1 flex-col gap-2.5" aria-label="Main">
             <Link
               href="/users/super_admin/Dashoard"
-              className="flex items-center gap-3 rounded-2xl border border-[#5d44f8]/45 bg-[rgba(93,68,248,0.12)] px-4 py-3.5 text-sm font-medium text-white shadow-[0_0_28px_rgba(93,68,248,0.2)] transition hover:bg-[rgba(93,68,248,0.18)]"
+              className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white transition"
+              style={{
+                background: "linear-gradient(135deg, rgba(28,22,62,0.38), rgba(107,63,245,0.20))",
+                border: "1px solid rgba(255,255,255,0.9)",
+                boxShadow: "-5px 5px 20px rgba(30,40,80,0.35), 0 0 0 1px rgba(255,255,255,0.2)"
+              }}
             >
-              <IconDashboard className="h-5 w-5 text-[#f1f0f3]" />
+              <img src="/Dashboard.png" alt="Dashboard" width="20" height="20" />
               Dashboard
             </Link>
             <Link
               href="#"
-              className="flex items-center gap-3 rounded-2xl border border-white/[0.1] bg-white/[0.03] px-4 py-3.5 text-sm font-medium text-white/75 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
+              className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white/75 transition hover:text-white"
+              style={{
+                background: "linear-gradient(135deg, rgba(28,22,62,0.38), rgba(30,24,74,0.65))",
+                border: "1px solid rgba(255,255,255,0.18)",
+                boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
+                backdropFilter: "blur(4px)",
+                WebkitBackdropFilter: "blur(4px)"
+              }}
             >
-              <IconTenants className="h-5 w-5 text-white/55" />
+              <img src="/Tenants.png" alt="Tenants" width="20" height="20" />
               Tenants
             </Link>
             <Link
-              href="#"
-              className="flex items-center gap-3 rounded-2xl border border-white/[0.1] bg-white/[0.03] px-4 py-3.5 text-sm font-medium text-white/75 transition hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white"
+              href="/users/super_admin/system-monitoring"
+              className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white/75 transition hover:text-white"
+              style={{
+                background: "linear-gradient(135deg, rgba(28,22,62,0.38), rgba(30,24,74,0.65))",
+                border: "1px solid rgba(255,255,255,0.18)",
+                boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
+                backdropFilter: "blur(4px)",
+                WebkitBackdropFilter: "blur(4px)"
+              }}
             >
-              <IconSettings className="h-5 w-5 text-white/55" />
+              <img src="/Settings.png" alt="Settings" width="20" height="20" />
               Settings
             </Link>
           </nav>
 
           <button
             type="button"
-            className="mt-6 flex items-center justify-center gap-2 rounded-2xl border border-white/[0.1] bg-transparent px-4 py-3 text-sm font-medium text-white/65 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200"
+            className="mt-6 flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium text-white/65 transition"
+            style={{
+              background: "rgba(255, 100, 100, 0.08)",
+              border: "1px solid rgba(255,100,100,0.2)"
+            }}
           >
             <IconSignOut className="h-5 w-5" />
             Sign Out
           </button>
         </aside>
 
-        <main className="min-w-0 flex-1 rounded-[28px] border border-[#5d44f8]/20 bg-[linear-gradient(145deg,rgba(35,22,56,0.92),rgba(12,10,28,0.96))] p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8">
+        <main className="min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8" style={{
+          background: "rgba(217,217,217,0.12)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          border: "1px solid rgba(203,191,255,0.10)",
+          boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
+        }}>
           <h1
-            className="mb-8 text-3xl font-bold tracking-tight text-[#9686f8] md:text-4xl"
-            style={{ textShadow: "0 0 32px rgba(93,68,248,0.4)" }}
+            className="mb-8 text-3xl font-bold tracking-tight md:text-4xl"
+            style={{ 
+              color: "#D0C8FF",
+              textShadow: "2px 2px 20px rgba(208,200,255,0.45)"
+            }}
           >
             Dashboard
           </h1>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)]">
-            <section className="rounded-[22px] border border-white/[0.08] bg-[rgba(255,255,255,0.03)] p-6 shadow-inner">
+            <section className="rounded-[22px] border p-6 shadow-inner" style={{
+              background: "rgba(217,217,217,0.09)",
+              border: "1px solid rgba(203,191,255,0.10)"
+            }}>
               <h2 className="mb-6 text-lg font-semibold text-white/90">Subscription Rate</h2>
               <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-10">
                 <div className="relative h-52 w-52 shrink-0">
@@ -283,7 +327,11 @@ export default async function SuperAdminDashboardPage() {
             </section>
 
             <div className="flex flex-col gap-4">
-              <article className="flex items-start gap-4 rounded-[22px] border border-white/[0.1] bg-[rgba(255,255,255,0.04)] px-5 py-5 shadow-[0_0_24px_rgba(93,68,248,0.08)]">
+              <article className="flex items-start gap-4 rounded-[22px] border px-5 py-5" style={{
+                background: "rgba(217,217,217,0.09)",
+                border: "1px solid rgba(203,191,255,0.10)",
+                boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
+              }}>
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(93,68,248,0.15)] text-[#f1f0f3]">
                   <IconBallot className="h-6 w-6" />
                 </div>
@@ -292,7 +340,11 @@ export default async function SuperAdminDashboardPage() {
                   <BallotCastAsOfLine className="mt-1 text-xs text-white/45" />
                 </div>
               </article>
-              <article className="flex items-start gap-4 rounded-[22px] border border-white/[0.1] bg-[rgba(255,255,255,0.04)] px-5 py-5 shadow-[0_0_24px_rgba(93,68,248,0.08)]">
+              <article className="flex items-start gap-4 rounded-[22px] border px-5 py-5" style={{
+                background: "rgba(217,217,217,0.09)",
+                border: "1px solid rgba(203,191,255,0.10)",
+                boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
+              }}>
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(150,134,248,0.2)] text-[#f1f0f3]">
                   <IconUsers className="h-6 w-6" />
                 </div>
@@ -301,7 +353,11 @@ export default async function SuperAdminDashboardPage() {
                   <p className="mt-1 text-xs text-white/45">Total Registered Tenants</p>
                 </div>
               </article>
-              <article className="flex items-start gap-4 rounded-[22px] border border-white/[0.1] bg-[rgba(255,255,255,0.04)] px-5 py-5 shadow-[0_0_24px_rgba(93,68,248,0.08)]">
+              <article className="flex items-start gap-4 rounded-[22px] border px-5 py-5" style={{
+                background: "rgba(217,217,217,0.09)",
+                border: "1px solid rgba(203,191,255,0.10)",
+                boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
+              }}>
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(20,184,166,0.18)] text-[#5eead4]">
                   <IconPercent className="h-6 w-6" />
                 </div>
@@ -315,15 +371,24 @@ export default async function SuperAdminDashboardPage() {
 
           <section className="mt-10">
             <h2
-              className="mb-5 text-xl font-bold text-[#9686f8] md:text-2xl"
-              style={{ textShadow: "0 0 20px rgba(93,68,248,0.25)" }}
+              className="mb-5 text-xl font-bold md:text-2xl"
+              style={{ 
+                color: "#D0C8FF",
+                textShadow: "2px 2px 20px rgba(208,200,255,0.45)"
+              }}
             >
               Leading Active Tenants
             </h2>
-            <div className="overflow-x-auto rounded-[22px] border border-white/[0.08] bg-[rgba(0,0,0,0.2)]">
+            <div className="overflow-x-auto rounded-[22px] border" style={{
+              background: "rgba(217,217,217,0.09)",
+              border: "1px solid rgba(203,191,255,0.10)",
+              boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
+            }}>
               <table className="w-full min-w-[720px] border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-white/[0.08] text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                  <tr className="text-[11px] font-semibold uppercase tracking-wider text-white/45" style={{
+                    borderBottom: "1px solid rgba(203,191,255,0.10)"
+                  }}>
                     <th className="px-5 py-4">Organization name</th>
                     <th className="px-5 py-4">Email</th>
                     <th className="px-5 py-4">Type</th>
@@ -334,7 +399,10 @@ export default async function SuperAdminDashboardPage() {
                 </thead>
                 <tbody>
                   {leadingTenants.map((row) => (
-                    <tr key={row.id} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02]">
+                    <tr key={row.id} className="last:border-0" style={{
+                      borderBottom: "1px solid rgba(203,191,255,0.05)",
+                      transition: "background 0.2s",
+                    }}>
                       <td className="px-5 py-4 font-medium text-white/85">{row.organization}</td>
                       <td className="px-5 py-4 text-white/55">{row.email}</td>
                       <td className="px-5 py-4 text-white/60">{row.type}</td>
@@ -345,13 +413,21 @@ export default async function SuperAdminDashboardPage() {
                             verificationFileName={row.verificationFileName}
                           />
                         ) : (
-                          <span className="inline-flex rounded-full border border-[#2ecc71]/35 bg-[#2ecc71]/15 px-3 py-1 text-xs font-medium text-[#6ee7a0]">
+                          <span className="inline-flex rounded-full border px-3 py-1 text-xs font-medium" style={{
+                            background: "rgba(80,200,120,0.18)",
+                            border: "1px solid rgba(93,68,248,0.50)",
+                            color: "rgba(80,200,120,0.85)"
+                          }}>
                             {row.verification}
                           </span>
                         )}
                       </td>
                       <td className="px-5 py-4">
-                        <span className="inline-flex rounded-full border border-[#2ecc71]/35 bg-[#2ecc71]/12 px-3 py-1 text-xs font-medium text-[#6ee7a0]">
+                        <span className="inline-flex rounded-full border px-3 py-1 text-xs font-medium" style={{
+                          background: "rgba(80,200,120,0.18)",
+                          border: "1px solid rgba(93,68,248,0.50)",
+                          color: "rgba(80,200,120,0.85)"
+                        }}>
                           {row.subscription}
                         </span>
                       </td>
