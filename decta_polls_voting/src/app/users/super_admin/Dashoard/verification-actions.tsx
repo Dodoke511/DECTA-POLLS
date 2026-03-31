@@ -1,0 +1,123 @@
+"use client";
+
+import { useState } from "react";
+
+type VerificationActionsProps = {
+  tenantId: string;
+  tenantEmail: string;
+  tenantOrganization: string;
+  verificationUrl: string | null;
+  isVerified: boolean;
+};
+
+function IconDownload({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden>
+      <path d="M12 3v11" strokeLinecap="round" />
+      <path d="M8 10.5L12 14.5l4-4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 16.5v3h16v-3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconCheck({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M5 12.5l4.2 4.2L19 7.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function VerificationDownloadAction({
+  verificationUrl,
+  verificationFileName,
+}: {
+  verificationUrl: string | null;
+  verificationFileName: string | null;
+}) {
+  if (!verificationUrl) {
+    return null;
+  }
+
+  return (
+    <a
+      href={verificationUrl}
+      rel="noopener noreferrer"
+      download={verificationFileName ?? undefined}
+      title={verificationFileName ? `Download ${verificationFileName}` : "Download verification file"}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/80 transition hover:bg-white/10 hover:text-white"
+    >
+      <IconDownload className="h-5 w-5" />
+    </a>
+  );
+}
+
+export function VerificationEmailAction({
+  tenantId,
+  tenantEmail,
+  tenantOrganization,
+  verificationUrl,
+  isVerified,
+}: VerificationActionsProps) {
+  const [localVerified, setLocalVerified] = useState(isVerified);
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [message, setMessage] = useState("");
+
+  const handleSendEmail = async () => {
+    try {
+      setStatus("sending");
+      setMessage("");
+
+      const response = await fetch("/api/send_verification_email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          tenantId,
+          email: tenantEmail,
+          organization: tenantOrganization,
+          verificationUrl,
+        }),
+      });
+
+      const payload = (await response.json()) as { message?: string };
+      if (!response.ok) {
+        throw new Error(payload.message || "Failed to send email.");
+      }
+
+      setStatus("sent");
+      setMessage("Email sent.");
+      setLocalVerified(true);
+      setTimeout(() => {
+        setStatus("idle");
+        setMessage("");
+      }, 3500);
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Failed to send email.");
+    }
+  };
+
+  if (!verificationUrl || localVerified) {
+    return null;
+  }
+
+  return (
+    <div className="inline-flex flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={handleSendEmail}
+        disabled={status === "sending"}
+        title="Send verification email"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[#6ee7a0] transition hover:bg-[#2ecc71]/15 hover:text-[#baf8d1] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <IconCheck className="h-5 w-5" />
+      </button>
+
+      {message && (
+        <span className={`text-[11px] ${status === "sent" ? "text-[#6ee7a0]" : "text-red-300"}`}>
+          {message}
+        </span>
+      )}
+    </div>
+  );
+}

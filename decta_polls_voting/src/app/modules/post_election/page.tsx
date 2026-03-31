@@ -1,1 +1,3 @@
-//modify or delete this file. Pampa setup lang to sa file structure
+export default function PostElectionPage() {
+  return <div>Post Election</div>;
+}
