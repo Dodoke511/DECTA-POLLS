@@ -97,10 +97,32 @@ function Sidebar() {
       boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
     }}>
       <div className="mb-10 px-2 text-center">
-        <p className="text-2xl font-bold tracking-tight text-[#9686f8]" style={{ textShadow: "0 0 24px rgba(93,68,248,0.35)" }}>
+        {/* ── Gradient WELCOME copied from page.tsx ── */}
+        <p style={{
+          margin: 0,
+          fontFamily: "Montserrat, sans-serif",
+          fontSize: 32,
+          fontWeight: 600,
+          lineHeight: 1.1,
+          background: "linear-gradient(180deg, #F0F1F3 0%, #7761FF 100%)",
+          backgroundClip: "text",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          color: "transparent",
+          display: "inline-block",
+          whiteSpace: "nowrap",
+        }}>
           WELCOME!
         </p>
-        <p className="mt-1 text-sm text-white/55">Super Admin</p>
+        <p style={{
+          color: "#F1F0F3",
+          fontSize: 13,
+          fontFamily: "'Source Sans Pro', sans-serif",
+          margin: "6px 0 0",
+          opacity: 0.8,
+        }}>
+          Super Admin
+        </p>
       </div>
 
       <nav className="flex flex-1 flex-col gap-2.5" aria-label="Main">
@@ -158,23 +180,6 @@ function Sidebar() {
         Sign Out
       </button>
     </aside>
-  );
-}
-
-// ─── Topbar ───────────────────────────────────────────────────────────────────
-function Topbar() {
-  return (
-    <header className="flex items-center gap-3 border-b border-white/[0.06] px-6 py-3.5 backdrop-blur-md" style={{ background: "linear-gradient(90deg, #160C38 0%, #1b1050 50%, rgba(120,100,240,0.90) 100%)" }}>
-      <img src="/DECTA LOGO.png" alt="DECTA Logo" width="36" height="36" style={{ borderRadius: "50%", border: "1px solid rgba(255,255,255,0.2)" }} />
-      <span style={{
-        color: "#F1F0F3",
-        fontSize: 14,
-        fontFamily: "Montserrat, sans-serif",
-        fontWeight: 500,
-      }}>
-        D.E.C.T.A Polls | Tenant Admin
-      </span>
-    </header>
   );
 }
 
@@ -264,15 +269,16 @@ export default function SystemMonitoring() {
       background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)",
       fontFamily: "Montserrat, sans-serif",
     }}>
+      {/* ── Header copied from page.tsx ── */}
       <header className="flex items-center gap-3 border-b border-white/[0.06] px-6 py-3.5 backdrop-blur-md" style={{ background: "linear-gradient(90deg, #160C38 0%, #1b1050 50%, rgba(120,100,240,0.90) 100%)" }}>
-        <img src="/DECTA LOGO.png" alt="DECTA Logo" width="36" height="36" style={{ borderRadius: "50%", border: "1px solid rgba(255,255,255,0.2)" }} />
-        <span style={{
-          color: "#F1F0F3",
-          fontSize: 14,
-          fontFamily: "Montserrat, sans-serif",
-          fontWeight: 500,
-        }}>
-          D.E.C.T.A Polls | Tenant Admin
+        <img
+          src="/decta-logo.png"
+          alt="D.E.C.T.A Polls"
+          className="h-9 w-9 shrink-0 rounded-full object-contain"
+          style={{ boxShadow: "0 0 20px rgba(93,68,248,0.25)" }}
+        />
+        <span className="text-sm font-medium tracking-wide text-white/95">
+          D.E.C.T.A Polls <span className="text-white/45">|</span> Tenant Admin
         </span>
       </header>
 

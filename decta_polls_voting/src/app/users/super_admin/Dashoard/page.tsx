@@ -218,6 +218,7 @@ export default async function SuperAdminDashboardPage() {
               fontWeight: 600,
               lineHeight: 1.1,
               background: "linear-gradient(180deg, #F0F1F3 0%, #7761FF 100%)",
+              backgroundClip: "text",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               color: "transparent",
@@ -251,7 +252,7 @@ export default async function SuperAdminDashboardPage() {
               Dashboard
             </Link>
             <Link
-              href="#"
+              href="/users/super_admin/system-monitoring"
               className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white/75 transition hover:text-white"
               style={{
                 background: "linear-gradient(135deg, rgba(28,22,62,0.38), rgba(30,24,74,0.65))",
