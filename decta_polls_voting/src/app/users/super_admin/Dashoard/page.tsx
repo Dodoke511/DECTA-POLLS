@@ -210,7 +210,7 @@ export default async function SuperAdminDashboardPage() {
           border: "1px solid rgba(203,191,255,0.10)",
           boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
         }}>
-          <div className="mb-10 px-2">
+          <div className="mb-10 px-2 text-center">
             <p className="text-2xl font-bold tracking-tight text-[#9686f8]" style={{ textShadow: "0 0 24px rgba(93,68,248,0.35)" }}>
               WELCOME!
             </p>

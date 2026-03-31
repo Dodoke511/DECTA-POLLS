@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import GlobalConfiguration from "@/src/app/users/super_admin/system-configuration/globalconfig";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -67,15 +68,6 @@ function StatusBadge({ status }: { status: ActionStatus }) {
 }
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
-function IconDashboard() {
-  return <img src="/Dashboard.png" alt="Dashboard" width="22" height="22" />;
-}
-function IconTenants() {
-  return <img src="/Tenants.png" alt="Tenants" width="22" height="22" />;
-}
-function IconSettings() {
-  return <img src="/Settings.png" alt="Settings" width="22" height="22" />;
-}
 function IconSignOut() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -95,125 +87,75 @@ function IconUser() {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
-type SidebarItem = "Dashboard" | "Tenants" | "Settings";
-
-function Sidebar({ activeItem, setActiveItem }: { activeItem: SidebarItem; setActiveItem: React.Dispatch<React.SetStateAction<SidebarItem>>; }) {
-  const navItems: Array<{ label: SidebarItem; Icon: React.ComponentType }> = [
-    { label: "Dashboard", Icon: IconDashboard },
-    { label: "Tenants",   Icon: IconTenants   },
-    { label: "Settings",  Icon: IconSettings  },
-  ];
-
+function Sidebar() {
   return (
-    <aside style={{
-      width: 288,
-      minHeight: "calc(100vh - 92px)",
+    <aside className="flex w-full shrink-0 flex-col rounded-3xl border md:w-[260px] md:rounded-r-3xl md:rounded-l-none py-8 pl-5 pr-4" style={{
       background: "rgba(217,217,217,0.13)",
       backdropFilter: "blur(16px)",
       WebkitBackdropFilter: "blur(16px)",
-      borderRadius: "36px 0 0 36px",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      padding: "40px 16px 28px",
-      flexShrink: 0,
-      boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.07)",
+      border: "1px solid rgba(203,191,255,0.10)",
+      boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
     }}>
-      {/* WELCOME */}
-      <div style={{ textAlign: "center", marginBottom: 60 }}>
-        <p style={{
-          margin: 0,
-          fontFamily: "Montserrat, sans-serif",
-          fontSize: 32,
-          fontWeight: 600,
-          lineHeight: 1.1,
-          background: "linear-gradient(180deg, #F0F1F3 0%, #7761FF 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          color: "transparent",
-          display: "inline-block",
-          whiteSpace: "nowrap",
-        }}>
+      <div className="mb-10 px-2 text-center">
+        <p className="text-2xl font-bold tracking-tight text-[#9686f8]" style={{ textShadow: "0 0 24px rgba(93,68,248,0.35)" }}>
           WELCOME!
         </p>
-        <p style={{
-          color: "#F1F0F3",
-          fontSize: 13,
-          fontFamily: "'Source Sans Pro', sans-serif",
-          margin: "6px 0 0",
-          opacity: 0.8,
-        }}>
-          Super Admin
-        </p>
+        <p className="mt-1 text-sm text-white/55">Super Admin</p>
       </div>
 
-      {/* Nav Items */}
-      <nav style={{
-        display: "flex", flexDirection: "column",
-        gap: 10, width: "100%",
-      }}>
-        {navItems.map(({ label, Icon }) => {
-          const isActive = label === activeItem;
-          const baseColor = "rgba(28,22,62,0.38)";
-          const hoverColor = "rgba(255,255,255,0.08)";
-          return (
-            <button
-              key={label}
-              onClick={() => setActiveItem(label)}
-              style={{
-                width: "100%",
-                height: 64,
-                borderRadius: 20,
-                background: isActive
-                  ? `linear-gradient(135deg, ${baseColor}, rgba(107,63,245,0.20))`
-                  : `linear-gradient(135deg, ${baseColor}, rgba(30,24,74,0.65))`,
-                border: isActive ? "1px solid rgba(255,255,255,0.9)" : "1px solid rgba(255,255,255,0.18)",
-                color: "#F1F0F3",
-                fontFamily: "Montserrat, sans-serif",
-                fontSize: 16,
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                padding: "0 20px",
-                gap: 14,
-                transition: "all 0.25s ease",
-                boxShadow: isActive
-                  ? "-5px 5px 20px rgba(30,40,80,0.35), 0 0 0 1px rgba(255,255,255,0.2)"
-                  : "inset 0 0 0 1px rgba(255,255,255,0.12)",
-                backdropFilter: "blur(4px)",
-                WebkitBackdropFilter: "blur(4px)",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = isActive ? `linear-gradient(135deg, rgba(255,255,255,0.8), rgba(107,63,245,0.20))` : `linear-gradient(135deg, ${hoverColor}, rgba(30,24,74,0.80))`)}
-              onMouseLeave={(e) => (e.currentTarget.style.background = isActive ? `linear-gradient(135deg, ${baseColor}, rgba(107,63,245,0.20))` : `linear-gradient(135deg, ${baseColor}, rgba(30,24,74,0.65))`)}
-            >
-              <div style={{ width: 35, height: 35, display: "grid", placeItems: "center", background: "rgba(255,255,255,0.2)", borderRadius: 10 }}>
-                <Icon />
-              </div>
-              <span style={{ color: isActive ? "#ffffff" : "#F1F0F3" }}>{label}</span>
-            </button>
-          );
-        })}
+      <nav className="flex flex-1 flex-col gap-2.5" aria-label="Main">
+        <Link
+          href="/users/super_admin/Dashoard"
+          className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white/75 transition hover:text-white"
+          style={{
+            background: "linear-gradient(135deg, rgba(28,22,62,0.38), rgba(30,24,74,0.65))",
+            border: "1px solid rgba(255,255,255,0.18)",
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)"
+          }}
+        >
+          <img src="/Dashboard.png" alt="Dashboard" width="20" height="20" />
+          Dashboard
+        </Link>
+        <Link
+          href="#"
+          className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white/75 transition hover:text-white"
+          style={{
+            background: "linear-gradient(135deg, rgba(28,22,62,0.38), rgba(30,24,74,0.65))",
+            border: "1px solid rgba(255,255,255,0.18)",
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)"
+          }}
+        >
+          <img src="/Tenants.png" alt="Tenants" width="20" height="20" />
+          Tenants
+        </Link>
+        <Link
+          href="/users/super_admin/system-monitoring"
+          className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white transition"
+          style={{
+            background: "linear-gradient(135deg, rgba(28,22,62,0.38), rgba(107,63,245,0.20))",
+            border: "1px solid rgba(255,255,255,0.9)",
+            boxShadow: "-5px 5px 20px rgba(30,40,80,0.35), 0 0 0 1px rgba(255,255,255,0.2)"
+          }}
+        >
+          <img src="/Settings.png" alt="Settings" width="20" height="20" />
+          Settings
+        </Link>
       </nav>
 
-      {/* Sign Out */}
-      <button style={{
-        background: "none",
-        border: "none",
-        color: "#F1F0F3",
-        fontSize: 13,
-        fontFamily: "Montserrat, sans-serif",
-        fontWeight: 500,
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        marginTop: "auto",
-        paddingTop: 32,
-        opacity: 0.85,
-      }}>
-        <IconSignOut /> Sign Out
+      <button
+        type="button"
+        className="mt-6 flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium text-white/65 transition"
+        style={{
+          background: "rgba(255, 100, 100, 0.08)",
+          border: "1px solid rgba(255,100,100,0.2)"
+        }}
+      >
+        <IconSignOut />
+        Sign Out
       </button>
     </aside>
   );
@@ -222,17 +164,7 @@ function Sidebar({ activeItem, setActiveItem }: { activeItem: SidebarItem; setAc
 // ─── Topbar ───────────────────────────────────────────────────────────────────
 function Topbar() {
   return (
-    <header style={{
-      height: 56,
-      width: "100%",
-      background: "linear-gradient(90deg, #160C38 0%, #1b1050 50%, rgba(120,100,240,0.90) 100%)",
-      display: "flex",
-      alignItems: "center",
-      padding: "0 24px",
-      gap: 12,
-      position: "fixed",
-      top: 0, left: 0, zIndex: 100,
-    }}>
+    <header className="flex items-center gap-3 border-b border-white/[0.06] px-6 py-3.5 backdrop-blur-md" style={{ background: "linear-gradient(90deg, #160C38 0%, #1b1050 50%, rgba(120,100,240,0.90) 100%)" }}>
       <img src="/DECTA LOGO.png" alt="DECTA Logo" width="36" height="36" style={{ borderRadius: "50%", border: "1px solid rgba(255,255,255,0.2)" }} />
       <span style={{
         color: "#F1F0F3",
@@ -315,7 +247,6 @@ function SearchAudit({ value, onChange }: { value: string; onChange: (v: string)
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SystemMonitoring() {
-  const [activeItem, setActiveItem] = useState<"Dashboard" | "Tenants" | "Settings">("Dashboard");
   const [activeTab, setActiveTab] = useState<"monitoring" | "config">("monitoring");
   const [search, setSearch] = useState("");
 
@@ -330,26 +261,24 @@ export default function SystemMonitoring() {
   return (
     <div style={{
       minHeight: "100vh",
-      // Deep purple gradient matching Figma
       background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)",
       fontFamily: "Montserrat, sans-serif",
     }}>
-      <Topbar />
+      <header className="flex items-center gap-3 border-b border-white/[0.06] px-6 py-3.5 backdrop-blur-md" style={{ background: "linear-gradient(90deg, #160C38 0%, #1b1050 50%, rgba(120,100,240,0.90) 100%)" }}>
+        <img src="/DECTA LOGO.png" alt="DECTA Logo" width="36" height="36" style={{ borderRadius: "50%", border: "1px solid rgba(255,255,255,0.2)" }} />
+        <span style={{
+          color: "#F1F0F3",
+          fontSize: 14,
+          fontFamily: "Montserrat, sans-serif",
+          fontWeight: 500,
+        }}>
+          D.E.C.T.A Polls | Tenant Admin
+        </span>
+      </header>
 
-      {/* Body */}
-      <div style={{
-        display: "flex",
-        paddingTop: 56,
-        minHeight: "100vh",
-        padding: "72px 20px 20px 20px",
-        boxSizing: "border-box",
-      }}>
-        {/* Sidebar */}
-        <div style={{ paddingTop: 16, paddingBottom: 16 }}>
-          <Sidebar activeItem={activeItem} setActiveItem={setActiveItem} />
-        </div>
+      <div className="flex min-h-[calc(100vh-53px)] flex-col gap-4 p-4 md:flex-row md:p-6">
+        <Sidebar />
 
-        {/* Main panel */}
         <main style={{
           flex: 1,
           background: "rgba(217,217,217,0.12)",
@@ -357,8 +286,8 @@ export default function SystemMonitoring() {
           WebkitBackdropFilter: "blur(10px)",
           borderRadius: "0 36px 36px 0",
           padding: "28px 32px 36px",
-          marginTop: 16,
-          marginBottom: 16,
+          marginTop: 0,
+          marginBottom: 0,
           boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)",
           display: "flex",
           flexDirection: "column",
