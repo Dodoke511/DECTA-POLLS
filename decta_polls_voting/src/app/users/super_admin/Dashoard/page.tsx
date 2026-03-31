@@ -211,10 +211,30 @@ export default async function SuperAdminDashboardPage() {
           boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
         }}>
           <div className="mb-10 px-2 text-center">
-            <p className="text-2xl font-bold tracking-tight text-[#9686f8]" style={{ textShadow: "0 0 24px rgba(93,68,248,0.35)" }}>
+            <p style={{
+              margin: 0,
+              fontFamily: "Montserrat, sans-serif",
+              fontSize: 32,
+              fontWeight: 600,
+              lineHeight: 1.1,
+              background: "linear-gradient(180deg, #F0F1F3 0%, #7761FF 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              color: "transparent",
+              display: "inline-block",
+              whiteSpace: "nowrap",
+            }}>
               WELCOME!
             </p>
-            <p className="mt-1 text-sm text-white/55">Super Admin</p>
+            <p style={{
+              color: "#F1F0F3",
+              fontSize: 13,
+              fontFamily: "'Source Sans Pro', sans-serif",
+              margin: "6px 0 0",
+              opacity: 0.8,
+            }}>
+              Super Admin
+            </p>
           </div>
 
           <nav className="flex flex-1 flex-col gap-2.5" aria-label="Main">
