@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function Home() {
-  redirect("/users/super_admin");
+  redirect("/users/super_admin/Dashoard");
 }

@@ -1,36 +1,111 @@
 import Link from "next/link";
 import { BallotCastAsOfLine } from "./ballot-cast-as-of";
+import { supabaseAdmin } from "@/src/lib/supabaseAdmin";
+import {
+  VerificationDownloadAction,
+  VerificationEmailAction,
+} from "./verification-actions";
 
-const leadingTenants = [
-  {
-    organization: "CEBU INSTITUTE TECHNOLOGY",
-    email: "cit-university@mail.com",
-    type: "University",
-    verification: "Approved",
-    subscription: "Enterprise",
-  },
-  {
-    organization: "MANILA POLYTECHNIC COLLEGE",
-    email: "mpc-admin@mail.com",
-    type: "College",
-    verification: "Approved",
-    subscription: "Enterprise",
-  },
-  {
-    organization: "DAVAO STATE ACADEMY",
-    email: "dsa-registrar@mail.com",
-    type: "Academy",
-    verification: "Approved",
-    subscription: "Enterprise",
-  },
-  {
-    organization: "QUEZON LEARNING HUB",
-    email: "qlh-contact@mail.com",
-    type: "Organization",
-    verification: "Approved",
-    subscription: "Enterprise",
-  },
-];
+type TenantRow = {
+  id: string;
+  organization: string;
+  email: string;
+  type: string;
+  isVerified: boolean;
+  verification: string;
+  verificationUrl: string | null;
+  verificationFileName: string | null;
+  subscription: string;
+};
+
+function isHttpUrl(value: string): boolean {
+  return value.startsWith("http://") || value.startsWith("https://");
+}
+
+function getValueAsString(
+  value: unknown,
+  fallback: string,
+): string {
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+  return fallback;
+}
+
+function sanitizeStoragePath(path: string): string {
+  return path.replace(/^\/+/, "");
+}
+
+function extractTenantVerificationPath(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (isHttpUrl(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      const marker = "/tenant_verifications/";
+      const markerIndex = parsed.pathname.indexOf(marker);
+      if (markerIndex >= 0) {
+        const filePart = parsed.pathname.slice(markerIndex + marker.length);
+        return filePart ? decodeURIComponent(sanitizeStoragePath(filePart)) : null;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  if (trimmed.startsWith("tenant_verifications/")) {
+    return sanitizeStoragePath(trimmed.slice("tenant_verifications/".length));
+  }
+
+  return sanitizeStoragePath(trimmed);
+}
+
+function toFileName(path: string | null): string | null {
+  if (!path) return null;
+  const parts = path.split("/");
+  return parts[parts.length - 1] ?? null;
+}
+
+async function toTenantRow(record: Record<string, unknown>, index: number): Promise<TenantRow> {
+  const verified =
+    typeof record.is_verified === "boolean"
+      ? record.is_verified
+      : record.verified;
+  const verificationFromFlag =
+    typeof verified === "boolean" ? (verified ? "Approved" : "Pending") : undefined;
+  const verificationValue = getValueAsString(
+    record.verification ?? verificationFromFlag,
+    "Pending",
+  );
+  const verificationPath = extractTenantVerificationPath(verificationValue);
+  const verificationFileName = toFileName(verificationPath);
+
+  let verificationUrl: string | null = null;
+  if (verificationPath) {
+    const { data } = await supabaseAdmin
+      .storage
+      .from("tenant_verifications")
+      .createSignedUrl(verificationPath, 60 * 60);
+    verificationUrl = data?.signedUrl ?? null;
+  }
+
+  return {
+    id: getValueAsString(record.id, `tenant-${index}`),
+    organization: getValueAsString(
+      record.organization ?? record.organization_name,
+      "Unknown Organization",
+    ),
+    email: getValueAsString(record.email, "No Email"),
+    type: getValueAsString(record.type, "N/A"),
+    isVerified: typeof verified === "boolean" ? verified : false,
+    verification: verificationValue,
+    verificationUrl,
+    verificationFileName,
+    subscription: getValueAsString(record.subscription, "Standard"),
+  };
+}
 
 function IconDashboard({ className }: { className?: string }) {
   return (
@@ -102,7 +177,19 @@ function LogoMark() {
   );
 }
 
-export default function SuperAdminDashboardPage() {
+export default async function SuperAdminDashboardPage() {
+  const { data, error } = await supabaseAdmin
+    .from("tenants")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const leadingTenants: TenantRow[] = !error && Array.isArray(data)
+    ? await Promise.all(
+      data.map((row, index) => toTenantRow(row as Record<string, unknown>, index)),
+    )
+    : [];
+
   return (
     <div className="min-h-screen bg-[#231638] bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(150,134,248,0.22),transparent_50%),radial-gradient(ellipse_80%_50%_at_100%_50%,rgba(93,68,248,0.12),transparent_55%),radial-gradient(ellipse_60%_40%_at_0%_80%,rgba(93,68,248,0.08),transparent_50%)] text-[#f1f0f3]">
       <header className="flex items-center gap-3 border-b border-white/[0.06] bg-[#231638]/90 px-6 py-3.5 backdrop-blur-md">
@@ -123,7 +210,7 @@ export default function SuperAdminDashboardPage() {
 
           <nav className="flex flex-1 flex-col gap-2.5" aria-label="Main">
             <Link
-              href="/users/super_admin"
+              href="/users/super_admin/Dashoard"
               className="flex items-center gap-3 rounded-2xl border border-[#5d44f8]/45 bg-[rgba(93,68,248,0.12)] px-4 py-3.5 text-sm font-medium text-white shadow-[0_0_28px_rgba(93,68,248,0.2)] transition hover:bg-[rgba(93,68,248,0.18)]"
             >
               <IconDashboard className="h-5 w-5 text-[#f1f0f3]" />
@@ -240,28 +327,54 @@ export default function SuperAdminDashboardPage() {
                     <th className="px-5 py-4">Organization name</th>
                     <th className="px-5 py-4">Email</th>
                     <th className="px-5 py-4">Type</th>
-                    <th className="px-5 py-4">Verification</th>
+                    <th className="px-5 py-4 text-center">Verification</th>
                     <th className="px-5 py-4">Subscription</th>
+                    <th className="px-5 py-4 text-center" aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
                   {leadingTenants.map((row) => (
-                    <tr key={row.email} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02]">
+                    <tr key={row.id} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02]">
                       <td className="px-5 py-4 font-medium text-white/85">{row.organization}</td>
                       <td className="px-5 py-4 text-white/55">{row.email}</td>
                       <td className="px-5 py-4 text-white/60">{row.type}</td>
-                      <td className="px-5 py-4">
-                        <span className="inline-flex rounded-full border border-[#2ecc71]/35 bg-[#2ecc71]/15 px-3 py-1 text-xs font-medium text-[#6ee7a0]">
-                          {row.verification}
-                        </span>
+                      <td className="px-5 py-4 text-center">
+                        {row.verificationUrl ? (
+                          <VerificationDownloadAction
+                            verificationUrl={row.verificationUrl}
+                            verificationFileName={row.verificationFileName}
+                          />
+                        ) : (
+                          <span className="inline-flex rounded-full border border-[#2ecc71]/35 bg-[#2ecc71]/15 px-3 py-1 text-xs font-medium text-[#6ee7a0]">
+                            {row.verification}
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-4">
                         <span className="inline-flex rounded-full border border-[#2ecc71]/35 bg-[#2ecc71]/12 px-3 py-1 text-xs font-medium text-[#6ee7a0]">
                           {row.subscription}
                         </span>
                       </td>
+                      <td className="px-5 py-4 text-center">
+                        <VerificationEmailAction
+                          tenantId={row.id}
+                          tenantEmail={row.email}
+                          tenantOrganization={row.organization}
+                          verificationUrl={row.verificationUrl}
+                          isVerified={row.isVerified}
+                        />
+                      </td>
                     </tr>
                   ))}
+                  {leadingTenants.length === 0 && (
+                    <tr>
+                      <td className="px-5 py-6 text-white/60" colSpan={6}>
+                        {error
+                          ? "Unable to load tenants from database."
+                          : "No tenants found."}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
