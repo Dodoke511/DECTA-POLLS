@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { IoCheckmark, IoClose } from "react-icons/io5";
-import GradientText from '../../mainlanding/ui/GradientText';
+import GradientText from '../mainlanding/ui/GradientText';
 
 interface Plan {
   name: string;
@@ -39,9 +39,9 @@ const plans: Plan[] = [
 // Mock QR Code Base64
 const MOCK_QR_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWAQMAAAAGzYrqAAAABlBMVEX///8AAABVwtN+AAAAAXRSTlMAQObYZgAAADdJREFUeF7twTEOACAMw7Bw+P9f86YpEkM62YpI7H0pSkYpKSV/V0pGKSklpZSUklJKSikppb6H6wU82UAnvAAAAABJRU5ErkJggg==";
 
-const PlanCard: React.FC<{ 
-  plan: Plan; 
-  isSelected: boolean; 
+const PlanCard: React.FC<{
+  plan: Plan;
+  isSelected: boolean;
   onSelect: (name: string) => void;
   onShowQR: (planName: string, price: string) => void;
 }> = ({
@@ -50,75 +50,72 @@ const PlanCard: React.FC<{
   onSelect,
   onShowQR
 }) => {
-  return (
-    <div
-      className={`group relative transition-all duration-300 ease-in-out cursor-pointer w-full max-w-[320px] p-8 min-h-[400px] flex flex-col rounded-3xl ${
-        isSelected 
-          ? 'border-2 border-[#5D44F8] shadow-[0_0_40px_rgba(93,68,248,0.8),0_0_80px_rgba(93,68,248,0.4),inset_0_1px_0_rgba(255,255,255,0.6)] transform scale-105 bg-white/10 backdrop-blur-xl' 
-          : 'border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.4)] hover:border-[#5D44F8]/60 hover:shadow-[0_0_25px_rgba(93,68,248,0.5),0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.5)] hover:transform hover:scale-102 bg-white/5 backdrop-blur-lg'
-      }`}
-      style={{
-        backdropFilter: isSelected ? 'blur(20px)' : 'blur(12px)',
-        WebkitBackdropFilter: isSelected ? 'blur(20px)' : 'blur(12px)',
-        background: isSelected 
-          ? 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%), rgba(93,68,248,0.1)' 
-          : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 100%)',
-        boxShadow: isSelected
-          ? '0 0 40px rgba(93,68,248,0.8), 0 0 80px rgba(93,68,248,0.4), inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1px 0 rgba(255,255,255,0.1), inset 0 0 8px 4px rgba(255,255,255,0.15)'
-          : '0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(255,255,255,0.1), inset 0 0 4px 2px rgba(255,255,255,0.1)'
-      }}
-      onClick={() => onSelect(plan.name)}
-    >
-      {/* Glass reflection effect */}
-      <div 
-        className="absolute inset-0 rounded-3xl pointer-events-none"
+    return (
+      <div
+        className={`group relative transition-all duration-300 ease-in-out cursor-pointer w-full max-w-[320px] p-8 min-h-[400px] flex flex-col rounded-3xl ${isSelected
+            ? 'border-2 border-[#5D44F8] shadow-[0_0_40px_rgba(93,68,248,0.8),0_0_80px_rgba(93,68,248,0.4),inset_0_1px_0_rgba(255,255,255,0.6)] transform scale-105 bg-white/10 backdrop-blur-xl'
+            : 'border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.4)] hover:border-[#5D44F8]/60 hover:shadow-[0_0_25px_rgba(93,68,248,0.5),0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.5)] hover:transform hover:scale-102 bg-white/5 backdrop-blur-lg'
+          }`}
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
-          opacity: isSelected ? 0.8 : 0.5
+          backdropFilter: isSelected ? 'blur(20px)' : 'blur(12px)',
+          WebkitBackdropFilter: isSelected ? 'blur(20px)' : 'blur(12px)',
+          background: isSelected
+            ? 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%), rgba(93,68,248,0.1)'
+            : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 100%)',
+          boxShadow: isSelected
+            ? '0 0 40px rgba(93,68,248,0.8), 0 0 80px rgba(93,68,248,0.4), inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1px 0 rgba(255,255,255,0.1), inset 0 0 8px 4px rgba(255,255,255,0.15)'
+            : '0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(255,255,255,0.1), inset 0 0 4px 2px rgba(255,255,255,0.1)'
         }}
-      />
-      
-      <h3 className="relative z-10 text-2xl text-center mb-6 font-montserrat font-bold">
-        <GradientText 
-          colors={["#5227FF", "#FF9FFC", "#B19EEF"]} 
-          animationSpeed={8}
-        >
-          {plan.name}
-        </GradientText>
-      </h3>
+        onClick={() => onSelect(plan.name)}
+      >
+        {/* Glass reflection effect */}
+        <div
+          className="absolute inset-0 rounded-3xl pointer-events-none"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
+            opacity: isSelected ? 0.8 : 0.5
+          }}
+        />
 
-      <div className="relative z-10 flex-1">
-        {plan.features.map((feature, index) => {
-          const isPrice = feature.includes('Monthly Price');
-          return (
-            <div
-              key={index}
-              className={`flex items-center mb-6 text-base font-source-sans transition-all duration-200 ${
-                isPrice 
-                  ? 'text-[#9686F8] font-bold underline underline-offset-4 decoration-dotted hover:text-white cursor-help drop-shadow-sm' 
-                  : 'text-white/95 font-medium drop-shadow-sm'
-              }`}
-              onClick={(e) => {
-                if (isPrice) {
-                  e.stopPropagation();
-                  onShowQR(plan.name, feature.split(': ')[1]);
-                }
-              }}
-            >
-              <IoCheckmark 
-                size={20} 
-                className={`mr-3 flex-shrink-0 transition-colors duration-200 ${
-                  isSelected ? 'text-[#5D44F8] drop-shadow-sm' : 'text-white/70'
-                }`} 
-              />
-              <span>{feature}</span>
-            </div>
-          );
-        })}
+        <h3 className="relative z-10 text-2xl text-center mb-6 font-montserrat font-bold">
+          <GradientText
+            colors={["#5227FF", "#FF9FFC", "#B19EEF"]}
+            animationSpeed={8}
+          >
+            {plan.name}
+          </GradientText>
+        </h3>
+
+        <div className="relative z-10 flex-1">
+          {plan.features.map((feature, index) => {
+            const isPrice = feature.includes('Monthly Price');
+            return (
+              <div
+                key={index}
+                className={`flex items-center mb-6 text-base font-source-sans transition-all duration-200 ${isPrice
+                    ? 'text-[#9686F8] font-bold underline underline-offset-4 decoration-dotted hover:text-white cursor-help drop-shadow-sm'
+                    : 'text-white/95 font-medium drop-shadow-sm'
+                  }`}
+                onClick={(e) => {
+                  if (isPrice) {
+                    e.stopPropagation();
+                    onShowQR(plan.name, feature.split(': ')[1]);
+                  }
+                }}
+              >
+                <IoCheckmark
+                  size={20}
+                  className={`mr-3 flex-shrink-0 transition-colors duration-200 ${isSelected ? 'text-[#5D44F8] drop-shadow-sm' : 'text-white/70'
+                    }`}
+                />
+                <span>{feature}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 export default function PlanSubscription({ onContinue, onBack }: { onContinue: (plan: string) => void; onBack?: () => void }) {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -139,15 +136,15 @@ export default function PlanSubscription({ onContinue, onBack }: { onContinue: (
     >
       {/* Global QR Modal Panel */}
       {qrModal.show && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
           onClick={() => setQrModal({ ...qrModal, show: false })}
         >
-        <div 
-          className="glass-card relative w-full max-w-md p-10 rounded-[40px] text-center animate-in zoom-in-95 duration-300"
-          onClick={(e) => e.stopPropagation()}
-        >
-            <button 
+          <div
+            className="glass-card relative w-full max-w-md p-10 rounded-[40px] text-center animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
               className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors"
               onClick={() => setQrModal({ ...qrModal, show: false })}
             >
@@ -156,7 +153,7 @@ export default function PlanSubscription({ onContinue, onBack }: { onContinue: (
 
             <h3 className="text-2xl text-white font-semibold mb-2 font-montserrat">Scan to Subscribe</h3>
             <p className="text-[#9686F8] font-medium text-lg mb-8 font-source-sans">{qrModal.plan} Plan — {qrModal.price}</p>
-            
+
             <div className="inline-block bg-white p-5 rounded-3xl shadow-[0_0_30px_rgba(93,68,248,0.4)]">
               <img src={MOCK_QR_BASE64} alt="QR Code" style={{ width: '200px', height: '200px' }} />
             </div>
@@ -204,7 +201,7 @@ export default function PlanSubscription({ onContinue, onBack }: { onContinue: (
             <PlanCard
               key={plan.name}
               plan={plan}
-              isSelected={selectedPlan === plan.name} 
+              isSelected={selectedPlan === plan.name}
               onSelect={setSelectedPlan}
               onShowQR={(name, price) => setQrModal({ show: true, plan: name, price: price })}
             />
@@ -215,9 +212,8 @@ export default function PlanSubscription({ onContinue, onBack }: { onContinue: (
         <button
           disabled={!selectedPlan}
           onClick={() => selectedPlan && onContinue(selectedPlan)}
-          className={`inline-flex items-center justify-center px-8 py-0 h-12 rounded-xl font-montserrat text-white text-xl font-semibold cursor-pointer transition-all duration-300 leading-tight ${
-            selectedPlan 
-              ? 'hover:bg-[#4c35d1] hover:shadow-[0_0_40px_rgba(93,68,248,0.4)] transform hover:-translate-y-1' 
+          className={`inline-flex items-center justify-center px-8 py-0 h-12 rounded-xl font-montserrat text-white text-xl font-semibold cursor-pointer transition-all duration-300 leading-tight ${selectedPlan
+              ? 'hover:bg-[#4c35d1] hover:shadow-[0_0_40px_rgba(93,68,248,0.4)] transform hover:-translate-y-1'
               : 'cursor-not-allowed'
             }`}
           style={{

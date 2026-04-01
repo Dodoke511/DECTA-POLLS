@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
-import GlobalConfiguration from "@/src/app/users/super_admin/system-configuration/globalconfig";
+import { SuperAdminHeader } from "@/components/super_admin/Header";
+import { SuperAdminSidebar } from "@/components/super_admin/Sidebar";
+import GlobalConfiguration from "@/app/users/super_admin/system-configuration/globalconfig";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ActionStatus = "Success" | "Warning" | "Error";
@@ -86,102 +87,7 @@ function IconUser() {
   );
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
-function Sidebar() {
-  return (
-    <aside className="flex w-full shrink-0 flex-col rounded-3xl border md:w-[260px] md:rounded-r-3xl md:rounded-l-none py-8 pl-5 pr-4" style={{
-      background: "rgba(217,217,217,0.13)",
-      backdropFilter: "blur(16px)",
-      WebkitBackdropFilter: "blur(16px)",
-      border: "1px solid rgba(203,191,255,0.10)",
-      boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)"
-    }}>
-      <div className="mb-10 px-2 text-center">
-        {/* ── Gradient WELCOME copied from page.tsx ── */}
-        <p style={{
-          margin: 0,
-          fontFamily: "Montserrat, sans-serif",
-          fontSize: 32,
-          fontWeight: 600,
-          lineHeight: 1.1,
-          background: "linear-gradient(180deg, #F0F1F3 0%, #7761FF 100%)",
-          backgroundClip: "text",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          color: "transparent",
-          display: "inline-block",
-          whiteSpace: "nowrap",
-        }}>
-          WELCOME!
-        </p>
-        <p style={{
-          color: "#F1F0F3",
-          fontSize: 13,
-          fontFamily: "'Source Sans Pro', sans-serif",
-          margin: "6px 0 0",
-          opacity: 0.8,
-        }}>
-          Super Admin
-        </p>
-      </div>
-
-      <nav className="flex flex-1 flex-col gap-2.5" aria-label="Main">
-        <Link
-          href="/users/super_admin/Dashoard"
-          className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white/75 transition hover:text-white"
-          style={{
-            background: "linear-gradient(135deg, rgba(28,22,62,0.38), rgba(30,24,74,0.65))",
-            border: "1px solid rgba(255,255,255,0.18)",
-            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
-            backdropFilter: "blur(4px)",
-            WebkitBackdropFilter: "blur(4px)"
-          }}
-        >
-          <img src="/Dashboard.png" alt="Dashboard" width="20" height="20" />
-          Dashboard
-        </Link>
-        <Link
-          href="#"
-          className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white/75 transition hover:text-white"
-          style={{
-            background: "linear-gradient(135deg, rgba(28,22,62,0.38), rgba(30,24,74,0.65))",
-            border: "1px solid rgba(255,255,255,0.18)",
-            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
-            backdropFilter: "blur(4px)",
-            WebkitBackdropFilter: "blur(4px)"
-          }}
-        >
-          <img src="/Tenants.png" alt="Tenants" width="20" height="20" />
-          Tenants
-        </Link>
-        <Link
-          href="/users/super_admin/system-monitoring"
-          className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white transition"
-          style={{
-            background: "linear-gradient(135deg, rgba(28,22,62,0.38), rgba(107,63,245,0.20))",
-            border: "1px solid rgba(255,255,255,0.9)",
-            boxShadow: "-5px 5px 20px rgba(30,40,80,0.35), 0 0 0 1px rgba(255,255,255,0.2)"
-          }}
-        >
-          <img src="/Settings.png" alt="Settings" width="20" height="20" />
-          Settings
-        </Link>
-      </nav>
-
-      <button
-        type="button"
-        className="mt-6 flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium text-white/65 transition"
-        style={{
-          background: "rgba(255, 100, 100, 0.08)",
-          border: "1px solid rgba(255,100,100,0.2)"
-        }}
-      >
-        <IconSignOut />
-        Sign Out
-      </button>
-    </aside>
-  );
-}
+// Sidebar removed - using shared component
 
 // ─── Tab Button ───────────────────────────────────────────────────────────────
 function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -264,49 +170,34 @@ export default function SystemMonitoring() {
   );
 
   return (
-    <div style={{
-      minHeight: "100vh",
+    <div className="flex flex-col h-screen overflow-hidden text-[#f1f0f3]" style={{
       background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)",
-      fontFamily: "Montserrat, sans-serif",
     }}>
-      {/* ── Header copied from page.tsx ── */}
-      <header className="flex items-center gap-3 border-b border-white/[0.06] px-6 py-3.5 backdrop-blur-md" style={{ background: "linear-gradient(90deg, #160C38 0%, #1b1050 50%, rgba(120,100,240,0.90) 100%)" }}>
-        <img
-          src="/decta-logo.png"
-          alt="D.E.C.T.A Polls"
-          className="h-9 w-9 shrink-0 rounded-full object-contain"
-          style={{ boxShadow: "0 0 20px rgba(93,68,248,0.25)" }}
-        />
-        <span className="text-sm font-medium tracking-wide text-white/95">
-          D.E.C.T.A Polls <span className="text-white/45">|</span> Tenant Admin
-        </span>
-      </header>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
+      <SuperAdminHeader />
 
-      <div className="flex min-h-[calc(100vh-53px)] flex-col gap-4 p-4 md:flex-row md:p-6">
-        <Sidebar />
+      <div className="flex flex-1 overflow-hidden flex-col gap-4 p-4 md:flex-row md:p-6">
+        <SuperAdminSidebar activePath="/users/super_admin/system-monitoring" />
 
-        <main style={{
-          flex: 1,
+        <main className="min-w-0 flex-1 rounded-[28px] border shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm overflow-y-auto no-scrollbar h-full" style={{
           background: "rgba(217,217,217,0.12)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
-          borderRadius: "36px",
-          padding: "28px 32px 36px",
-          marginTop: 0,
-          marginBottom: 0,
+          border: "1px solid rgba(203,191,255,0.10)",
           boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)",
+          padding: "28px 32px 36px",
           display: "flex",
           flexDirection: "column",
         }}>
 
           {/* Page Title */}
-          <h1 style={{
+          <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{
             color: "#D0C8FF",
-            fontSize: 42,
-            fontWeight: 600,
-            fontFamily: "Montserrat, sans-serif",
             textShadow: "2px 2px 20px rgba(208,200,255,0.45)",
-            margin: "0 0 24px",
           }}>
             {pageTitle}
           </h1>
@@ -329,102 +220,50 @@ export default function SystemMonitoring() {
 
           {/* Main Content */}
           {activeTab === "monitoring" ? (
-            <div style={{
-              background: "rgba(217,217,217,0.09)",
-              borderRadius: 18,
-              overflow: "hidden",
-              border: "1px solid rgba(203,191,255,0.10)",
-            }}>
-              {/* Column Headers */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "210px 1fr 170px 130px",
-                padding: "18px 28px 14px",
-                alignItems: "center",
-              }}>
-              {["TIMESTAMP", "TENANT", "ACTION", "ACTION STATUS"].map((h) => (
-                <span key={h} style={{
-                  color: "#F1F0F3",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  fontFamily: "Montserrat, sans-serif",
-                  letterSpacing: "0.04em",
-                }}>
-                  {h}
-                </span>
-              ))}
-            </div>
+            <div className="w-full rounded-[22px] border border-white/[0.10] bg-white/[0.09] shadow-[5px_5px_10px_2px_rgba(255,255,255,0.06)] overflow-hidden">
+              {/* Table Wrapper */}
+              <div className="w-full">
+                <table className="w-full border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                      <th className="px-6 py-4">TIMESTAMP</th>
+                      <th className="px-6 py-4">TENANT</th>
+                      <th className="px-6 py-4">ACTION</th>
+                      <th className="px-6 py-4">ACTION STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
 
-            {/* Divider */}
-            <div style={{
-              height: 1,
-              background: "rgba(203,191,255,0.55)",
-              margin: "0 24px",
-            }} />
-
-            {/* Data Rows */}
-            {filtered.length === 0 ? (
-              <div style={{
-                padding: 48,
-                textAlign: "center",
-                color: "rgba(241,240,243,0.4)",
-                fontSize: 14,
-              }}>
-                No results found.
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-24 py-16 text-center text-white/40">
+                          No results found.
+                        </td>
+                      </tr>
+                    ) : (
+                      filtered.map((log) => (
+                        <tr
+                          key={log.id}
+                          className="border-b border-white/[0.07] last:border-0 hover:bg-white/[0.02] transition-colors"
+                        >
+                          <td className="px-6 py-4 font-mono text-white/80">{log.timestamp}</td>
+                          <td className="px-6 py-4 font-medium text-white/90">{log.tenant}</td>
+                          <td className="px-6 py-4 text-white/60">{log.action}</td>
+                          <td className="px-6 py-4">
+                            <StatusBadge status={log.status} />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              filtered.map((log) => (
-                <div
-                  key={log.id}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "210px 1fr 170px 130px",
-                    padding: "14px 28px",
-                    alignItems: "center",
-                    borderBottom: "1px solid rgba(203,191,255,0.07)",
-                  }}
-                >
-                  {/* Timestamp */}
-                  <span style={{
-                    color: "#F1F0F3",
-                    fontSize: 16,
-                    fontFamily: "'Source Sans Pro', sans-serif",
-                    fontWeight: 400,
-                  }}>
-                    {log.timestamp}
-                  </span>
-
-                  {/* Tenant */}
-                  <span style={{
-                    color: "#F1F0F3",
-                    fontSize: 16,
-                    fontFamily: "'Source Sans Pro', sans-serif",
-                    fontWeight: 400,
-                  }}>
-                    {log.tenant}
-                  </span>
-
-                  {/* Action */}
-                  <span style={{
-                    color: "#F1F0F3",
-                    fontSize: 13,
-                    fontFamily: "Montserrat, sans-serif",
-                    fontWeight: 500,
-                  }}>
-                    {log.action}
-                  </span>
-
-                  {/* Status */}
-                  <div>
-                    <StatusBadge status={log.status} />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        ) : (
-          <GlobalConfiguration />
-        )}
+            </div>
+          ) : (
+            <div className="flex-1">
+              <GlobalConfiguration />
+            </div>
+          )}
         </main>
       </div>
     </div>

@@ -61,7 +61,7 @@ export default function LogInPage() {
             });
 
             if (superAdminRes.ok) {
-                router.push('/users/super_admin');
+                router.push('/users/super_admin/Dashboard');
                 return;
             }
 

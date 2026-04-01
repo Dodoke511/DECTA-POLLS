@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import PlanSubscription from "../../../components/auth/registration/PlanSubscription";
-import RegisterOrganization from "../../../components/auth/registration/RegisterOrganization";
-import RegisterAdmin from "../../../components/auth/registration/RegisterAdmin";
+import PlanSubscription from "../../../components/registration/PlanSubscription";
+import RegisterOrganization from "../../../components/registration/RegisterOrganization";
+import RegisterAdmin from "../../../components/registration/RegisterAdmin";
 
 
 export default function Home() {

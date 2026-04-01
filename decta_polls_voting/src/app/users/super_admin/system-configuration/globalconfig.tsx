@@ -2,340 +2,156 @@
 
 export default function GlobalConfiguration() {
   return (
-    <div style={{
-      width: "100%",
-      minHeight: "100%",
-      background: "transparent",
-      overflowY: "auto",
-      padding: 0,
-      boxSizing: "border-box",
-      color: "#F1F0F3",
-      display: "flex",
-      flexDirection: "column",
-      gap: "28px",
-    }}>
+    <div className="flex w-full flex-col gap-7 text-[#F1F0F3]">
       {/* Security Settings */}
-      <div style={{
-        width: "100%",
-        minHeight: "320px",
-        background: "rgba(217,217,217,0.09)",
-        border: "1px solid rgba(203,191,255,0.10)",
-        borderRadius: 18,
-        overflow: "hidden",
-        boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)",
-      }}>
-          <div style={{ padding: "32px 34px" }}>
-            <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 700, fontFamily: "Montserrat, sans-serif", color: "#e5e7eb", marginBottom: "14px" }}>Security Settings</h2>
-            <div style={{ height: "1px", background: "rgba(167, 139, 250, 0.45)", marginBottom: "20px" }} />
+      <section className="rounded-[22px] border border-white/[0.10] bg-white/[0.09] shadow-[5px_5px_10px_2px_rgba(255,255,255,0.06)] overflow-hidden">
+          <div className="p-8 md:p-9">
+            <h2 className="mb-4 text-xl font-bold tracking-tight text-white/90">Security Settings</h2>
+            <div className="mb-6 h-px bg-white/[0.10]" />
 
-            {/* Row 1 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+            {/* Form Content */}
+            <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Minimum Password Length</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Minimum Password Length</label>
                 <input
                   type="text"
                   defaultValue="12"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Session Timeout (minutes)</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Session Timeout (minutes)</label>
                 <input
                   type="text"
                   defaultValue="10 minutes"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
-            </div>
 
-            {/* Row 2 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <input type="checkbox" defaultChecked style={{ width: "20px", height: "20px", cursor: "pointer" }} />
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#e5e7eb" }}>Enable Password Expiry</label>
+              <div className="flex items-center gap-3">
+                <input type="checkbox" defaultChecked className="h-5 w-5 cursor-pointer rounded border-white/[0.2] bg-white/[0.05] accent-[#6B3FF5]" />
+                <label className="text-sm font-semibold text-white/70">Enable Password Expiry</label>
               </div>
+
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Max Login Attempts</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Max Login Attempts</label>
                 <input
                   type="text"
                   defaultValue="5"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
-            </div>
 
-            {/* Row 3 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginTop: "24px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Action Lockout Duration (hours)</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Action Lockout Duration (hours)</label>
                 <input
                   type="text"
                   defaultValue="1"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
-              <div />
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Data Retention & Backup */}
-        <div style={{
-          width: "100%",
-          minHeight: "320px",
-          background: "rgba(217,217,217,0.09)",
-          border: "1px solid rgba(203,191,255,0.10)",
-          borderRadius: 18,
-          overflow: "hidden",
-          boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)",
-        }}>
-          <div style={{ padding: "32px 34px" }}>
-            <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 700, fontFamily: "Montserrat, sans-serif", color: "#e5e7eb", marginBottom: "14px" }}>Data Retention & Backup</h2>
-            <div style={{ height: "1px", background: "rgba(167, 139, 250, 0.45)", marginBottom: "20px" }} />
+        <section className="rounded-[22px] border border-white/[0.10] bg-white/[0.09] shadow-[5px_5px_10px_2px_rgba(255,255,255,0.06)] overflow-hidden">
+          <div className="p-8 md:p-9">
+            <h2 className="mb-4 text-xl font-bold tracking-tight text-white/90">Data Retention & Backup</h2>
+            <div className="mb-6 h-px bg-white/[0.10]" />
 
-            {/* Row 1 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+            <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Audit Log Retention (days)</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Audit Log Retention (days)</label>
                 <input
                   type="text"
                   defaultValue="365"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Election Data Retention (days)</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Election Data Retention (days)</label>
                 <input
                   type="text"
                   defaultValue="730"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
-            </div>
 
-            {/* Row 2 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Backup Frequency</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Backup Frequency</label>
                 <input
                   type="text"
                   defaultValue="Daily"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Backup Retention (days)</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Backup Retention (days)</label>
                 <input
                   type="text"
                   defaultValue="90"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
-            </div>
 
-            {/* Row 3 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <input type="checkbox" defaultChecked style={{ width: "20px", height: "20px", cursor: "pointer" }} />
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#e5e7eb" }}>Enable Automatic Backups</label>
+              <div className="flex items-center gap-3">
+                <input type="checkbox" defaultChecked className="h-5 w-5 cursor-pointer rounded border-white/[0.2] bg-white/[0.05] accent-[#6B3FF5]" />
+                <label className="text-sm font-semibold text-white/70">Enable Automatic Backups</label>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <input type="checkbox" defaultChecked style={{ width: "20px", height: "20px", cursor: "pointer" }} />
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#e5e7eb" }}>Encrypt Backups</label>
+              <div className="flex items-center gap-3">
+                <input type="checkbox" defaultChecked className="h-5 w-5 cursor-pointer rounded border-white/[0.2] bg-white/[0.05] accent-[#6B3FF5]" />
+                <label className="text-sm font-semibold text-white/70">Encrypt Backups</label>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Tenant Defaults */}
-        <div style={{
-          width: "100%",
-          minHeight: "280px",
-          background: "rgba(217,217,217,0.09)",
-          border: "1px solid rgba(203,191,255,0.10)",
-          borderRadius: 18,
-          overflow: "hidden",
-          boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)",
-        }}>
-          <div style={{ padding: "32px 34px" }}>
-            <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 700, fontFamily: "Montserrat, sans-serif", color: "#e5e7eb", marginBottom: "14px" }}>Tenant Defaults</h2>
-            <div style={{ height: "1px", background: "rgba(167, 139, 250, 0.45)", marginBottom: "20px" }} />
+        <section className="rounded-[22px] border border-white/[0.10] bg-white/[0.09] shadow-[5px_5px_10px_2px_rgba(255,255,255,0.06)] overflow-hidden">
+          <div className="p-8 md:p-9">
+            <h2 className="mb-4 text-xl font-bold tracking-tight text-white/90">Tenant Defaults</h2>
+            <div className="mb-6 h-px bg-white/[0.10]" />
 
-            {/* Row 1 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+            <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Max User Per Tenant</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Max User Per Tenant</label>
                 <input
                   type="text"
                   defaultValue="12"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Max Elections</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Max Elections</label>
                 <input
                   type="text"
                   defaultValue="100"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
-            </div>
 
-            {/* Row 2 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Storage Limit (GB)</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Storage Limit (GB)</label>
                 <input
                   type="text"
                   defaultValue=""
                   placeholder="Enter value"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#e5e7eb", marginBottom: "8px" }}>Action Lockout Duration (hours)</label>
+                <label className="mb-2 block text-sm font-semibold text-white/70">Action Lockout Duration (hours)</label>
                 <input
                   type="text"
                   defaultValue=""
                   placeholder="Enter value"
-                  style={{
-                    width: "100%",
-                    height: "40px",
-                    padding: "8px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(226, 232, 240, 0.4)",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#e5e7eb",
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "14px",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm text-white/90 placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
             </div>
           </div>
-        </div>
+        </section>
     </div>
   );
 }
