@@ -172,10 +172,7 @@ function LogoMark() {
     <img
       src="/decta-logo.png"
       alt="D.E.C.T.A Polls"
-      className="h-9 w-9 shrink-0 rounded-full object-contain"
-      style={{
-        boxShadow: "0 0 20px rgba(93,68,248,0.25)"
-      }}
+      className="h-18 w-18 shrink-0 rounded-full object-contain"
     />
   );
 }
@@ -194,16 +191,16 @@ export default async function SuperAdminDashboardPage() {
     : [];
 
   return (
-    <div className="min-h-screen text-[#f1f0f3]" style={{ background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)" }}>
-      <header className="flex items-center gap-3 border-b border-white/[0.06] px-6 py-3.5 backdrop-blur-md" style={{ background: "linear-gradient(90deg, #160C38 0%, #1b1050 50%, rgba(120,100,240,0.90) 100%)" }}>
+    <div className="h-screen overflow-hidden flex flex-col text-[#f1f0f3]" style={{ background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)" }}>
+      <header className="flex items-center gap-3 border-b border-white/[0.06] px-6 py-3.5 backdrop-blur-md">
         <LogoMark />
         <span className="text-sm font-medium tracking-wide text-white/95">
           D.E.C.T.A Polls <span className="text-white/45">|</span> Tenant Admin
         </span>
       </header>
 
-      <div className="flex min-h-[calc(100vh-53px)] flex-col gap-4 p-4 md:flex-row md:p-6">
-        <aside className="flex w-full shrink-0 flex-col rounded-3xl border md:w-[260px] md:rounded-r-3xl md:rounded-l-none py-8 pl-5 pr-4" style={{
+      <div className="flex flex-1 overflow-hidden flex-col gap-4 p-4 md:flex-row md:p-6">
+        <aside className="flex w-full shrink-0 flex-col rounded-3xl border md:w-[260px] md:rounded-r-3xl md:rounded-l-none py-8 pl-5 pr-4 h-full overflow-y-auto overflow-x-hidden" style={{
           background: "rgba(217,217,217,0.13)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
@@ -294,7 +291,7 @@ export default async function SuperAdminDashboardPage() {
           </button>
         </aside>
 
-        <main className="min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8" style={{
+        <main className="min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto h-full" style={{
           background: "rgba(217,217,217,0.12)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
@@ -303,7 +300,7 @@ export default async function SuperAdminDashboardPage() {
         }}>
           <h1
             className="mb-8 text-3xl font-bold tracking-tight md:text-4xl"
-            style={{ 
+            style={{
               color: "#D0C8FF",
               textShadow: "2px 2px 20px rgba(208,200,255,0.45)"
             }}
@@ -393,7 +390,7 @@ export default async function SuperAdminDashboardPage() {
           <section className="mt-10">
             <h2
               className="mb-5 text-xl font-bold md:text-2xl"
-              style={{ 
+              style={{
                 color: "#D0C8FF",
                 textShadow: "2px 2px 20px rgba(208,200,255,0.45)"
               }}
