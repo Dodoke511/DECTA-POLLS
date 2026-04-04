@@ -13,6 +13,7 @@ export default function LogInPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [superAdminPararms, setSuperAdminPararms] = useState('');
 
     // Forgot-password state
     const [forgotStep, setForgotStep] = useState<ForgotStep>('idle');
@@ -61,7 +62,13 @@ export default function LogInPage() {
             });
 
             if (superAdminRes.ok) {
-                router.push('/users/super_admin/Dashboard');
+                const random = Math.random().toString(36).substring(2, 12);
+                sessionStorage.setItem('adminToken', random);
+                
+                const params = new URLSearchParams();
+                params.set('role', 'super_admin');
+                params.set('random', random);
+                router.push('/users/super_admin/Dashboard?' + params.toString());
                 return;
             }
 

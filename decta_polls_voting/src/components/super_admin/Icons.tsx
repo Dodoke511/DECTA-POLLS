@@ -59,3 +59,21 @@ export function IconPercent(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconDownload(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden>
+      <path d="M12 3v11" strokeLinecap="round" />
+      <path d="M8 10.5L12 14.5l4-4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 16.5v3h16v-3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconCheck(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M5 12.5l4.2 4.2L19 7.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { IconDownload, IconCheck } from "./Icons";
 
 type VerificationActionsProps = {
   tenantId: string;
@@ -10,24 +11,6 @@ type VerificationActionsProps = {
   isVerified: boolean;
 };
 
-function IconDownload({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden>
-      <path d="M12 3v11" strokeLinecap="round" />
-      <path d="M8 10.5L12 14.5l4-4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4 16.5v3h16v-3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconCheck({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M5 12.5l4.2 4.2L19 7.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 export function VerificationDownloadAction({
   verificationUrl,
   verificationFileName,
@@ -35,9 +18,7 @@ export function VerificationDownloadAction({
   verificationUrl: string | null;
   verificationFileName: string | null;
 }) {
-  if (!verificationUrl) {
-    return null;
-  }
+  if (!verificationUrl) return null;
 
   return (
     <a
@@ -91,15 +72,13 @@ export function VerificationEmailAction({
         setStatus("idle");
         setMessage("");
       }, 3500);
-    } catch (error) {
+    } catch (err) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Failed to send email.");
+      setMessage(err instanceof Error ? err.message : "Failed to send email.");
     }
   };
 
-  if (!verificationUrl || localVerified) {
-    return null;
-  }
+  if (!verificationUrl || localVerified) return null;
 
   return (
     <div className="inline-flex flex-col items-center gap-1">

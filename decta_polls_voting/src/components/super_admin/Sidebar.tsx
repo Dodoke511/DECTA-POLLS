@@ -1,12 +1,19 @@
 import React from "react";
 import Link from "next/link";
 import { IconDashboard, IconTenants, IconSettings, IconSignOut } from "./Icons";
+import { useRouter } from "next/navigation";
 
 interface SidebarProps {
   activePath: string;
 }
 
 export function SuperAdminSidebar({ activePath }: SidebarProps) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    router.push("/");
+  };
+
   const getItemStyle = (path: string) => {
     const isActive = activePath === path;
     if (isActive) {
@@ -26,6 +33,17 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
 
   const getTextStyle = (path: string) => {
     return activePath === path ? "text-white" : "text-white/75 hover:text-white";
+  };
+
+  // Get the token for persistent navigation
+  const [token, setToken] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    setToken(sessionStorage.getItem('adminToken'));
+  }, []);
+
+  const getUrlWithToken = (path: string) => {
+    if (!token) return path;
+    return `${path}?role=super_admin&random=${token}`;
   };
 
   return (
@@ -66,7 +84,7 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
 
       <div className="flex flex-1 flex-col gap-2.5" role="navigation" aria-label="Main Navigation">
         <Link
-          href="/users/super_admin/Dashboard"
+          href={getUrlWithToken("/users/super_admin/Dashboard")}
           className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition ${getTextStyle("/users/super_admin/Dashboard")}`}
           style={getItemStyle("/users/super_admin/Dashboard")}
         >
@@ -74,17 +92,17 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
           Dashboard
         </Link>
         <Link
-          href="/users/super_admin/system-monitoring"
-          className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition ${getTextStyle("/users/super_admin/system-monitoring")}`}
-          style={getItemStyle("/users/super_admin/system-monitoring")}
+          href={getUrlWithToken("/users/super_admin/tenants-monitoring")}
+          className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition ${getTextStyle("/users/super_admin/tenants-monitoring")}`}
+          style={getItemStyle("/users/super_admin/tenants-monitoring")}
         >
           <IconTenants className="h-5 w-5 shrink-0" />
           Tenants
         </Link>
         <Link
-          href="/users/super_admin/system-configuration"
-          className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition ${getTextStyle("/users/super_admin/system-configuration")}`}
-          style={getItemStyle("/users/super_admin/system-configuration")}
+          href={getUrlWithToken("/users/super_admin/system-monitoring")}
+          className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition ${getTextStyle("/users/super_admin/system-monitoring")}`}
+          style={getItemStyle("/users/super_admin/system-monitoring")}
         >
           <IconSettings className="h-5 w-5 shrink-0" />
           Settings
@@ -93,6 +111,9 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
 
       <button
         type="button"
+        onClick={() => {
+          handleLogout();
+        }}
         className="mt-6 flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium text-white/65 transition hover:text-white"
         style={{
           background: "rgba(255, 100, 100, 0.08)",
