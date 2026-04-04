@@ -26,9 +26,9 @@ export function VerificationDownloadAction({
       rel="noopener noreferrer"
       download={verificationFileName ?? undefined}
       title={verificationFileName ? `Download ${verificationFileName}` : "Download verification file"}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/80 transition hover:bg-white/10 hover:text-white"
+      className="inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-md text-white/80 transition hover:bg-white/10 hover:text-white"
     >
-      <IconDownload className="h-5 w-5" />
+      <IconDownload className="h-4 w-4 sm:h-5 sm:w-5" />
     </a>
   );
 }
@@ -87,13 +87,13 @@ export function VerificationEmailAction({
         onClick={handleSendEmail}
         disabled={status === "sending"}
         title="Send verification email"
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[#6ee7a0] transition hover:bg-[#2ecc71]/15 hover:text-[#baf8d1] disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-md text-[#6ee7a0] transition hover:bg-[#2ecc71]/15 hover:text-[#baf8d1] disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <IconCheck className="h-5 w-5" />
+        <IconCheck className="h-4 w-4 sm:h-5 sm:w-5" />
       </button>
 
       {message && (
-        <span className={`text-[11px] ${status === "sent" ? "text-[#6ee7a0]" : "text-red-300"}`}>
+        <span className={`text-[10px] sm:text-[11px] ${status === "sent" ? "text-[#6ee7a0]" : "text-red-300"}`}>
           {message}
         </span>
       )}

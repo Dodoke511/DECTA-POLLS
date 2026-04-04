@@ -68,7 +68,9 @@ export default function LogInPage() {
                 const params = new URLSearchParams();
                 params.set('role', 'super_admin');
                 params.set('random', random);
-                router.push('/users/super_admin/Dashboard?' + params.toString());
+                
+                // Navigate to loading page, then to super admin dashboard
+                router.push('/loading?destination=' + encodeURIComponent('/users/super_admin/Dashboard?' + params.toString()));
                 return;
             }
 

@@ -125,7 +125,7 @@ button.glass-card:disabled:hover {
 /* Plan title glowing gradient effect */
 .plan-title-gradient {
   font-family: var(--font-montserrat), sans-serif !important;
-  font-weight: 500 !important;
+  font-weight: 700 !important;
   background: linear-gradient(135deg, #5227FF 0%, #FF9FFC 50%, #B19EEF 100%, #5227FF 100%) !important;
   background-size: 300% 300% !important;
   -webkit-background-clip: text !important;
@@ -3760,4 +3760,262 @@ input[type="date"]::-moz-calendar-picker-indicator:hover {
 /* Ensure date input text is visible */
 input[type="date"] {
   color-scheme: dark;
+}
+
+/* ===== SUPER ADMIN GLASSMORPHISM STYLES ===== */
+/* Using the same glassmorphism effect as .glass-card from landing page */
+
+/* Sidebar glassmorphism - no rounded corners on right side */
+.super-admin-sidebar {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 20px 0 0 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+/* Dashboard main content - no rounded corners on left side */
+.super-admin-dashboard-main {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 0 20px 20px 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+/* Dashboard cards glassmorphism */
+.super-admin-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Stat cards with glowing edges and radiant animation */
+.super-admin-card.stat-card {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(93, 68, 248, 0.4);
+  box-shadow: 0 0 4px rgba(93, 68, 248, 0.15);
+  animation: gradientGlowPulse 4s ease-in-out infinite;
+  position: relative;
+}
+
+.super-admin-card.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, #5227FF 0%, #FF9FFC 50%, #B19EEF 100%, #5227FF 100%);
+  background-size: 300% 300%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: gradientShift 8s ease-in-out infinite;
+  opacity: 0.4;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes gradientGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(93, 68, 248, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(93, 68, 248, 0.25), 0 0 12px rgba(255, 159, 252, 0.1);
+  }
+}
+
+/* Sidebar navigation items glassmorphism */
+.super-admin-nav-item {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.super-admin-nav-item:hover {
+  color: #5D44F8 !important;
+  box-shadow: 
+    0 0 20px rgba(93, 68, 248, 0.4),
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+}
+
+.super-admin-nav-item:hover * {
+  color: #5D44F8 !important;
+}
+
+.super-admin-nav-item-active {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    -4px 0 12px rgba(93, 68, 248, 0.5),
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+  color: #5D44F8 !important;
+}
+
+.super-admin-nav-item-active::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 60%;
+  background: #5D44F8;
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(93, 68, 248, 0.6);
+}
+
+.super-admin-nav-item-active * {
+  color: #5D44F8 !important;
+}
+
+/* Button glassmorphism for super admin */
+.super-admin-button {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.super-admin-button:hover {
+  color: #5D44F8 !important;
+  box-shadow: 
+    0 0 20px rgba(93, 68, 248, 0.4),
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+}
+
+.super-admin-button:hover * {
+  color: #5D44F8 !important;
+}
+
+/* Logout button glassmorphism with red tint */
+.super-admin-logout-button {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.super-admin-logout-button:hover {
+  color: #5D44F8 !important;
+  box-shadow: 
+    0 0 20px rgba(93, 68, 248, 0.4),
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+}
+
+.super-admin-logout-button:hover * {
+  color: #5D44F8 !important;
+}
+
+/* Table glassmorphism */
+.super-admin-table {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Responsive adjustments for super admin components */
+@media (max-width: 768px) {
+  .super-admin-sidebar {
+    border-radius: 20px;
+  }
+  
+  .super-admin-dashboard-main {
+    border-radius: 20px;
+  }
+}
+
+/* Input fields styling - maintain color on hover and focus */
+input[type="text"]:hover,
+input[type="text"]:focus,
+input[type="text"]:active {
+  color: #f1f0f3 !important;
+}
+
+input[type="text"]::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* Override button hover color for inputs */
+.super-admin-button:hover input[type="text"],
+.super-admin-button input[type="text"]:hover,
+.super-admin-button input[type="text"]:focus {
+  color: #f1f0f3 !important;
 }
