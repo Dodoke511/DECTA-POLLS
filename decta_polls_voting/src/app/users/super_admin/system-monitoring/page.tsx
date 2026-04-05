@@ -83,19 +83,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
   return (
     <button
       onClick={onClick}
-      style={{
-        padding: "10px 22px",
-        borderRadius: 999,
-        cursor: "pointer",
-        background: active ? "#6B3FF5" : "rgba(255,255,255,0.08)",
-        border: `1px solid ${active ? "#4e2ec0" : "rgba(100,80,180,0.50)"}`,
-        color: "#F1F0F3",
-        fontFamily: "Montserrat, sans-serif",
-        fontSize: 13,
-        fontWeight: 700,
-        transition: "background 0.2s",
-        whiteSpace: "nowrap",
-      }}
+      className={`${active ? "super-admin-nav-item-active" : "super-admin-button"} px-6 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap`}
     >
       {label}
     </button>
@@ -105,22 +93,10 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
 // ─── Search Audit ─────────────────────────────────────────────────────────────
 function SearchAudit({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      background: "rgba(255,255,255,0.05)",
-      borderRadius: 12,
-      border: "1px solid rgba(241,240,243,0.50)",
-      padding: "7px 16px",
-      minWidth: 210,
-    }}>
-      <div style={{
-        width: 28, height: 28, borderRadius: "50%",
+    <div className="super-admin-button flex items-center gap-2.5 rounded-xl px-4 py-2 min-w-[210px]">
+      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{
         background: "rgba(255,255,255,0.13)",
         border: "1px solid rgba(255,255,255,0.2)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0,
       }}>
         <IconUser />
       </div>
@@ -129,16 +105,8 @@ function SearchAudit({ value, onChange }: { value: string; onChange: (v: string)
         placeholder="Search Audit"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        style={{
-          background: "none",
-          border: "none",
-          outline: "none",
-          color: "#F1F0F3",
-          fontFamily: "Montserrat, sans-serif",
-          fontSize: 13,
-          fontWeight: 700,
-          width: 130,
-        }}
+        className="bg-transparent border-none outline-none font-montserrat text-sm font-bold w-32"
+        style={{ color: '#f1f0f3' }}
       />
     </div>
   );
@@ -172,7 +140,7 @@ export default function SystemMonitoringPage() {
   );
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden text-[#f1f0f3]" style={{
+    <div className="flex flex-col h-screen text-[#f1f0f3]" style={{
       background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)",
     }}>
       <style dangerouslySetInnerHTML={{
@@ -182,47 +150,31 @@ export default function SystemMonitoringPage() {
       `}} />
       <SuperAdminHeader />
 
-      <div className="flex flex-1 overflow-hidden flex-col gap-4 p-4 md:flex-row md:p-6">
+      <div className="flex flex-1 gap-4 p-4 md:flex-row md:p-6 overflow-hidden">
         <SuperAdminSidebar activePath="/users/super_admin/system-monitoring" />
 
-        <main className="min-w-0 flex-1 rounded-[28px] border shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm overflow-y-auto no-scrollbar h-full" style={{
-          background: "rgba(217,217,217,0.12)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          border: "1px solid rgba(203,191,255,0.10)",
-          boxShadow: "5px 5px 10px 2px rgba(255,255,255,0.06)",
-          padding: "28px 32px 36px",
-          display: "flex",
-          flexDirection: "column",
-        }}>
+        <main className="super-admin-dashboard-main flex-1 flex flex-col rounded-[28px] border shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:rounded-l-none overflow-hidden">
+          <div className="flex-1 overflow-y-auto no-scrollbar p-6 md:p-8">
+            {/* Page Title */}
+            <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{
+              color: "#D0C8FF",
+              textShadow: "2px 2px 20px rgba(208,200,255,0.45)",
+            }}>
+              {pageTitle}
+            </h1>
 
-          {/* Page Title */}
-          <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{
-            color: "#D0C8FF",
-            textShadow: "2px 2px 20px rgba(208,200,255,0.45)",
-          }}>
-            {pageTitle}
-          </h1>
-
-          {/* Tabs + Search */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 30,
-            gap: 12,
-            flexWrap: "wrap",
-          }}>
-            <div style={{ display: "flex", gap: 10 }}>
-              <TabButton label="System Monitoring"   active={activeTab === "monitoring"} onClick={() => setActiveTab("monitoring")} />
-              <TabButton label="Global Configuration" active={activeTab === "config"}    onClick={() => setActiveTab("config")} />
+            {/* Tabs + Search */}
+            <div className="flex items-center justify-between mb-8 gap-3 flex-wrap">
+              <div className="flex gap-2.5">
+                <TabButton label="System Monitoring"   active={activeTab === "monitoring"} onClick={() => setActiveTab("monitoring")} />
+                <TabButton label="Global Configuration" active={activeTab === "config"}    onClick={() => setActiveTab("config")} />
+              </div>
+              {activeTab === "monitoring" && <SearchAudit value={search} onChange={setSearch} />}
             </div>
-            {activeTab === "monitoring" && <SearchAudit value={search} onChange={setSearch} />}
-          </div>
 
-          {/* Main Content */}
-          {activeTab === "monitoring" ? (
-            <div className="w-full rounded-[22px] border border-white/[0.10] bg-white/[0.09] shadow-[5px_5px_10px_2px_rgba(255,255,255,0.06)] overflow-hidden">
+            {/* Main Content */}
+            {activeTab === "monitoring" ? (
+              <div className="super-admin-table w-full rounded-[22px] border border-white/[0.10] overflow-hidden mb-8">
               {/* Table Wrapper */}
               <div className="w-full">
                 <table className="w-full border-collapse text-left text-sm">
@@ -243,7 +195,7 @@ export default function SystemMonitoringPage() {
                         </td>
                       </tr>
                     ) : (
-                      filtered.map((log) => (
+                      filtered.map((log, index) => (
                         <tr
                           key={log.id}
                           className="border-b border-white/[0.07] last:border-0 hover:bg-white/[0.02] transition-colors"
@@ -266,6 +218,7 @@ export default function SystemMonitoringPage() {
               <GlobalConfiguration />
             </div>
           )}
+          </div>
         </main>
       </div>
     </div>
