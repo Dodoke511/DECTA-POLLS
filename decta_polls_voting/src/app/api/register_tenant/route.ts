@@ -19,6 +19,7 @@ export async function POST(request: Request) {
         const subscription = formData.get('subscription') as string;
         const verification = formData.get('verification') as File | null;
         const isVerified = formData.get('isVerified') === 'true';
+        const tenantStatus = formData.get('status') as string;
         const first_name = formData.get('first_name') as string;
         const middle_name = formData.get('middle_name') as string | null;
         const surname = formData.get('surname') as string;
@@ -111,6 +112,7 @@ export async function POST(request: Request) {
                     type,
                     subscription,
                     verification: verificationDocUrl,
+                    status: tenantStatus,
                     is_verified: isVerified,
                     slug,
                     main_color: main_color,

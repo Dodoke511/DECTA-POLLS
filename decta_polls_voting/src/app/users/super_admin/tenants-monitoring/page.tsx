@@ -105,6 +105,7 @@ export default function TenantsMonitoringPage() {
                             organization: getValueAsString(record.organization ?? record.organization_name, "Unknown Organization"),
                             email: getValueAsString(record.email, "No Email"),
                             type: getValueAsString(record.type, "N/A"),
+                            status: getValueAsString(record.status, "PENDING"),
                             isVerified: typeof verified === "boolean" ? verified : false,
                             verification: verificationValue,
                             verificationUrl,
@@ -169,13 +170,19 @@ export default function TenantsMonitoringPage() {
                                             </span>
                                         </td>
                                         <td className="py-4 pl-8 pr-5 text-center align-middle md:pl-10">
-                                            <TenantMonitoringStatusActions
-                                                tenantId={row.id}
-                                                tenantEmail={row.email}
-                                                tenantOrganization={row.organization}
-                                                verificationUrl={row.verificationUrl}
-                                                isVerified={row.isVerified}
-                                            />
+                                            {row.status === "PENDING" ? (
+                                                <TenantMonitoringStatusActions
+                                                    tenantId={row.id}
+                                                    tenantEmail={row.email}
+                                                    tenantOrganization={row.organization}
+                                                    verificationUrl={row.verificationUrl}
+                                                    isVerified={row.isVerified}
+                                                />
+                                            ) : (
+                                                <span className={`inline-flex rounded-full border ${row.status === "PENDING" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : row.status === "REJECTED" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : "border-[#5D44F8] bg-[#50C878]/[0.18] text-[#50C878]"} px-3 py-1 text-xs font-medium`}>
+                                                    {row.status}
+                                                </span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

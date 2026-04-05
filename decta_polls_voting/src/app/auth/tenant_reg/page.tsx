@@ -99,6 +99,7 @@ export default function Home() {
             formData.append('type', orgData.organizationType);
             formData.append('subscription', selectedPlan || 'BASIC');
             if (orgData.verificationFile) formData.append('verification', orgData.verificationFile);
+            formData.append('status', 'PENDING');
             formData.append('isVerified', 'false');
             formData.append('slug', orgData.tenantSlug);
             formData.append('main_color', orgData.main_Color);

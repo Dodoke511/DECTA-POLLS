@@ -23,6 +23,7 @@ export type TenantRow = {
   organization: string;
   email: string;
   type: string;
+  status: string;
   isVerified: boolean;
   verification: string;
   verificationUrl: string | null;
@@ -122,6 +123,7 @@ export default function SuperAdminDashboardPage() {
               organization: getValueAsString(record.organization ?? record.organization_name, "Unknown Organization"),
               email: getValueAsString(record.email, "No Email"),
               type: getValueAsString(record.type, "N/A"),
+              status: getValueAsString(record.status, "PENDING"),
               isVerified: typeof verified === "boolean" ? verified : false,
               verification: verificationValue,
               verificationUrl,
@@ -244,11 +246,9 @@ export default function SuperAdminDashboardPage() {
                           <span className="inline-flex rounded-full border border-[#5D44F8] bg-[#50C878]/[0.18] px-3 py-1 text-xs font-medium text-[#50C878]/[0.85]">{row.subscription}</span>
                         </td>
                         <td className="px-5 py-4 text-center">
-                          {row.isVerified && (
-                            <span className="inline-flex rounded-full border border-[#5D44F8] bg-[#50C878]/[0.18] px-3 py-1 text-xs font-medium text-[#50C878]/[0.85]">
-                              APPROVED
-                            </span>
-                          )}
+                          <span className={`inline-flex rounded-full border ${row.status === "PENDING" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : row.status === "REJECTED" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : "border-[#5D44F8] bg-[#50C878]/[0.18] text-[#50C878]"} px-3 py-1 text-xs font-medium`}>
+                            {row.status}
+                          </span>
                         </td>
                       </tr>
                     ))}
