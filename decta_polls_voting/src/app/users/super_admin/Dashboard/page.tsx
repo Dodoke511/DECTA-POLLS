@@ -10,10 +10,6 @@ import {
   IconUsers,
   IconPercent,
 } from "@/components/super_admin/Icons";
-import {
-  VerificationDownloadAction,
-  VerificationEmailAction,
-} from "@/components/super_admin/TenantActions";
 import { BallotCastAsOfLine } from "@/components/super_admin/Stats";
 import { useRouter } from "next/navigation";
 
@@ -164,40 +160,35 @@ export default function SuperAdminDashboardPage() {
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)]">
             <section className="super-admin-card stat-card rounded-[22px] border px-2 py-1.5 shadow-inner">
               <h2 className="mb-0 text-sm font-semibold text-white/90">Subscription Rate</h2>
-              <div className="flex flex-col items-center justify-center gap-1.5 sm:flex-row sm:justify-center sm:gap-2">
-                <div className="relative flex items-center justify-center ml-32 mt-6">
+              <div className="flex flex-col items-center justify-center gap-4 py-2 sm:flex-row sm:items-center sm:gap-6">
+                <div className="flex shrink-0 items-center justify-center">
                   <PieChart
                     series={[
                       {
                         data: [
                           { id: 0, value: 140, label: 'Enterprise', color: '#a855f7' },
-                          { id: 1, value: 88, label: 'Basic', color: '#14b8a6' },
-                          { id: 2, value: 100, label: 'Standard', color: '#ef4444' },
+                          { id: 1, value: 100, label: 'Standard', color: '#ef4444' },
+                          { id: 2, value: 88, label: 'Basic', color: '#14b8a6' },
                         ],
-                        innerRadius: 40,
-                        outerRadius: 75,
-                        paddingAngle: 8,
-                        cornerRadius: 8,
-                        startAngle: -90,
-                        endAngle: 180,
-                        cx: 105,
-                        cy: 85,
-                      }
+                        innerRadius: '46%',
+                        outerRadius: '92%',
+                        paddingAngle: 6,
+                        cornerRadius: 10,
+                      },
                     ]}
-                    width={210}
-                    height={165}
-                    slotProps={{
-                      legend: { hidden: true },
-                    }}
+                    width={216}
+                    height={216}
+                    hideLegend
                     sx={{
                       '& .MuiPieArc-root': {
                         stroke: 'none !important',
                         strokeWidth: 0,
+                        filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.35))',
                       },
                     }}
                   />
                 </div>
-                <ul className="flex flex-wrap justify-center gap-1.5 sm:flex-col sm:gap-1.5">
+                <ul className="flex flex-wrap justify-center gap-2 sm:flex-col sm:gap-2 sm:pl-1">
                   <li className="flex items-center gap-1.5 text-xs text-white/80"><span className="h-2.5 w-2.5 rounded-full bg-[#a855f7] shadow-[0_0_8px_rgba(168,85,247,0.8)]" />Enterprise</li>
                   <li className="flex items-center gap-1.5 text-xs text-white/80"><span className="h-2.5 w-2.5 rounded-full bg-[#ef4444] shadow-[0_0_8px_rgba(239,68,68,0.6)]" />Standard</li>
                   <li className="flex items-center gap-1.5 text-xs text-white/80"><span className="h-2.5 w-2.5 rounded-full bg-[#14b8a6] shadow-[0_0_8px_rgba(20,184,166,0.7)]" />Basic</li>
@@ -237,33 +228,33 @@ export default function SuperAdminDashboardPage() {
                       <th className="px-5 py-4">Organization name</th>
                       <th className="px-5 py-4">Email</th>
                       <th className="px-5 py-4">Type</th>
-                      <th className="px-5 py-4 text-center">Verification</th>
                       <th className="px-5 py-4">Subscription</th>
-                      <th className="px-5 py-4 text-center" />
+                      <th className="px-5 py-4 text-center">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td className="px-5 py-6 text-white/60" colSpan={6}>Loading...</td></tr>
+                      <tr><td className="px-5 py-6 text-white/60" colSpan={5}>Loading...</td></tr>
                     ) : leadingTenants.map((row) => (
                       <tr key={row.id} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
                         <td className="px-5 py-4 font-medium text-white/85">{row.organization}</td>
                         <td className="px-5 py-4 text-white/55">{row.email}</td>
                         <td className="px-5 py-4 text-white/60">{row.type}</td>
-                        <td className="px-5 py-4 text-center">
-                          <VerificationDownloadAction verificationUrl={row.verificationUrl} verificationFileName={row.verificationFileName} />
-                        </td>
                         <td className="px-5 py-4">
                           <span className="inline-flex rounded-full border border-[#5D44F8] bg-[#50C878]/[0.18] px-3 py-1 text-xs font-medium text-[#50C878]/[0.85]">{row.subscription}</span>
                         </td>
                         <td className="px-5 py-4 text-center">
-                          <VerificationEmailAction tenantId={row.id} tenantEmail={row.email} tenantOrganization={row.organization} verificationUrl={row.verificationUrl} isVerified={row.isVerified} />
+                          {row.isVerified && (
+                            <span className="inline-flex rounded-full border border-[#5D44F8] bg-[#50C878]/[0.18] px-3 py-1 text-xs font-medium text-[#50C878]/[0.85]">
+                              APPROVED
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
                     {(!loading && leadingTenants.length === 0) && (
                       <tr>
-                        <td className="px-5 py-6 text-white/60" colSpan={6}>
+                        <td className="px-5 py-6 text-white/60" colSpan={5}>
                           {error ? `Error: ${error}` : "No tenants found."}
                         </td>
                       </tr>
