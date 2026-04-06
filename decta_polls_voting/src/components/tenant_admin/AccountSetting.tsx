@@ -70,7 +70,7 @@ export function AccountSetting() {
                         onChange={handleLogoUpload}
                     />
                     <p className="mt-5 text-[15px] font-medium tracking-wide text-white/80 text-center">
-                        Upload Your Logo
+                        Change Your Logo
                     </p>
                 </div>
 
@@ -161,7 +161,7 @@ export function AccountSetting() {
                                     className={`rounded-[14px] px-4 py-1.5 text-[13px] font-medium transition-all ${activeTriggers.includes(trigger)
                                         ? "bg-[#35256e] text-[#D0C8FF] border border-[#524199]"
                                         : "bg-transparent text-white/40 border border-white/[0.15] hover:bg-[#35256e]/50 hover:text-[#D0C8FF]/80 hover:border-[#524199]/50"
-                                    }`}
+                                        }`}
                                 >
                                     {trigger}
                                 </button>
