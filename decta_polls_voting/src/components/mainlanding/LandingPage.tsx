@@ -39,7 +39,7 @@ export default function LandingPage() {
   const handleLoginClick = async () => {
     setLoginLoading(true);
     // Navigate to loading page with login parameters
-    router.push('/loading?destination=/auth/login_form&type=login');
+    router.push('/loading?destination=' + encodeURIComponent('/auth/login_form') + '&type=login');
   };
 
   // Debounced copy function to prevent rapid clicks

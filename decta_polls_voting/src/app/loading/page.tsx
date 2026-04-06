@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DarkVeil from '@/components/mainlanding/ui/DarkVeil';
 
-export default function LoadingPage() {
+function LoadingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const destination = searchParams.get('destination') || '/auth/login_form';
@@ -46,5 +46,13 @@ export default function LoadingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoadingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>}>
+      <LoadingContent />
+    </Suspense>
   );
 }

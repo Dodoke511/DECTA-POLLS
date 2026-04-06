@@ -89,8 +89,17 @@ export default function LogInPage() {
                 return;
             }
 
+            // Store tenant token and email
+            const random = Math.random().toString(36).substring(2, 12);
+            sessionStorage.setItem('tenantToken', random);
+            sessionStorage.setItem('tenantEmail', email);
+            
+            const params = new URLSearchParams();
+            params.set('role', 'tenant');
+            params.set('random', random);
+            
             // Navigate to loading page, then to tenant dashboard
-            router.push('/loading?destination=/users/tenant');
+            router.push('/loading?destination=' + encodeURIComponent('/users/tenant/dashboard?' + params.toString()));
         } catch (error: any) {
             setError(error.message || 'Login failed');
             setIsLoading(false);
