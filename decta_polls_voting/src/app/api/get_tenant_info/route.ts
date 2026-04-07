@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from("tenants")
-      .select("organization, email, type")
+      .select("organization, email, type, logo_url, main_color, secondary_color")
       .eq("email", email)
       .single();
 

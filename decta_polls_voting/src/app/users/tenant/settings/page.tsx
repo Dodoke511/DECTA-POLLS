@@ -10,20 +10,126 @@ import { ViewAssignedRole } from "@/components/tenant_admin/ViewAssignedRole";
 export default function TenantSettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // States hoisted from AccountSetting
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [brandingColorPrimary, setBrandingColorPrimary] = useState("FFFFFF");
+  const [brandingColorSecondary, setBrandingColorSecondary] = useState("FFFFFF");
+  const [registrationMode, setRegistrationMode] = useState("HYBRID");
+  const [activeTriggers, setActiveTriggers] = useState<string[]>([
+      "Election Start",
+      "Election End",
+      "Candidate Added",
+      "New Voter Registered",
+      "Results Published",
+      "Vote Cast",
+  ]);
+  const [allowSubstitution, setAllowSubstitution] = useState(false);
+  const [allowWithdrawal, setAllowWithdrawal] = useState(false);
+  const [tenantEmail, setTenantEmail] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const role = params.get('role');
     const random = params.get('random');
     const storedToken = sessionStorage.getItem('tenantToken');
+    const email = sessionStorage.getItem('tenantEmail');
 
-    if (role !== 'tenant' || !random || random !== storedToken) {
+    if (role !== 'tenant' || !random || random !== storedToken || !email) {
       router.push('/auth/login_form');
       return;
     }
 
-    setLoading(false);
+    setTenantEmail(email);
+
+    // Fetch initial settings
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/get_tenant_info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const result = await response.json();
+        
+        if (response.ok && result.data) {
+          const config = result.data;
+          console.log("🔥 FETCHED CONFIG FROM DB:", config); // <-- Added for debugging
+          
+          if (config.logo_url) setLogoPreview(config.logo_url);
+          if (config.branding_color_primary) setBrandingColorPrimary(config.branding_color_primary);
+          if (config.branding_color_secondary) setBrandingColorSecondary(config.branding_color_secondary);
+          if (config.registration_mode) setRegistrationMode(config.registration_mode);
+          if (config.active_triggers) setActiveTriggers(config.active_triggers);
+          if (config.allow_substitution !== undefined) setAllowSubstitution(config.allow_substitution);
+          if (config.allow_withdrawal !== undefined) setAllowWithdrawal(config.allow_withdrawal);
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSettings();
   }, [router]);
+
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+      let finalLogoUrl = logoPreview;
+
+      // 1. If there is a new logo file, upload it
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append("file", logoFile);
+        formData.append("email", tenantEmail);
+
+        const uploadRes = await fetch("/api/upload_tenant_logo", {
+          method: "POST",
+          body: formData,
+        });
+        
+        const uploadData = await uploadRes.json();
+        if (uploadRes.ok && uploadData.publicUrl) {
+          finalLogoUrl = uploadData.publicUrl;
+        } else {
+          throw new Error(uploadData.error || "Failed to upload logo");
+        }
+      }
+
+      // 2. Save settings to DB
+      const payload = {
+        email: tenantEmail,
+        brandingColorPrimary,
+        brandingColorSecondary,
+        registrationMode,
+        activeTriggers,
+        allowSubstitution,
+        allowWithdrawal,
+        logoUrl: finalLogoUrl,
+      };
+
+      const res = await fetch("/api/update_tenant_settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to save settings");
+
+      alert("Settings saved successfully!");
+      setLogoFile(null); // Reset file after successful upload/save
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error saving settings: ${err.message || "Please try again."}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (loading) {
     return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
@@ -49,7 +155,16 @@ export default function TenantSettingsPage() {
               <div className="flex flex-col gap-1">
                 <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Account Settings</h2>
                 <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
-                  <AccountSetting />
+                  <AccountSetting 
+                    logoPreview={logoPreview} setLogoPreview={setLogoPreview}
+                    setLogoFile={setLogoFile}
+                    brandingColorPrimary={brandingColorPrimary} setBrandingColorPrimary={setBrandingColorPrimary}
+                    brandingColorSecondary={brandingColorSecondary} setBrandingColorSecondary={setBrandingColorSecondary}
+                    registrationMode={registrationMode} setRegistrationMode={setRegistrationMode}
+                    activeTriggers={activeTriggers} setActiveTriggers={setActiveTriggers}
+                    allowSubstitution={allowSubstitution} setAllowSubstitution={setAllowSubstitution}
+                    allowWithdrawal={allowWithdrawal} setAllowWithdrawal={setAllowWithdrawal}
+                  />
                 </div>
               </div>
               <div className="flex flex-col gap-1">
@@ -57,6 +172,22 @@ export default function TenantSettingsPage() {
                 <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
                   <ViewAssignedRole />
                 </div>
+              </div>
+              <div className="flex justify-end gap-5 mt-4 px-2 pb-10">
+                <button
+                  className="flex h-[52px] min-w-[180px] items-center justify-center rounded-[18px] bg-[#4f35cd] px-10 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                >
+                  Add Role
+                </button>
+                <button
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                  className={`flex h-[52px] min-w-[200px] items-center justify-center rounded-[18px] bg-[#4f35cd] px-10 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]'}`}
+                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </button>
               </div>
             </div>
           </div>

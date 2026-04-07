@@ -3,22 +3,41 @@
 import React, { useState } from "react";
 import { RiImageAddLine } from "react-icons/ri";
 
-export function AccountSetting() {
-    const [logoPreview, setLogoPreview] = useState<string | null>(null);
-    const [brandingColorPrimary, setBrandingColorPrimary] = useState("FFFFFF");
-    const [brandingColorSecondary, setBrandingColorSecondary] = useState("FFFFFF");
-    const [registrationMode, setRegistrationMode] = useState("HYBRID");
-    const [activeTriggers, setActiveTriggers] = useState([
-        "Election Start",
-        "Election End",
-        "Candidate Added",
-        "New Voter Registered",
-        "Results Published",
-        "Vote Cast",
-    ]);
-    const [allowSubstitution, setAllowSubstitution] = useState(false);
-    const [allowWithdrawal, setAllowWithdrawal] = useState(false);
+export interface AccountSettingProps {
+    logoPreview: string | null;
+    brandingColorPrimary: string;
+    brandingColorSecondary: string;
+    registrationMode: string;
+    activeTriggers: string[];
+    allowSubstitution: boolean;
+    allowWithdrawal: boolean;
+    setLogoPreview: React.Dispatch<React.SetStateAction<string | null>>;
+    setLogoFile: React.Dispatch<React.SetStateAction<File | null>>;
+    setBrandingColorPrimary: React.Dispatch<React.SetStateAction<string>>;
+    setBrandingColorSecondary: React.Dispatch<React.SetStateAction<string>>;
+    setRegistrationMode: React.Dispatch<React.SetStateAction<string>>;
+    setActiveTriggers: React.Dispatch<React.SetStateAction<string[]>>;
+    setAllowSubstitution: React.Dispatch<React.SetStateAction<boolean>>;
+    setAllowWithdrawal: React.Dispatch<React.SetStateAction<boolean>>;
+}
 
+export function AccountSetting({
+    logoPreview,
+    brandingColorPrimary,
+    brandingColorSecondary,
+    registrationMode,
+    activeTriggers,
+    allowSubstitution,
+    allowWithdrawal,
+    setLogoPreview,
+    setLogoFile,
+    setBrandingColorPrimary,
+    setBrandingColorSecondary,
+    setRegistrationMode,
+    setActiveTriggers,
+    setAllowSubstitution,
+    setAllowWithdrawal
+}: AccountSettingProps) {
     const toggleTrigger = (trigger: string) => {
         if (activeTriggers.includes(trigger)) {
             setActiveTriggers(activeTriggers.filter((t) => t !== trigger));
@@ -27,9 +46,18 @@ export function AccountSetting() {
         }
     };
 
+    const [imgError, setImgError] = React.useState(false);
+
+    // Reset error state when logoPreview changes (e.g. from a new upload)
+    React.useEffect(() => {
+        setImgError(false);
+    }, [logoPreview]);
+
     const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
+        setLogoFile(file); // Save file object for uploading
+        
         const reader = new FileReader();
         reader.onload = () => {
             setLogoPreview(reader.result as string);
@@ -50,13 +78,14 @@ export function AccountSetting() {
                 <div className="flex flex-col items-center justify-center">
                     <label
                         htmlFor="logo-upload"
-                        className="flex h-[150px] w-[150px] cursor-pointer items-center justify-center rounded-full bg-[#82839b] shadow-inner text-white/80 transition-all hover:bg-[#9293ad] border border-white/5"
+                        className="flex h-[150px] w-[150px] overflow-hidden cursor-pointer items-center justify-center rounded-full bg-[#82839b] shadow-inner text-white/80 transition-all hover:bg-[#9293ad] border border-white/5"
                     >
-                        {logoPreview ? (
+                        {logoPreview && !imgError ? (
                             <img
                                 src={logoPreview}
-                                alt="Organization Logo"
-                                className="h-full w-full rounded-full object-cover"
+                                alt="Logo"
+                                onError={() => setImgError(true)}
+                                className="h-full w-full object-cover"
                             />
                         ) : (
                             <RiImageAddLine style={{ fontSize: "64px" }} />
