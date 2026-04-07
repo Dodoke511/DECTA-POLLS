@@ -53,11 +53,11 @@ export async function POST(request: Request) {
       .from('election')
       .insert([
         {
-          tenant_id: tenantId,
+          tenantID: tenantId,
           title,
-          start_date: startDate,
-          end_date: endDate,
-          status: 'draft',
+          startDate: startDate,
+          endDate: endDate,
+          status: 'DRAFT',
           banner: bannerUrl,
         },
       ])
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { message: 'Election draft created successfully.', electionId: data.id },
+      { message: 'Election draft created successfully.', electionId: data.id, banner: bannerUrl },
       { status: 201 }
     );
   } catch (err: any) {

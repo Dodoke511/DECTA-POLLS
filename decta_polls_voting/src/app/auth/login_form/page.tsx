@@ -93,6 +93,9 @@ export default function LogInPage() {
             const random = Math.random().toString(36).substring(2, 12);
             sessionStorage.setItem('tenantToken', random);
             sessionStorage.setItem('tenantEmail', email);
+            if (data.tenantId) {
+                sessionStorage.setItem('tenantUserId', data.tenantId);
+            }
             
             const params = new URLSearchParams();
             params.set('role', 'tenant');

@@ -6,7 +6,7 @@ import { X, Upload, ImageIcon, Loader2, CalendarDays } from "lucide-react";
 interface CreateElectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (electionId: string, token: string) => void;
+  onSuccess: (electionId: string, token: string, electionTitle: string, banner: string | null) => void;
   tenantId: string;
   token: string;
 }
@@ -115,7 +115,7 @@ export function CreateElectionModal({
         throw new Error(data.error || "Failed to create election.");
       }
 
-      onSuccess(data.electionId, token);
+      onSuccess(data.electionId, token, form.title, data.banner);
     } catch (err: any) {
       setSubmitError(err.message || "An unexpected error occurred.");
     } finally {
@@ -295,7 +295,7 @@ export function CreateElectionModal({
                   Creating…
                 </>
               ) : (
-                "Create Draft"
+                "Create"
               )}
             </button>
           </div>

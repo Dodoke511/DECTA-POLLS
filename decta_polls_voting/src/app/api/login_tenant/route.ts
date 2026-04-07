@@ -26,10 +26,18 @@ export async function POST(request: Request) {
             throw error;
         }
 
+        // Retrieve the tenant specifically to avoid RLS issues on the client
+        const { data: tenantData } = await supabase
+            .from('tenants')
+            .select('id')
+            .eq('email', email)
+            .single();
+
         return NextResponse.json({
             message: 'Login successful',
             user: data.user,
-            session: data.session
+            session: data.session,
+            tenantId: tenantData?.id
         }, { status: 200 });
     } catch (error: any) {
         console.error('API Route Error:', error);
