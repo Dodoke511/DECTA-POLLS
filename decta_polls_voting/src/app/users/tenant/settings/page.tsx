@@ -6,6 +6,10 @@ import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { useRouter } from "next/navigation";
 import { AccountSetting } from "@/components/tenant_admin/AccountSetting";
 import { ViewAssignedRole } from "@/components/tenant_admin/ViewAssignedRole";
+import { AssignUserModal } from "@/components/tenant_admin/AssignUserModal";
+import { AddRoleModal } from "@/components/tenant_admin/AddRoleModal";
+
+
 
 export default function TenantSettingsPage() {
   const router = useRouter();
@@ -29,6 +33,53 @@ export default function TenantSettingsPage() {
   const [allowSubstitution, setAllowSubstitution] = useState(false);
   const [allowWithdrawal, setAllowWithdrawal] = useState(false);
   const [tenantEmail, setTenantEmail] = useState("");
+  const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<any>(null);
+  
+  const handleEditRole = (role: any) => {
+    setEditingRole(role);
+    setIsAddRoleModalOpen(true);
+  };
+  
+  // Assign Role States
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isAssigningUser, setIsAssigningUser] = useState(false);
+  const [assigningRoleId, setAssigningRoleId] = useState<string | null>(null);
+
+  const handleOpenAssignModal = (roleId: string) => {
+    setAssigningRoleId(roleId);
+    setIsAssignModalOpen(true);
+  };
+
+  const handleAssignUser = async (formData: any) => {
+    if (!assigningRoleId || !tenantEmail) return;
+    setIsAssigningUser(true);
+    
+    try {
+      const response = await fetch("/api/invite_tenant_user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          roleId: assigningRoleId,
+          tenantEmail: tenantEmail
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Failed to send invitation");
+
+      alert("Invitation sent successfully! The user will receive an email instructions to join.");
+      setIsAssignModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error assigning user: ${err.message || "Please try again."}`);
+    } finally {
+      setIsAssigningUser(false);
+    }
+  };
+
+
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -131,6 +182,58 @@ export default function TenantSettingsPage() {
     }
   };
 
+  const [isCreatingRole, setIsCreatingRole] = useState(false);
+  const handleCreateRole = async (roleName: string, permissions: string[]) => {
+    if (!roleName.trim() || permissions.length === 0) return;
+    setIsCreatingRole(true);
+    
+    try {
+      if (editingRole) {
+        // UPDATE Existing
+        const payload = {
+          roleId: editingRole.id,
+          roleName: roleName,
+          permissions: permissions,
+        };
+
+        const res = await fetch("/api/update_tenant_role", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || "Failed to update role");
+        alert("Role updated successfully! Please refresh to see changes.");
+      } else {
+        // CREATE New
+        const payload = {
+          tenantEmail,
+          roleName: roleName,
+          permissions: permissions,
+        };
+
+        const res = await fetch("/api/create_tenant_role", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || "Failed to create role");
+        alert("Role created successfully! Please refresh to see changes.");
+      }
+
+      setIsAddRoleModalOpen(false);
+      setEditingRole(null);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error saving role: ${err.message || "Please try again."}`);
+    } finally {
+      setIsCreatingRole(false);
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
   }
@@ -170,11 +273,18 @@ export default function TenantSettingsPage() {
               <div className="flex flex-col gap-1">
                 <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>View Assigned Roles</h2>
                 <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
-                  <ViewAssignedRole />
+                  <ViewAssignedRole 
+                    onAssignClick={handleOpenAssignModal} 
+                    onEditClick={handleEditRole}
+                  />
                 </div>
               </div>
               <div className="flex justify-end gap-5 mt-4 px-2 pb-10">
                 <button
+                  onClick={() => {
+                    setEditingRole(null);
+                    setIsAddRoleModalOpen(true);
+                  }}
                   className="flex h-[52px] min-w-[180px] items-center justify-center rounded-[18px] bg-[#4f35cd] px-10 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
                 >
@@ -193,6 +303,24 @@ export default function TenantSettingsPage() {
           </div>
         </main>
       </div>
+
+      <AddRoleModal 
+        isOpen={isAddRoleModalOpen}
+        onClose={() => {
+          setIsAddRoleModalOpen(false);
+          setEditingRole(null);
+        }}
+        onSave={handleCreateRole}
+        isSaving={isCreatingRole}
+        editingRole={editingRole}
+      />
+
+      <AssignUserModal 
+        isOpen={isAssignModalOpen} 
+        onClose={() => setIsAssignModalOpen(false)}
+        onAssign={handleAssignUser}
+        isSaving={isAssigningUser}
+      />
     </div>
   );
 }
