@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 interface AssignUserModalProps {
   isOpen: boolean;
@@ -8,6 +8,10 @@ interface AssignUserModalProps {
   onAssign: (formData: typeof initialForm) => void;
   isInvitation?: boolean;
   isSaving?: boolean;
+  initialData?: Partial<typeof initialForm>;
+  title?: string;
+  description?: string;
+  submitButtonText?: string;
 }
 
 const initialForm = {
@@ -19,8 +23,34 @@ const initialForm = {
   birth_date: "",
 };
 
-export function AssignUserModal({ isOpen, onClose, onAssign, isInvitation = true, isSaving = false }: AssignUserModalProps) {
+export function AssignUserModal({ 
+  isOpen, 
+  onClose, 
+  onAssign, 
+  isInvitation = true, 
+  isSaving = false,
+  initialData,
+  title = "Assign Role",
+  description = "Enter the user details you wish to assign this role to.",
+  submitButtonText = "Assign User"
+}: AssignUserModalProps) {
   const [form, setForm] = useState(initialForm);
+
+  useEffect(() => {
+    if (isOpen && initialData) {
+      setForm((prev) => ({
+        ...prev,
+        email: initialData.email ?? prev.email,
+        first_name: initialData.first_name ?? prev.first_name,
+        middle_name: initialData.middle_name ?? "",
+        surname: initialData.surname ?? prev.surname,
+        contact: initialData.contact ?? "",
+        birth_date: initialData.birth_date ?? "",
+      }));
+    } else if (!isOpen) {
+      setForm(initialForm); // Reset when closing
+    }
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -33,8 +63,8 @@ export function AssignUserModal({ isOpen, onClose, onAssign, isInvitation = true
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#090215]/80 backdrop-blur-sm px-4">
       <div className="super-admin-sidebar w-full max-w-xl max-h-[85vh] shrink-0 flex flex-col !rounded-[28px] border p-6 md:p-8 relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
-        <h2 className="mb-2 text-2xl font-bold relative z-10" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Assign Role</h2>
-        <p className="text-[13px] text-white/50 mb-6 relative z-10">Enter the user details you wish to assign this role to.</p>
+        <h2 className="mb-2 text-2xl font-bold relative z-10" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>{title}</h2>
+        <p className="text-[13px] text-white/50 mb-6 relative z-10">{description}</p>
         
         <div className="flex-1 overflow-y-auto no-scrollbar relative z-10 pr-2">
           <div className="flex flex-col gap-5">
@@ -121,7 +151,7 @@ export function AssignUserModal({ isOpen, onClose, onAssign, isInvitation = true
                 : "bg-[#4f35cd] hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
             }`}
           >
-            {isSaving ? "Sending..." : "Assign User"}
+            {isSaving ? "Saving..." : submitButtonText}
           </button>
         </div>
       </div>

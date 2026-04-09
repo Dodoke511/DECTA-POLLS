@@ -32,6 +32,7 @@ export default function TenantSettingsPage() {
   ]);
   const [allowSubstitution, setAllowSubstitution] = useState(false);
   const [allowWithdrawal, setAllowWithdrawal] = useState(false);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
   const [tenantEmail, setTenantEmail] = useState("");
   const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
@@ -116,6 +117,7 @@ export default function TenantSettingsPage() {
           if (config.active_triggers) setActiveTriggers(config.active_triggers);
           if (config.allow_substitution !== undefined) setAllowSubstitution(config.allow_substitution);
           if (config.allow_withdrawal !== undefined) setAllowWithdrawal(config.allow_withdrawal);
+          if (config.subscription) setSubscriptionPlan(config.subscription);
         }
       } catch (err) {
         console.error("Error fetching settings:", err);
@@ -282,13 +284,20 @@ export default function TenantSettingsPage() {
               <div className="flex justify-end gap-5 mt-4 px-2 pb-10">
                 <button
                   onClick={() => {
+                    if (subscriptionPlan === 'BASIC') return;
                     setEditingRole(null);
                     setIsAddRoleModalOpen(true);
                   }}
-                  className="flex h-[52px] min-w-[180px] items-center justify-center rounded-[18px] bg-[#4f35cd] px-10 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={subscriptionPlan === 'BASIC'}
+                  title={subscriptionPlan === 'BASIC' ? "Custom roles are not available in the BASIC plan. Please upgrade to Standard or Enterprise." : ""}
+                  className={`flex h-[52px] min-w-[180px] items-center justify-center rounded-[18px] px-10 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${
+                    subscriptionPlan === 'BASIC' 
+                    ? "bg-white/10 opacity-40 cursor-not-allowed grayscale" 
+                    : "bg-[#4f35cd] hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
+                  }`}
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
                 >
-                  Add Role
+                  {subscriptionPlan === 'BASIC' ? "Role Restricted" : "Add Role"}
                 </button>
                 <button
                   onClick={handleSaveChanges}
