@@ -93,7 +93,25 @@ export default function LogInPage() {
             const random = Math.random().toString(36).substring(2, 12);
             sessionStorage.setItem('tenantToken', random);
             sessionStorage.setItem('tenantEmail', email);
-            
+
+            // Fetch and store permissions cookie for middleware + PermissionProvider
+            try {
+                const permRes = await fetch('/api/get_user_permissions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email }),
+                });
+                const permData = permRes.ok ? await permRes.json() : { permissions: [] };
+                const permissions: string[] = permData.permissions ?? [];
+                // Write cookie readable by middleware (server) and client
+                const cookieValue = encodeURIComponent(JSON.stringify(permissions));
+                document.cookie = `decta_permissions=${cookieValue}; path=/; SameSite=Strict`;
+                document.cookie = `decta_role=${permData.role ?? 'tenant_user'}; path=/; SameSite=Strict`;
+            } catch {
+                // Non-fatal — middleware will redirect to login if cookie is missing
+                console.warn('[login] Could not fetch permissions, proceeding without cookie');
+            }
+
             const params = new URLSearchParams();
             params.set('role', 'tenant');
             params.set('random', random);

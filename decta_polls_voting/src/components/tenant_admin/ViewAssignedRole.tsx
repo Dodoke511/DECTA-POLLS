@@ -51,18 +51,21 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
                         <th className="py-2 text-[11px] font-bold uppercase tracking-wider text-white/45 md:pr-8">
                             STATUS
                         </th>
+                        <th className="py-2 text-[11px] font-bold uppercase tracking-wider text-white/45 md:pr-8">
+                            ASSIGN
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
                     {loading ? (
                         <tr>
-                            <td colSpan={4} className="py-8 text-center text-[13px] text-white/40">
+                            <td colSpan={5} className="py-8 text-center text-[13px] text-white/40">
                                 Loading roles...
                             </td>
                         </tr>
                     ) : assignedRoles.length === 0 ? (
                         <tr>
-                            <td colSpan={4} className="py-8 text-center text-[13px] text-white/40">
+                            <td colSpan={5} className="py-8 text-center text-[13px] text-white/40">
                                 No custom roles created yet.
                             </td>
                         </tr>
@@ -78,13 +81,8 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
                             <td className="py-4 text-[13px] font-medium text-white/70 md:pr-8">
                                 {row.roleName}
                             </td>
-                            <td className="py-4 md:pr-8">
-                                <button
-                                    onClick={() => onAssignClick?.(row.id)}
-                                    className="rounded-lg bg-[#4f35cd]/20 px-4 py-1.5 text-[12px] font-bold text-[#D0C8FF] border border-[#4f35cd]/50 hover:bg-[#4f35cd]/40 transition-colors"
-                                >
-                                    Assign
-                                </button>
+                            <td className="py-4 text-[13px] text-white/70 md:pr-8">
+                                {row.assignedEmail ?? ""}
                             </td>
                             <td className="py-4 md:pr-8">
                                 <button
@@ -97,13 +95,21 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
                             </td>
                             <td className="py-4 md:pr-8">
                                 <span
-                                    className={`inline-flex items-center rounded-full border px-3.5 py-1 text-[11px] font-medium tracking-wide ${row.status === "Assigned"
+                                    className={`inline-flex items-center rounded-full border px-3.5 py-1 text-[11px] font-medium tracking-wide ${row.assignedEmail
                                             ? "border-[#387a66] bg-[#22483d]/60 text-[#5db59b]"
                                             : "border-[#8b5e34] bg-[#4a321f]/60 text-[#c28f64]"
                                         }`}
                                 >
-                                    {row.status === "Assigned" ? "Assigned" : "Not Assigned"}
+                                    {row.assignedEmail ? "Assigned" : "Not Assigned"}
                                 </span>
+                            </td>
+                            <td className="py-4 md:pr-8">
+                                <button
+                                    onClick={() => onAssignClick?.(row.id)}
+                                    className="rounded-lg bg-[#4f35cd]/20 px-4 py-1.5 text-[12px] font-bold text-[#D0C8FF] border border-[#4f35cd]/50 hover:bg-[#4f35cd]/40 transition-colors"
+                                >
+                                    Assign
+                                </button>
                             </td>
                         </tr>
                     ))}

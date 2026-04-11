@@ -38,7 +38,12 @@ export default function TenantSettingsPage() {
   const [editingRole, setEditingRole] = useState<any>(null);
   
   const handleEditRole = (role: any) => {
-    setEditingRole(role);
+    setEditingRole({
+      id: role.id,
+      roleName: role.roleName,
+      permissions: role.permissions ?? [],
+      roleDescription: role.roleDescription ?? "",
+    });
     setIsAddRoleModalOpen(true);
   };
   
@@ -185,7 +190,7 @@ export default function TenantSettingsPage() {
   };
 
   const [isCreatingRole, setIsCreatingRole] = useState(false);
-  const handleCreateRole = async (roleName: string, permissions: string[]) => {
+  const handleCreateRole = async (roleName: string, permissions: string[], roleDescription: string) => {
     if (!roleName.trim() || permissions.length === 0) return;
     setIsCreatingRole(true);
     
@@ -196,6 +201,7 @@ export default function TenantSettingsPage() {
           roleId: editingRole.id,
           roleName: roleName,
           permissions: permissions,
+          roleDescription: roleDescription,
         };
 
         const res = await fetch("/api/update_tenant_role", {
@@ -213,6 +219,7 @@ export default function TenantSettingsPage() {
           tenantEmail,
           roleName: roleName,
           permissions: permissions,
+          roleDescription: roleDescription,
         };
 
         const res = await fetch("/api/create_tenant_role", {

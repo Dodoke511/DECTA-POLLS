@@ -10,7 +10,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tenantEmail, roleName, permissions } = body;
+    const { tenantEmail, roleName, permissions, roleDescription } = body;
 
     console.log("[create_tenant_role] Received payload:", { tenantEmail, roleName, permissions_count: permissions?.length });
 
@@ -40,7 +40,8 @@ export async function POST(request: Request) {
         {
           tenantID: tenant.id,
           roleName: roleName,
-          permissions: permissions, // Automagically converted to JSONB via supabase-js
+          permissions: permissions,
+          roleDescription: roleDescription ?? null,
         }
       ])
       .select()

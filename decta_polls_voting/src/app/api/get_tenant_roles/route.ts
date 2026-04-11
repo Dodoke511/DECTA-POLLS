@@ -37,13 +37,29 @@ export async function POST(request: Request) {
       .eq("tenantID", tenant.id);
 
     if (rolesError) {
-      // If ordering fails because created_at doesn't exist, we will just suppress it and do a standard select below if needed. But it's safer to just remove .order if we don't know the schema.
       console.error("[get_tenant_roles] Supabase error:", rolesError);
       return NextResponse.json({ error: rolesError.message }, { status: 500 });
     }
 
+    // 3. Fetch tenant users to get assigned person emails
+    const { data: tenantUsers } = await supabase
+      .from("tenant users")
+      .select("roleID, email")
+      .eq("tenantID", tenant.id);
+
+    // 4. Map assigned email onto each role
+    const rolesWithAssignee = (roles ?? []).map((role: any) => {
+      const assignedUser = (tenantUsers ?? []).find(
+        (u: any) => u.roleID === role.id
+      );
+      return {
+        ...role,
+        assignedEmail: assignedUser?.email ?? null,
+      };
+    });
+
     return NextResponse.json({
-      data: roles,
+      data: rolesWithAssignee,
     });
   } catch (err: any) {
     console.error("[get_tenant_roles] API error:", err);

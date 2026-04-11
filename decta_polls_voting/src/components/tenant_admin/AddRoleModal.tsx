@@ -115,21 +115,24 @@ export const PERMISSION_CATEGORIES = [
 interface AddRoleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (roleName: string, permissions: string[]) => void;
+  onSave: (roleName: string, permissions: string[], roleDescription: string) => void;
   isSaving: boolean;
-  editingRole?: { id: string, roleName: string, permissions: string[] } | null;
+  editingRole?: { id: string, roleName: string, permissions: string[], roleDescription?: string } | null;
 }
 
 export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole }: AddRoleModalProps) {
   const [roleName, setRoleName] = useState("");
+  const [roleDescription, setRoleDescription] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
 
   useEffect(() => {
     if (editingRole) {
       setRoleName(editingRole.roleName);
+      setRoleDescription(editingRole.roleDescription || "");
       setSelectedPermissions(editingRole.permissions || []);
     } else {
       setRoleName("");
+      setRoleDescription("");
       setSelectedPermissions([]);
     }
   }, [editingRole, isOpen]);
@@ -156,7 +159,7 @@ export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole }:
   };
 
   const handleSave = () => {
-    onSave(roleName, selectedPermissions);
+    onSave(roleName, selectedPermissions, roleDescription);
   };
 
   return (
@@ -166,7 +169,7 @@ export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole }:
         <p className="text-[13px] text-white/50 mb-6 relative z-10">{editingRole ? "Modify the permissions or name for this role." : "Configure custom permissions for this specific role variant."}</p>
         
         <div className="flex-1 overflow-y-auto no-scrollbar pr-4 relative z-10">
-          <div className="mb-8">
+          <div className="mb-5">
             <label className="mb-2 block text-[13px] font-medium tracking-wide text-white/50 uppercase">Role Name</label>
             <input
               type="text"
@@ -174,6 +177,17 @@ export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole }:
               onChange={(e) => setRoleName(e.target.value)}
               placeholder="e.g. Canvasser"
               className="w-full rounded-xl border border-white/[0.1] bg-white/[0.02] px-5 py-3.5 text-[15px] text-white placeholder-white/20 outline-none transition-colors focus:border-[#5D44F8] focus:bg-white/[0.05] focus:ring-1 focus:ring-[#5D44F8]/50"
+            />
+          </div>
+
+          <div className="mb-8">
+            <label className="mb-2 block text-[13px] font-medium tracking-wide text-white/50 uppercase">Role Description</label>
+            <textarea
+              value={roleDescription}
+              onChange={(e) => setRoleDescription(e.target.value)}
+              placeholder="Briefly describe what this role is responsible for..."
+              rows={3}
+              className="w-full rounded-xl border border-white/[0.1] bg-white/[0.02] px-5 py-3.5 text-[14px] text-white placeholder-white/20 outline-none transition-colors focus:border-[#5D44F8] focus:bg-white/[0.05] focus:ring-1 focus:ring-[#5D44F8]/50 resize-none"
             />
           </div>
 

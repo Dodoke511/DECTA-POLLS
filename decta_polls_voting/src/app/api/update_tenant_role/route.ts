@@ -10,7 +10,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { roleId, roleName, permissions } = body;
+    const { roleId, roleName, permissions, roleDescription } = body;
 
     if (!roleId || !roleName || !permissions) {
       return NextResponse.json(
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       .update({
         roleName: roleName,
         permissions: permissions,
+        roleDescription: roleDescription ?? null,
       })
       .eq("id", roleId)
       .select()
