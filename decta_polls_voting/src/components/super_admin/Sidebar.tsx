@@ -36,7 +36,7 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     sessionStorage.removeItem('adminToken');
-    router.push('/loading?destination=/');
+    router.push('/loader?destination=/');
   };
 
   const getItemStyle = (path: string) => {

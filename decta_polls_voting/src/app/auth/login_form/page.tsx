@@ -64,13 +64,13 @@ export default function LogInPage() {
             if (superAdminRes.ok) {
                 const random = Math.random().toString(36).substring(2, 12);
                 sessionStorage.setItem('adminToken', random);
-                
+
                 const params = new URLSearchParams();
                 params.set('role', 'super_admin');
                 params.set('random', random);
-                
-                // Navigate to loading page, then to super admin dashboard
-                router.push('/loading?destination=' + encodeURIComponent('/users/super_admin/Dashboard?' + params.toString()));
+
+                // Navigate to loader page, then to super admin dashboard
+                router.push('/loader?destination=' + encodeURIComponent('/users/super_admin/Dashboard?' + params.toString()));
                 return;
             }
 
@@ -96,13 +96,13 @@ export default function LogInPage() {
             if (data.tenantId) {
                 sessionStorage.setItem('tenantUserId', data.tenantId);
             }
-            
+
             const params = new URLSearchParams();
             params.set('role', 'tenant');
             params.set('random', random);
-            
-            // Navigate to loading page, then to tenant dashboard
-            router.push('/loading?destination=' + encodeURIComponent('/users/tenant/dashboard?' + params.toString()));
+
+            // Navigate to loader page, then to tenant dashboard
+            router.push('/loader?destination=' + encodeURIComponent('/users/tenant/dashboard?' + params.toString()));
         } catch (error: any) {
             setError(error.message || 'Login failed');
             setIsLoading(false);

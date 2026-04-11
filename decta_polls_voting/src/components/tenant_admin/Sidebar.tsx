@@ -22,7 +22,7 @@ export function TenantAdminSidebar({ activePath }: SidebarProps) {
     setIsLoggingOut(true);
     sessionStorage.removeItem('tenantToken');
     sessionStorage.removeItem('tenantEmail');
-    router.push('/loading?destination=/');
+    router.push('/loader?destination=/');
   };
 
   const getItemStyle = (path: string) => {

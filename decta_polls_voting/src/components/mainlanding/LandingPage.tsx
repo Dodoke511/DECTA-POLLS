@@ -32,14 +32,14 @@ export default function LandingPage() {
   // Handle button clicks with loading states
   const handleBuildClick = async () => {
     setBuildLoading(true);
-    // Navigate to loading page with build parameters
-    router.push('/loading?destination=/auth/tenant_reg&type=build');
+    // Navigate to loader page with build parameters
+    router.push('/loader?destination=/auth/tenant_reg&type=build');
   };
 
   const handleLoginClick = async () => {
     setLoginLoading(true);
-    // Navigate to loading page with login parameters
-    router.push('/loading?destination=' + encodeURIComponent('/auth/login_form') + '&type=login');
+    // Navigate to loader page with login parameters
+    router.push('/loader?destination=' + encodeURIComponent('/auth/login_form') + '&type=login');
   };
 
   // Debounced copy function to prevent rapid clicks

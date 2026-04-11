@@ -31,10 +31,11 @@ export async function POST(request: Request) {
     }
 
     // Construct records payload
-    const recordsToInsert = positions.map((pos: any) => ({
+    const recordsToInsert = positions.map((pos: any, index: number) => ({
       electionID: electionId,
       title: pos.title,
       seats: parseInt(pos.maxWinners, 10) || 1,
+      order_index: index,
     }));
 
     // If there are positions to insert, proceed
