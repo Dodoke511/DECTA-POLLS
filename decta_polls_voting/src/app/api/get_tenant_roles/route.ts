@@ -1,43 +1,71 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const electionId = searchParams.get('electionId');
+    const { email } = await request.json();
 
-    if (!electionId) {
-      return NextResponse.json({ error: 'Missing electionId.' }, { status: 400 });
+    if (!email) {
+      return NextResponse.json(
+        { error: "Email is required to identify the tenant" },
+        { status: 400 }
+      );
     }
 
-    // Get tenantID from election
-    const { data: election, error: electionError } = await supabase
-      .from('election')
-      .select('tenantID')
-      .eq('id', electionId)
+    // 1. Fetch tenant ID
+    const { data: tenant, error: fetchError } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("email", email)
       .single();
 
-    if (electionError || !election) {
-      return NextResponse.json({ error: 'Election not found.' }, { status: 404 });
+    if (fetchError || !tenant) {
+      console.error("[get_tenant_roles] Error fetching tenant:", fetchError);
+      return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
-    // Fetch tenant roles
+    // 2. Fetch roles for this tenant
     const { data: roles, error: rolesError } = await supabase
-      .from('tenant_roles')
-      .select('id, roleName')
-      .eq('tenantID', election.tenantID);
+      .from("tenant roles")
+      .select("*")
+      .eq("tenantID", tenant.id);
 
     if (rolesError) {
+      console.error("[get_tenant_roles] Supabase error:", rolesError);
       return NextResponse.json({ error: rolesError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ roles: roles ?? [] }, { status: 200 });
+    // 3. Fetch tenant users to get assigned person emails
+    const { data: tenantUsers } = await supabase
+      .from("tenant users")
+      .select("roleID, email")
+      .eq("tenantID", tenant.id);
+
+    // 4. Map assigned email onto each role
+    const rolesWithAssignee = (roles ?? []).map((role: any) => {
+      const assignedUser = (tenantUsers ?? []).find(
+        (u: any) => u.roleID === role.id
+      );
+      return {
+        ...role,
+        assignedEmail: assignedUser?.email ?? null,
+      };
+    });
+
+    return NextResponse.json({
+      data: rolesWithAssignee,
+    });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    console.error("[get_tenant_roles] API error:", err);
+    return NextResponse.json(
+      { error: err.message || "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
