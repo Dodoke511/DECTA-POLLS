@@ -224,7 +224,6 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     // 2. It has been saved to the DB (has an id) AND has a customized name
     // (Note: Future logic for "phase rule" check can be added here once implemented)
     if (!phase.is_enabled && !meta.required) return true;
-    if (phase.is_enabled && !meta.required) return false;
 
     const hasBeenSaved = !!phase.id;
     const hasName = !!phase.name && phase.name.trim() !== "";
@@ -453,7 +452,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       </div>
 
       {/* ── Pre-flight Panel ─────────────────────────────────────────────────── */}
-      <div className="mt-10 max-w-2xl rounded-[24px] border border-white/8 bg-[#110D1E]/40 backdrop-blur-2xl overflow-hidden group hover:border-[#6648EB]/30 transition-all">
+      <div className="mt-10 mx-auto max-w-4xl rounded-[24px] border border-white/8 bg-[#110D1E]/40 backdrop-blur-2xl overflow-hidden group hover:border-[#6648EB]/30 transition-all">
         <button
           onClick={() => setShowPreflight(v => !v)}
           className="w-full flex items-center justify-between px-8 py-5 hover:bg-white/[0.02] transition-colors"

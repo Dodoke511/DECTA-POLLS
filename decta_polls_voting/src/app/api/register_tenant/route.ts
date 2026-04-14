@@ -14,7 +14,7 @@ export async function POST(request: Request) {
         const formData = await request.formData();
 
         const organization = formData.get('organization') as string;
-        const email = formData.get('email') as string;
+        const email = (formData.get('email') as string).trim().toLowerCase();
         const type = formData.get('type') as string;
         const subscription = formData.get('subscription') as string;
         const verification = formData.get('verification') as File | null;

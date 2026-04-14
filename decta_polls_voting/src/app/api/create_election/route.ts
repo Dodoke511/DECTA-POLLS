@@ -15,9 +15,21 @@ export async function POST(request: Request) {
     const endDate = formData.get('endDate') as string;
     const bannerFile = formData.get('banner') as File | null;
 
-    if (!tenantId || !title || !startDate || !endDate) {
+    console.log('tenantId:', tenantId);
+    console.log('title:', title);
+    console.log('startDate:', startDate);
+    console.log('endDate:', endDate);
+    console.log('bannerFile:', bannerFile);
+
+    const missing = [];
+    if (!tenantId) missing.push('tenantId');
+    if (!title) missing.push('title');
+    if (!startDate) missing.push('startDate');
+    if (!endDate) missing.push('endDate');
+
+    if (missing.length > 0) {
       return NextResponse.json(
-        { error: 'Missing required fields: tenantId, title, startDate, endDate.' },
+        { error: `Missing required fields: ${missing.join(', ')}` },
         { status: 400 }
       );
     }

@@ -16,6 +16,7 @@ interface FormFieldState {
   label: string;
   field_type: FieldType;
   required: boolean;
+  rule_checkable: boolean; // Whether this field can be used in screening/rule checks
   validation_rules: ValidationRules;
   order_index: number;
   _key: string;       // stable local key before DB id exists
@@ -33,6 +34,7 @@ const makeDefault = (type: FieldType, count: number): FormFieldState => ({
   label: FIELD_TYPE_META.find(m => m.type === type)?.label ?? 'New Field',
   field_type: type,
   required: false,
+  rule_checkable: false,
   validation_rules: {
     options: type === 'dropdown' || type === 'radio' ? ['Option 1', 'Option 2'] : undefined,
   },
@@ -248,13 +250,26 @@ function FieldCardBuild({ field, index, dragIndex, onUpdate, onDelete, onDragSta
             </div>
           )}
           {!isSection && (
-            <div className="flex items-center justify-between pt-2 border-t border-white/5">
-              <span className="text-[12px] text-white/45 font-medium">Required field</span>
-              <button type="button" onClick={() => onUpdate(field._key, { required: !field.required })}
-                className="relative w-10 h-5 rounded-full transition-all duration-200 flex-shrink-0"
-                style={{ background: field.required ? '#5B4FD9' : 'rgba(255,255,255,0.1)' }}>
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${field.required ? 'left-5' : 'left-0.5'}`} />
-              </button>
+            <div className="space-y-2 pt-2 border-t border-white/5">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-white/45 font-medium">Required field</span>
+                <button type="button" onClick={() => onUpdate(field._key, { required: !field.required })}
+                  className="relative w-10 h-5 rounded-full transition-all duration-200 flex-shrink-0"
+                  style={{ background: field.required ? '#5B4FD9' : 'rgba(255,255,255,0.1)' }}>
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${field.required ? 'left-5' : 'left-0.5'}`} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[12px] text-white/45 font-medium">Rule checkable</span>
+                  <p className="text-[10px] text-white/25">Expose this field for screening rule evaluation</p>
+                </div>
+                <button type="button" onClick={() => onUpdate(field._key, { rule_checkable: !field.rule_checkable })}
+                  className="relative w-10 h-5 rounded-full transition-all duration-200 flex-shrink-0"
+                  style={{ background: field.rule_checkable ? '#10B981' : 'rgba(255,255,255,0.1)' }}>
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${field.rule_checkable ? 'left-5' : 'left-0.5'}`} />
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -343,6 +358,8 @@ export const CandidateFormBuilder = forwardRef(({ electionId }: { electionId: st
           label: f.label,
           fieldType: f.field_type,
           required: f.required,
+          ruleCheckable: f.rule_checkable,
+          placeholder: f.validation_rules.placeholder,
           validationRules: f.validation_rules,
           orderIndex: i,
         }));
@@ -378,7 +395,11 @@ export const CandidateFormBuilder = forwardRef(({ electionId }: { electionId: st
             label: f.label,
             field_type: f.fieldType,
             required: f.required,
-            validation_rules: f.validationRules,
+            rule_checkable: f.rule_checkable ?? false,
+            validation_rules: {
+              ...(f.validationRules || {}),
+              placeholder: f.placeholder || f.validationRules?.placeholder || ''
+            },
             order_index: f.orderIndex,
             _key: genKey(),
             _expanded: false

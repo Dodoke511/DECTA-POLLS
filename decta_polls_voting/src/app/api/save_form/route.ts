@@ -74,6 +74,8 @@ export async function POST(request: Request) {
         label: f.label,
         fieldType: f.fieldType,
         required: f.required ?? false,
+        rule_checkable: f.ruleCheckable ?? false,
+        placeholder: f.placeholder || null,
         validationRules: f.validationRules ?? {},
         orderIndex: i,
       }));

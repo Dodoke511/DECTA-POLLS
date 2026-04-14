@@ -9,6 +9,7 @@ import {
 import { PhaseConfig, PhaseMetadata, PhaseType, TransitionMode } from '@/lib/types/phase';
 import { PositionsModule } from './modules/PositionsModule';
 import { CandidateFormBuilder } from './modules/CandidateFormBuilder';
+import { ScreeningModule } from './modules/ScreeningModule';
 
 export interface TenantRole {
   id: string;
@@ -288,9 +289,14 @@ export function PhaseCard({
               </div>
             )}
 
-            {/* ─ Embedded CandidateFormBuilder ─ */}
+            {/* ─ Embedded CandidateFormBuilder (filing) ─ */}
             {metadata.type === 'filing' && (
               <CandidateFormBuilder ref={moduleRef} electionId={electionId} />
+            )}
+
+            {/* ─ Embedded ScreeningModule (screening) ─ */}
+            {metadata.type === 'screening' && (
+              <ScreeningModule ref={moduleRef} electionId={electionId} phaseId={phase.id} />
             )}
 
             {/* ─ Rules section (stub) ─ */}
