@@ -28,17 +28,17 @@ export async function POST(request: Request) {
         role_assigned: p.role_assigned || null,
         transition_mode: p.transition_mode || 'manual',
       };
-      
+
       // Crucial: Only include the id key if it actually exists. 
       // Providing { id: undefined } or { id: null } can crash PosegREST if it's a primary key.
       if (p.id) row.id = p.id;
-      
+
       return row;
     });
 
     const { error } = await supabase
       .from('election phase')
-      .upsert(records, { onConflict: 'phase_type' });
+      .upsert(records, { onConflict: 'electionID, phase_type' });
 
     if (error) {
       console.error('Supabase upsert error:', error);
