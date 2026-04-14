@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     const { error } = await supabase
       .from('election phase')
-      .upsert(records, { onConflict: 'phase_type' });
+      .upsert(records, { onConflict: 'electionID, phase_type' });
 
     if (error) {
       console.error('Supabase upsert error:', error);
