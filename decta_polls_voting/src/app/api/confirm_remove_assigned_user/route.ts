@@ -39,11 +39,21 @@ export async function POST(request: Request) {
     }
 
     // 3. Remove the role assignment
-    const { error: updateError } = await supabase
+    const { data: user, error: userError } = await supabase
       .from("tenant users")
-      .update({ roleID: null })
-      .eq("roleID", record.role_id)
-      .eq("email", record.email);
+      .select("id")
+      .eq("email", record.email)
+      .single();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const { error: updateError } = await supabase
+      .from("userRoles")
+      .delete()
+      .eq("userID", user.id)
+      .eq("roleID", record.role_id);
 
     if (updateError) {
       console.error("[confirm_remove] Supabase update error:", updateError);

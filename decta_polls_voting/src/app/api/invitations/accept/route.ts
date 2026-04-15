@@ -63,22 +63,30 @@ export async function POST(request: Request) {
           surname: surname || invite.surname,
           contact: contact || invite.contact,
           birth_date: birth_date || invite.birth_date,
-          status: 'active',
-          roleID: invite.roleID
+          status: 'active'
         }
       ]);
 
     if (userTableError) {
       console.error("[accept_invitation] DB User Insert Error:", userTableError);
-      
-      // If the error is likely a missing column "roleID", we might want to inform the user nicely
-      if (userTableError.message.includes('column "roleID" of relation "tenant users" does not exist')) {
-          return NextResponse.json({ 
-              error: "Database Schema Error: The 'tenant users' table is missing a 'roleID' column. Please contact support." 
-          }, { status: 500 });
-      }
-
       return NextResponse.json({ error: "Failed to create user record: " + userTableError.message }, { status: 500 });
+    }
+
+    // 3.5 Insert into "userRoles" junction table
+    if (invite.roleID) {
+      const { error: roleError } = await supabase
+        .from("userRoles")
+        .insert([
+          {
+            userID: userId,
+            roleID: invite.roleID
+          }
+        ]);
+
+      if (roleError) {
+        console.error("[accept_invitation] DB UserRole Insert Error:", roleError);
+        return NextResponse.json({ error: "Failed to assign user role: " + roleError.message }, { status: 500 });
+      }
     }
 
     // 4. Update Invitation Status

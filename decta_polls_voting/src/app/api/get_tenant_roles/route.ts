@@ -41,16 +41,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: rolesError.message }, { status: 500 });
     }
 
-    // 3. Fetch tenant users to get assigned person emails
+    // 3. Fetch tenant users for this tenant to know their emails
     const { data: tenantUsers } = await supabase
       .from("tenant users")
-      .select("roleID, email")
+      .select("id, email")
       .eq("tenantID", tenant.id);
+      
+    const userIds = (tenantUsers ?? []).map((u: any) => u.id);
 
-    // 4. Map assigned email onto each role
+    // 4. Fetch userRoles for those users
+    const { data: userRoles } = userIds.length > 0 
+      ? await supabase.from("userRoles").select("roleID, userID").in("userID", userIds) 
+      : { data: [] };
+
+    // 5. Map assigned email onto each role
     const rolesWithAssignee = (roles ?? []).map((role: any) => {
+      const assignedUserRole = (userRoles ?? []).find(
+        (ur: any) => ur.roleID === role.id
+      );
       const assignedUser = (tenantUsers ?? []).find(
-        (u: any) => u.roleID === role.id
+        (u: any) => u.id === assignedUserRole?.userID
       );
       return {
         ...role,

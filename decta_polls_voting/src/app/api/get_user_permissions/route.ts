@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     // 2. Check if this is an invited tenant user
     const { data: tenantUser, error: userError } = await supabase
       .from("tenant users")
-      .select("roleID")
+      .select("id")
       .eq("email", email)
       .single();
 
@@ -41,7 +41,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!tenantUser.roleID) {
+    // Fetch user's role from userRoles junction table
+    const { data: userRole, error: userRoleError } = await supabase
+      .from("userRoles")
+      .select("roleID")
+      .eq("userID", tenantUser.id)
+      .single();
+
+    if (userRoleError || !userRole || !userRole.roleID) {
       // Assigned no role — no permissions
       return NextResponse.json({ permissions: [], role: "tenant_user" });
     }
@@ -50,7 +57,7 @@ export async function POST(request: Request) {
     const { data: role, error: roleError } = await supabase
       .from("tenant roles")
       .select("permissions")
-      .eq("id", tenantUser.roleID)
+      .eq("id", userRole.roleID)
       .single();
 
     if (roleError || !role) {
