@@ -87,20 +87,6 @@ export function WorkflowHeader({ electionTitle, banner, electionId }: WorkflowHe
       </div>
 
       <div className="flex items-center gap-6">
-        <button className="text-white/60 hover:text-white transition-colors" title="Customize Theme">
-          <Palette className="w-5 h-5" />
-        </button>
-        <button className="text-white/60 hover:text-white transition-colors" title="Preview">
-          <Eye className="w-5 h-5" />
-        </button>
-        <div className="flex items-center gap-4 border-l border-white/10 pl-6 border-r pr-6">
-          <button className="text-white/60 hover:text-white transition-colors disabled:opacity-30 disabled:hover:text-white/60" disabled title="Undo">
-            <Undo className="w-5 h-5" />
-          </button>
-          <button className="text-white/60 hover:text-white transition-colors disabled:opacity-30 disabled:hover:text-white/60" disabled title="Redo">
-            <Redo className="w-5 h-5" />
-          </button>
-        </div>
         <button className="bg-white/10 hover:bg-white/20 text-white/90 font-semibold px-6 py-2.5 rounded-xl transition-all backdrop-blur-sm border border-white/10 shadow-lg select-none">
           Publish
         </button>

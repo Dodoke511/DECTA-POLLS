@@ -4,16 +4,19 @@ import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Settings2, Lock, ChevronDown, ChevronUp, Zap,
-  Clock, Users, AlertTriangle, BookOpen, Loader2, CheckCircle2
+  Clock, Users, AlertTriangle, BookOpen, Loader2, CheckCircle2,
+  Archive, LayoutDashboard, Settings, ArrowRight, Save, Trash2, CheckSquare2
 } from 'lucide-react';
 import { PhaseConfig, PhaseMetadata, PhaseType, TransitionMode } from '@/lib/types/phase';
 import { PositionsModule } from './modules/PositionsModule';
-import { CandidateFormBuilder } from './modules/CandidateFormBuilder';
+import { DynamicFormBuilder } from './modules/CandidateFormBuilder';
 import { ScreeningModule } from './modules/ScreeningModule';
+import { AppealModule } from './modules/AppealModule';
 
 export interface TenantRole {
   id: string;
   roleName: string;
+  permissions: string[];
 }
 
 interface PhaseCardProps {
@@ -42,6 +45,15 @@ const ACCENT: Record<PhaseType, string> = {
   results: '#4F46E5',
 };
 
+const PHASE_PERMISSION_MAP: Record<PhaseType, string[]> = {
+  filing: ['candidate.review', 'candidate.view'],
+  screening: ['screen_candidates', 'candidate.review', 'candidate.approve', 'candidate.reject'],
+  appeal: ['appeal.review', 'appeal.approve', 'appeal.reject'],
+  publication: ['result.publish', 'election.activate'],
+  voting: ['election.activate', 'voter.assign_token'],
+  results: ['result.compute', 'result.view'],
+};
+
 export function PhaseCard({
   phase, metadata, roles, electionId,
   isDisabledByDependency, isLast,
@@ -53,6 +65,14 @@ export function PhaseCard({
   const [isRulesExpanded, setIsRulesExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+
+  const requiredPerms = PHASE_PERMISSION_MAP[metadata.type] || [];
+  const filteredRoles = roles.filter(role => {
+    if (!role.permissions) return false;
+    // Wildcard '*' grants everything
+    if (role.permissions.includes('*')) return true;
+    return requiredPerms.some(p => role.permissions.includes(p));
+  });
 
   const accent = ACCENT[metadata.type];
   const isRequired = metadata.required;
@@ -259,13 +279,98 @@ export function PhaseCard({
                   </div>
                 )}
 
+                {/* Completion Behavior */}
+                {metadata.hasCompletionBehavior && (
+                  <div className="col-span-full mt-2 p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+                    <div className="mb-4">
+                      <label className="text-[11px] font-semibold text-white/40 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
+                        <CheckSquare2 className="w-3 h-3" /> Completion Behavior
+                      </label>
+                      <p className="text-[11px] text-white/35">
+                        Determine what happens when this phase advances (via deadline or manually).
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      {/* Require All Reviewed */}
+                      <label className="flex items-start gap-3 cursor-pointer group">
+                        <div className="relative flex h-4 w-4 shrink-0 items-center justify-center mt-0.5">
+                          <input
+                            type="radio"
+                            name={`cb_${phase.id}`}
+                            checked={phase.completion_behavior === 'require_all_reviewed'}
+                            onChange={() => onChange(phase.phase_type, { completion_behavior: 'require_all_reviewed' })}
+                            className="peer h-4 w-4 appearance-none rounded-full border border-white/20 bg-white/[0.02] transition-all checked:border-[#10B981] checked:border-4 hover:border-white/40 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <p className={`text-[13px] font-medium transition-colors ${phase.completion_behavior === 'require_all_reviewed' ? 'text-white' : 'text-white/60 group-hover:text-white/80'}`}>
+                            Require all {metadata.type === 'appeal' ? 'appeals' : 'candidates'} to be reviewed
+                          </p>
+                          <p className="text-[11px] text-white/30 hidden md:block">
+                            Prevents advancing to the next phase if any items are still pending.
+                          </p>
+                        </div>
+                      </label>
+
+                      {/* Auto-Resolve */}
+                      <label className="flex items-start gap-3 cursor-pointer group">
+                        <div className="relative flex h-4 w-4 shrink-0 items-center justify-center mt-0.5">
+                          <input
+                            type="radio"
+                            name={`cb_${phase.id}`}
+                            checked={phase.completion_behavior === 'auto_resolve_pending'}
+                            onChange={() => onChange(phase.phase_type, { completion_behavior: 'auto_resolve_pending' })}
+                            className="peer h-4 w-4 appearance-none rounded-full border border-white/20 bg-white/[0.02] transition-all checked:border-[#6648EB] checked:border-4 hover:border-white/40 focus:outline-none"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className={`text-[13px] font-medium transition-colors ${phase.completion_behavior === 'auto_resolve_pending' ? 'text-white' : 'text-white/60 group-hover:text-white/80'}`}>
+                            Auto-resolve pending {metadata.type === 'appeal' ? 'appeals' : 'candidates'}
+                          </p>
+                          <p className="text-[11px] text-white/30 hidden md:block">
+                            Automatically process any unreviewed items when the phase completes.
+                          </p>
+
+                          {/* Auto-Resolve Sub-options */}
+                          {phase.completion_behavior === 'auto_resolve_pending' && (
+                            <div className="mt-3 pl-4 border-l-2 border-[#6648EB]/30 space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                              <label className="text-[10px] font-semibold text-white/30 uppercase tracking-widest block mb-2">
+                                Auto-Resolution Action
+                              </label>
+                              <div className="flex rounded-lg overflow-hidden border border-white/10 w-fit">
+                                <button
+                                  type="button"
+                                  onClick={() => onChange(phase.phase_type, { auto_resolve_action: 'auto_reject' })}
+                                  className={`px-4 py-2 text-[11px] font-semibold transition-all
+                                    ${phase.auto_resolve_action === 'auto_reject' ? 'bg-red-500/20 text-red-400 border-b-2 border-red-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                                >
+                                  Auto-Reject
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => onChange(phase.phase_type, { auto_resolve_action: 'auto_approve' })}
+                                  className={`px-4 py-2 text-[11px] font-semibold transition-all
+                                    ${phase.auto_resolve_action === 'auto_approve' ? 'bg-emerald-500/20 text-emerald-400 border-b-2 border-emerald-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                                >
+                                  Auto-Approve
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 {/* Manager role selector */}
                 {metadata.hasManagerRole && (
                   <div className={metadata.hasTransitionMode ? '' : 'col-span-full'}>
                     <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                       <Users className="w-3 h-3" /> Manager Role
                     </label>
-                    {roles.length > 0 ? (
+                    {filteredRoles.length > 0 ? (
                       <select
                         value={phase.role_assigned ?? ''}
                         onChange={e => onChange(phase.phase_type, { role_assigned: e.target.value || null })}
@@ -274,14 +379,19 @@ export function PhaseCard({
                         onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
                       >
                         <option value="">— No role assigned —</option>
-                        {roles.map(r => (
+                        {filteredRoles.map(r => (
                           <option key={r.id} value={r.id}>{r.roleName}</option>
                         ))}
                       </select>
                     ) : (
-                      <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-white/8 bg-white/3 text-white/35 text-[12px]">
-                        <AlertTriangle className="w-4 h-4 text-amber-500/60 flex-shrink-0" />
-                        No roles defined yet. Create roles in Settings first.
+                      <div className="flex flex-col gap-2 p-4 rounded-xl border border-dashed border-white/10 bg-white/3 text-white/35 text-[12px]">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-500/60 flex-shrink-0" />
+                          <span>No roles found with required permissions.</span>
+                        </div>
+                        <p className="text-[10px] text-white/20">
+                          Requires: {requiredPerms.join(', ')}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -289,9 +399,14 @@ export function PhaseCard({
               </div>
             )}
 
-            {/* ─ Embedded CandidateFormBuilder (filing) ─ */}
+            {/* ─ Embedded DynamicFormBuilder (filing) ─ */}
             {metadata.type === 'filing' && (
-              <CandidateFormBuilder ref={moduleRef} electionId={electionId} />
+              <DynamicFormBuilder
+                ref={moduleRef}
+                electionId={electionId}
+                toolName="candidate_application"
+                title="Candidate Application Form"
+              />
             )}
 
             {/* ─ Embedded ScreeningModule (screening) ─ */}
@@ -299,35 +414,14 @@ export function PhaseCard({
               <ScreeningModule ref={moduleRef} electionId={electionId} phaseId={phase.id} />
             )}
 
-            {/* ─ Rules section (stub) ─ */}
-            <div className='flex justify-between'>
-              <button
-                onClick={() => setIsRulesExpanded(v => !v)}
-                className="flex items-center gap-2 text-[11px] font-semibold text-white/30 hover:text-white/60 uppercase tracking-widest transition-colors"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                Phase Rules
-                {isRulesExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
+            {/* ─ Embedded AppealModule (appeal) ─ */}
+            {metadata.type === 'appeal' && (
+              <AppealModule ref={moduleRef} electionId={electionId} phaseId={phase.id} />
+            )}
 
-              {isRulesExpanded && (
-                <div className="mt-3 p-4 rounded-xl border border-dashed border-white/10 bg-white/2">
-                  <p className="text-[12px] text-white/35 leading-relaxed">
-                    <span className="text-white/50 font-semibold">Rules Engine</span> — Attach transition conditions to this phase
-                    (e.g. "All candidates must have a screening decision before advancing").
-                    Rules configuration will be available in a future update.
-                  </p>
-                  <button
-                    disabled
-                    className="mt-3 text-[11px] px-3 py-1.5 rounded-lg border border-white/10 text-white/30 cursor-not-allowed"
-                  >
-                    + Attach Rule (coming soon)
-                  </button>
-                </div>
-              )}
-
+            <div className='flex justify-end'>
               {/* ─ Individual Save Button ─ */}
-              <div className="pt-6 border-t border-white/5 flex items-center justify-between gap-4">
+              <div className="pt-6 flex items-center justify-between gap-4">
                 <div className="flex-1">
                   {saveStatus === 'success' && (
                     <span className="text-emerald-400 text-[12px] font-medium flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2 transition-all">

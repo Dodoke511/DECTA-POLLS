@@ -20,6 +20,8 @@ export interface PhaseConfig {
   deadline: string | null;
   role_assigned: string | null;
   transition_mode: TransitionMode;
+  completion_behavior?: 'require_all_reviewed' | 'auto_resolve_pending';
+  auto_resolve_action?: 'auto_reject' | 'auto_approve';
 }
 
 export interface PhaseMetadata {
@@ -36,6 +38,7 @@ export interface PhaseMetadata {
   hasManagerRole: boolean;
   hasDeadline: boolean;
   hasTransitionMode: boolean;
+  hasCompletionBehavior: boolean;
   redirectToSettings: boolean;
   embedModule: boolean;
 }
@@ -54,6 +57,7 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
     hasManagerRole: false,
     hasDeadline: true,
     hasTransitionMode: true,
+    hasCompletionBehavior: false,
     redirectToSettings: false,
     embedModule: false,
   },
@@ -70,6 +74,7 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
     hasManagerRole: true,
     hasDeadline: true,
     hasTransitionMode: true,
+    hasCompletionBehavior: true,
     redirectToSettings: false,
     embedModule: false,
   },
@@ -87,6 +92,7 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
     hasManagerRole: true,
     hasDeadline: true,
     hasTransitionMode: true,
+    hasCompletionBehavior: true,
     redirectToSettings: false,
     embedModule: false,
   },
@@ -103,6 +109,7 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
     hasManagerRole: false,
     hasDeadline: true,
     hasTransitionMode: true,
+    hasCompletionBehavior: false,
     redirectToSettings: false,
     embedModule: false,
   },
@@ -119,6 +126,7 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
     hasManagerRole: false,
     hasDeadline: false,
     hasTransitionMode: false,
+    hasCompletionBehavior: false,
     redirectToSettings: true,
     embedModule: false,
   },
@@ -135,6 +143,7 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
     hasManagerRole: false,
     hasDeadline: false,
     hasTransitionMode: false,
+    hasCompletionBehavior: false,
     redirectToSettings: true,
     embedModule: false,
   },

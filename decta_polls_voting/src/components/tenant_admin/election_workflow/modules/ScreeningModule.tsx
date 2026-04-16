@@ -478,29 +478,6 @@ export const ScreeningModule = forwardRef(({
           )}
         </div>
       </Section>
-
-      {/* ── Section C: Require All Decided ── */}
-      <Section icon={CheckSquare2} title="Require All Decided" accent="#10B981" defaultOpen={false}>
-        <div className="flex items-center justify-between mt-3">
-          <div>
-            <p className="text-[13px] font-medium text-white/75">Require all candidates to have a decision</p>
-            <p className="text-[11px] text-white/35 mt-0.5">
-              Prevents the election from advancing until every candidate has been approved or rejected
-            </p>
-            <p className="text-[10px] text-white/20 mt-2 flex items-center gap-1">
-              <Info className="w-3 h-3" /> This setting is saved and will be enforced in a future update.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setRequireAllDecided(v => !v)}
-            className="relative w-10 h-5 rounded-full transition-all duration-200 flex-shrink-0 ml-4"
-            style={{ background: requireAllDecided ? '#10B981' : 'rgba(255,255,255,0.1)' }}
-          >
-            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${requireAllDecided ? 'left-5' : 'left-0.5'}`} />
-          </button>
-        </div>
-      </Section>
     </div>
   );
 });

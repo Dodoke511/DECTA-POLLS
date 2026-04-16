@@ -40,6 +40,8 @@ export async function GET(request: Request) {
           transition_mode: 'manual',
           deadline: null,
           role_assigned: null,
+          completion_behavior: 'require_all_reviewed',
+          auto_resolve_action: 'auto_reject',
         }));
 
       const { data: seeded, error: seedError } = await supabase
@@ -57,7 +59,7 @@ export async function GET(request: Request) {
     // Also fetch election dates for pre-flight check
     const { data: election, error: electionError } = await supabase
       .from('election')
-      .select('startDate, endDate')
+      .select('startDate, endDate, tenantID')
       .eq('id', electionId)
       .single();
 

@@ -341,7 +341,7 @@ function FieldPreview({ field }: { field: FormFieldState }) {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-export const CandidateFormBuilder = forwardRef(({ electionId }: { electionId: string }, ref) => {
+export const DynamicFormBuilder = forwardRef(({ electionId, toolName = 'candidate_application', title = 'Candidate Application Form' }: { electionId: string, toolName?: string, title?: string }, ref) => {
   const [fields, setFields] = useState<FormFieldState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'build' | 'preview'>('build');
@@ -367,7 +367,7 @@ export const CandidateFormBuilder = forwardRef(({ electionId }: { electionId: st
         const res = await fetch('/api/save_form', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ electionId, toolName: 'candidate_application', fields: payload }),
+          body: JSON.stringify({ electionId, toolName, fields: payload }),
         });
 
         if (!res.ok) {
@@ -384,7 +384,7 @@ export const CandidateFormBuilder = forwardRef(({ electionId }: { electionId: st
   }));
 
   useEffect(() => {
-    fetch(`/api/get_form?electionId=${electionId}&toolName=candidate_application`)
+    fetch(`/api/get_form?electionId=${electionId}&toolName=${toolName}`)
       .then(r => r.json())
       .then(({ fields: fetched }) => {
         if (fetched?.length > 0) {
@@ -440,7 +440,7 @@ export const CandidateFormBuilder = forwardRef(({ electionId }: { electionId: st
             <Pencil className="w-3.5 h-3.5 text-[#A78BFA]" />
           </div>
           <div>
-            <p className="text-[13px] font-semibold text-white/85">Candidate Application Form</p>
+            <p className="text-[13px] font-semibold text-white/85">{title}</p>
             <p className="text-[11px] text-white/32">
               {fields.length} field{fields.length !== 1 ? 's' : ''} · drag to reorder
             </p>
@@ -497,4 +497,4 @@ export const CandidateFormBuilder = forwardRef(({ electionId }: { electionId: st
   );
 });
 
-CandidateFormBuilder.displayName = 'CandidateFormBuilder';
+DynamicFormBuilder.displayName = 'DynamicFormBuilder';

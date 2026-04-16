@@ -27,12 +27,14 @@ export async function POST(request: Request) {
         deadline: p.deadline || null,
         role_assigned: p.role_assigned || null,
         transition_mode: p.transition_mode || 'manual',
+        completion_behavior: p.completion_behavior,
+        auto_resolve_action: p.auto_resolve_action,
       };
-      
+
       // Crucial: Only include the id key if it actually exists. 
       // Providing { id: undefined } or { id: null } can crash PosegREST if it's a primary key.
       if (p.id) row.id = p.id;
-      
+
       return row;
     });
 

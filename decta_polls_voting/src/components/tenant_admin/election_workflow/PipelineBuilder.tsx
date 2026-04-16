@@ -37,12 +37,16 @@ function buildDefaultPipeline(electionId: string): PhaseConfig[] {
     deadline: null,
     role_assigned: null,
     transition_mode: 'manual' as const,
+    completion_behavior: 'require_all_reviewed',
+    auto_resolve_action: 'auto_reject',
   }));
 }
 
-function mergeFetchedPhases(electionId: string, fetched: any[]): PhaseConfig[] {
+function mergeFetchedPhases(electionId: string, fetched: any[], currentPhases: PhaseConfig[]): PhaseConfig[] {
   return PHASE_PIPELINE.map(meta => {
     const existing = fetched.find((p: any) => p.phase_type === meta.type);
+    const local = currentPhases.find(p => p.phase_type === meta.type);
+
     if (existing) {
       return {
         id: existing.id,
@@ -54,18 +58,23 @@ function mergeFetchedPhases(electionId: string, fetched: any[]): PhaseConfig[] {
         deadline: existing.deadline || null,
         role_assigned: existing.role_assigned || null,
         transition_mode: existing.transition_mode || 'manual',
+        completion_behavior: existing.completion_behavior || 'require_all_reviewed',
+        auto_resolve_action: existing.auto_resolve_action || 'auto_reject',
       };
     }
-    // Optional phase not yet in DB
-    return {
+
+    // Fallback to local state if available, otherwise default
+    return local || {
       electionID: electionId,
       phase_type: meta.type,
       phase_index: meta.index,
-      is_enabled: false,
+      is_enabled: REQUIRED_PHASES.includes(meta.type),
       name: '',
       deadline: null,
       role_assigned: null,
       transition_mode: 'manual' as const,
+      completion_behavior: 'require_all_reviewed',
+      auto_resolve_action: 'auto_reject',
     };
   });
 }
@@ -87,8 +96,10 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       const phasesRes = await fetch(`/api/get_election_phases?electionId=${electionId}`);
       if (phasesRes.ok) {
         const { phases: fetched, election } = await phasesRes.json();
-        const merged = mergeFetchedPhases(electionId, fetched ?? []);
-        setPhases(merged);
+        setPhases(current => {
+          const merged = mergeFetchedPhases(electionId, fetched ?? [], current);
+          return merged;
+        });
         if (election) setElectionMeta(election);
 
         if (isInitial && fetched) {
@@ -98,6 +109,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
             setIsInitialized(true);
           }
         }
+        return election;
       }
     } catch (err) {
       console.error('refreshPhases error:', err);
@@ -109,13 +121,16 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     const loadInitialData = async () => {
       setIsLoading(true);
       try {
+        const election = await refreshPhases(true);
+        const tenantId = election?.tenantID;
+
         const [rolesRes, positionsRes, subRes] = await Promise.all([
-          fetch(`/api/get_tenant_roles?electionId=${electionId}`),
+          tenantId
+            ? fetch(`/api/get_tenant_roles?tenantId=${tenantId}`)
+            : Promise.resolve({ ok: false } as Response),
           fetch(`/api/get_positions?electionId=${electionId}`),
           fetch(`/api/get_tenant_subscription?electionId=${electionId}`),
         ]);
-
-        await refreshPhases(true);
 
         if (subRes.ok) {
           const { subscription: fetchedSub } = await subRes.json();
@@ -332,7 +347,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8 px-1">
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent italic">Electoral Pipeline Phase Builder</h2>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text">Electoral Pipeline Phase Builder</h2>
           <p className="text-[12px] text-white/40 mt-1">Configure your election workflow here.</p>
         </div>
         <div className="flex items-center gap-4">
@@ -425,7 +440,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
                       subscription={subscription}
                       onChange={handleChange}
                       onToggle={handleToggle}
-                      onSave={() => handleSave([phase])}
+                      onSave={() => handleSave()}
                       onRefresh={() => refreshPhases()}
                       authParams={authParams}
                     />
