@@ -12,6 +12,9 @@ import { PositionsModule } from './modules/PositionsModule';
 import { DynamicFormBuilder } from './modules/CandidateFormBuilder';
 import { ScreeningModule } from './modules/ScreeningModule';
 import { AppealModule } from './modules/AppealModule';
+import { PublicationModule } from './modules/PublicationModule';
+import { VotingModule } from './modules/VotingModule';
+import { ResultsModule } from './modules/ResultsModule';
 
 export interface TenantRole {
   id: string;
@@ -416,7 +419,35 @@ export function PhaseCard({
 
             {/* ─ Embedded AppealModule (appeal) ─ */}
             {metadata.type === 'appeal' && (
-              <AppealModule ref={moduleRef} electionId={electionId} phaseId={phase.id} />
+              <AppealModule ref={moduleRef} electionId={electionId} phaseId={phase.id} subscription={subscription} />
+            )}
+
+            {/* ─ Embedded PublicationModule (publication) ─ */}
+            {metadata.type === 'publication' && (
+              <PublicationModule ref={moduleRef} electionId={electionId} authParams={authParams} />
+            )}
+
+            {/* ─ Embedded VotingModule (voting) ─ */}
+            {metadata.type === 'voting' && (
+              <VotingModule 
+                ref={moduleRef} 
+                electionId={electionId}
+                roles={roles}
+                roleAssigned={phase.role_assigned}
+                onRoleChange={(roleId) => onChange(phase.phase_type, { role_assigned: roleId })}
+              />
+            )}
+
+            {/* ─ Embedded ResultsModule (results) ─ */}
+            {metadata.type === 'results' && (
+              <ResultsModule 
+                ref={moduleRef} 
+                electionId={electionId}
+                subscription={subscription}
+                roles={roles}
+                roleAssigned={phase.role_assigned}
+                onRoleChange={(roleId) => onChange(phase.phase_type, { role_assigned: roleId })}
+              />
             )}
 
             <div className='flex justify-end'>

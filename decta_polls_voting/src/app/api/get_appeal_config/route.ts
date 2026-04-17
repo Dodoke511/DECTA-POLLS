@@ -49,6 +49,7 @@ export async function GET(request: Request) {
       onRejectStatus: config.onRejectStatus,
       visibility: config.visibility || [],
       showRejectionReason: config.showRejectionReason,
+      allowWithdrawal: config.allowWithdrawal ?? false,
     } : null;
 
     return NextResponse.json({ 

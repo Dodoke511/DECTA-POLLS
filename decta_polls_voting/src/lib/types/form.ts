@@ -12,7 +12,8 @@ export type FieldType =
   | 'radio'
   | 'checkbox'
   | 'url'
-  | 'section_header';
+  | 'section_header'
+  | 'position_selector';
 
 export interface ValidationRules {
   // Display
@@ -85,4 +86,5 @@ export const FIELD_TYPE_META: {
   { type: 'radio',          label: 'Multiple Choice', group: 'Choice',   description: 'Pick one visible option' },
   { type: 'checkbox',       label: 'Checkbox',        group: 'Choice',   description: 'Single agree/disagree toggle' },
   { type: 'section_header', label: 'Section Header',  group: 'Layout',   description: 'Visual divider with heading' },
+  { type: 'position_selector', label: 'Electoral Position', group: 'Advanced', description: 'Dynamic list of electoral positions' },
 ];

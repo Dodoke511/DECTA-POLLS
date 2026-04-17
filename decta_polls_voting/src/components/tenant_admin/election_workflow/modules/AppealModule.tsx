@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react';
-import { Loader2, Settings, Users2, ShieldAlert, ArrowRight, BookOpen, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Settings, Users2, ShieldAlert, ArrowRight, BookOpen, AlertCircle, Eye, EyeOff, Zap } from 'lucide-react';
 import { DynamicFormBuilder } from './CandidateFormBuilder';
 
 // ── Section wrapper ───────────────────────────────────────────────────────────
@@ -43,7 +43,15 @@ function Section({
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export const AppealModule = forwardRef(({ electionId, phaseId }: { electionId: string, phaseId?: string }, ref) => {
+export const AppealModule = forwardRef(({
+  electionId,
+  phaseId,
+  subscription = 'BASIC'
+}: {
+  electionId: string,
+  phaseId?: string,
+  subscription?: 'BASIC' | 'STANDARD' | 'ENTERPRISE'
+}, ref) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Configuration State
@@ -53,6 +61,7 @@ export const AppealModule = forwardRef(({ electionId, phaseId }: { electionId: s
   const [onRejectAction, setOnRejectAction] = useState<string>('keep_rejected');
   const [visibility, setVisibility] = useState<string[]>(['candidate', 'reviewers']);
   const [showRejectionReason, setShowRejectionReason] = useState<boolean>(true);
+  const [allowWithdrawal, setAllowWithdrawal] = useState<boolean>(false);
 
   // Approval State
   const [isMultiApprover, setIsMultiApprover] = useState(false);
@@ -73,6 +82,7 @@ export const AppealModule = forwardRef(({ electionId, phaseId }: { electionId: s
           setOnRejectAction(data.config.onRejectAction || 'keep_rejected');
           setVisibility(data.config.visibility || ['candidate', 'reviewers']);
           setShowRejectionReason(data.config.showRejectionReason ?? true);
+          setAllowWithdrawal(data.config.allowWithdrawal ?? false);
         }
         if (data.approval) {
           const min = data.approval.minimum_approvals || 1;
@@ -112,6 +122,7 @@ export const AppealModule = forwardRef(({ electionId, phaseId }: { electionId: s
               onRejectStatus: 'rejected',
               visibility,
               showRejectionReason,
+              allowWithdrawal,
             },
             approval: {
               minApprovals: isMultiApprover ? minApprovals : 1,
@@ -149,6 +160,7 @@ export const AppealModule = forwardRef(({ electionId, phaseId }: { electionId: s
           electionId={electionId}
           toolName="appeal_submission"
           title="Appeal Submission Form"
+          features={{ showRuleCheckable: false }}
         />
       </div>
 
@@ -321,6 +333,43 @@ export const AppealModule = forwardRef(({ electionId, phaseId }: { electionId: s
               <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${showRejectionReason ? 'left-5' : 'left-0.5'}`} />
             </button>
           </div>
+        </div>
+      </Section>
+
+      {/* ── Section 6: Candidate Withdrawal (Tiered) ── */}
+      <Section icon={ShieldAlert} title="Candidate Withdrawal" accent="#F43F5E">
+        <div className="space-y-4 mt-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[13px] font-medium text-white/75">Allow Candidate Withdrawal</p>
+              <p className="text-[11px] text-white/35 mt-0.5">
+                Permit candidates to submit a withdrawal request during the appeal phase.
+              </p>
+            </div>
+            {subscription === 'BASIC' ? (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-lg">
+                <Zap className="w-3 h-3 text-amber-500" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-amber-500/80">Standard+</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAllowWithdrawal(v => !v)}
+                className="relative w-10 h-5 rounded-full transition-all duration-200 flex-shrink-0 bg-white/10"
+                style={allowWithdrawal ? { background: '#F43F5E' } : {}}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${allowWithdrawal ? 'left-5' : 'left-0.5'}`} />
+              </button>
+            )}
+          </div>
+
+          {subscription === 'BASIC' && (
+            <div className="p-3 bg-white/[0.03] border border-white/5 rounded-xl border-dashed">
+              <p className="text-[11px] text-white/30 italic">
+                Candidate withdrawal management is only available for Standard and Enterprise tiers.
+              </p>
+            </div>
+          )}
         </div>
       </Section>
     </div>

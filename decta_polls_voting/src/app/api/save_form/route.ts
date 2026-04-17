@@ -8,7 +8,7 @@ const supabase = createClient(
 
 export async function POST(request: Request) {
   try {
-    const { electionId, toolName, fields } = await request.json();
+    const { electionId, toolName, fields, customLogicMeta } = await request.json();
 
     if (!electionId || !toolName) {
       return NextResponse.json({ error: 'Missing electionId or toolName.' }, { status: 400 });
@@ -55,6 +55,14 @@ export async function POST(request: Request) {
         );
       }
       formId = newForm.id;
+    }
+
+    // Update form metadata if provided
+    if (customLogicMeta) {
+      await supabase
+        .from('forms')
+        .update({ custom_logic_meta: customLogicMeta })
+        .eq('id', formId);
     }
 
     // Replace all form fields: delete existing, insert new

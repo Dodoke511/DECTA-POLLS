@@ -41,6 +41,7 @@ export async function POST(request: Request) {
         onRejectStatus: appealConfig.onRejectStatus,
         visibility: appealConfig.visibility,
         showRejectionReason: appealConfig.showRejectionReason,
+        allowWithdrawal: appealConfig.allowWithdrawal ?? false,
         updated_at: new Date().toISOString()
       };
 
