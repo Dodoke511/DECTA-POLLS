@@ -27,7 +27,7 @@ export function TenantAdminSidebar({ activePath }: SidebarProps) {
     // Clear permission cookies
     document.cookie = `${PERMISSIONS_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     document.cookie = `${ROLE_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-    router.push('/loading?destination=/');
+    router.push('/loader?destination=/auth/login_form');
   };
 
   const getItemStyle = (path: string) => {

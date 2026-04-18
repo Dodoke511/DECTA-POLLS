@@ -7,6 +7,53 @@ const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const tenantId = searchParams.get('tenantId');
+
+    if (!tenantId) {
+      return NextResponse.json({ error: "tenantId is required" }, { status: 400 });
+    }
+
+    // 1. Fetch roles for this tenant
+    const { data: roles, error: rolesError } = await supabase
+      .from("tenant roles")
+      .select("*")
+      .eq("tenantID", tenantId);
+
+    if (rolesError) {
+      return NextResponse.json({ error: rolesError.message }, { status: 500 });
+    }
+
+    // 2. Fetch tenant users to get assigned person emails
+    const { data: tenantUsers } = await supabase
+      .from("tenant users")
+      .select("roleID, email")
+      .eq("tenantID", tenantId);
+
+    // 3. Map assigned email onto each role
+    const rolesWithAssignee = (roles ?? []).map((role: any) => {
+      const assignedUser = (tenantUsers ?? []).find(
+        (u: any) => u.roleID === role.id
+      );
+      return {
+        ...role,
+        assignedEmail: assignedUser?.email ?? null,
+      };
+    });
+
+    return NextResponse.json({
+      roles: rolesWithAssignee,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { email } = await request.json();
