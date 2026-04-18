@@ -9,16 +9,12 @@ export interface AccountSettingProps {
     brandingColorSecondary: string;
     registrationMode: string;
     activeTriggers: string[];
-    allowSubstitution: boolean;
-    allowWithdrawal: boolean;
     setLogoPreview: React.Dispatch<React.SetStateAction<string | null>>;
     setLogoFile: React.Dispatch<React.SetStateAction<File | null>>;
     setBrandingColorPrimary: React.Dispatch<React.SetStateAction<string>>;
     setBrandingColorSecondary: React.Dispatch<React.SetStateAction<string>>;
     setRegistrationMode: React.Dispatch<React.SetStateAction<string>>;
     setActiveTriggers: React.Dispatch<React.SetStateAction<string[]>>;
-    setAllowSubstitution: React.Dispatch<React.SetStateAction<boolean>>;
-    setAllowWithdrawal: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export function AccountSetting({
@@ -27,16 +23,12 @@ export function AccountSetting({
     brandingColorSecondary,
     registrationMode,
     activeTriggers,
-    allowSubstitution,
-    allowWithdrawal,
     setLogoPreview,
     setLogoFile,
     setBrandingColorPrimary,
     setBrandingColorSecondary,
     setRegistrationMode,
-    setActiveTriggers,
-    setAllowSubstitution,
-    setAllowWithdrawal
+    setActiveTriggers
 }: AccountSettingProps) {
     const toggleTrigger = (trigger: string) => {
         if (activeTriggers.includes(trigger)) {
@@ -57,7 +49,7 @@ export function AccountSetting({
         const file = event.target.files?.[0];
         if (!file) return;
         setLogoFile(file); // Save file object for uploading
-        
+
         const reader = new FileReader();
         reader.onload = () => {
             setLogoPreview(reader.result as string);
@@ -113,21 +105,33 @@ export function AccountSetting({
                                 Branding Color
                             </label>
                             <div className="flex gap-3">
-                                <div className="group flex h-[42px] flex-1 cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30">
+                                <div className="group relative flex h-[42px] flex-1 cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
+                                    <input
+                                        type="color"
+                                        value={brandingColorPrimary.startsWith('#') ? brandingColorPrimary : `#${brandingColorPrimary}`}
+                                        onChange={(e) => setBrandingColorPrimary(e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
                                     <div
                                         className="h-[18px] w-[18px] rounded-[4px] border border-white/20 shadow-sm"
-                                        style={{ backgroundColor: `#${brandingColorPrimary}` }}
+                                        style={{ backgroundColor: brandingColorPrimary.startsWith('#') ? brandingColorPrimary : `#${brandingColorPrimary}` }}
                                     />
-                                    <span className="text-sm font-medium text-white/60 group-hover:text-white/80">
+                                    <span className="text-sm font-medium text-white/60 group-hover:text-white/80 uppercase">
                                         {brandingColorPrimary}
                                     </span>
                                 </div>
-                                <div className="group flex h-[42px] flex-1 cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30">
+                                <div className="group relative flex h-[42px] flex-1 cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
+                                    <input
+                                        type="color"
+                                        value={brandingColorSecondary.startsWith('#') ? brandingColorSecondary : `#${brandingColorSecondary}`}
+                                        onChange={(e) => setBrandingColorSecondary(e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
                                     <div
                                         className="h-[18px] w-[18px] rounded-[4px] border border-white/20 shadow-sm"
-                                        style={{ backgroundColor: `#${brandingColorSecondary}` }}
+                                        style={{ backgroundColor: brandingColorSecondary.startsWith('#') ? brandingColorSecondary : `#${brandingColorSecondary}` }}
                                     />
-                                    <span className="text-sm font-medium text-white/60 group-hover:text-white/80">
+                                    <span className="text-sm font-medium text-white/60 group-hover:text-white/80 uppercase">
                                         {brandingColorSecondary}
                                     </span>
                                 </div>
@@ -146,8 +150,8 @@ export function AccountSetting({
                                     className="h-[42px] w-full appearance-none rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 pr-10 text-sm font-medium text-white/60 outline-none transition-all hover:bg-white/[0.05] hover:text-white/80 focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50 cursor-pointer"
                                 >
                                     <option value="HYBRID" className="bg-[#180d42] text-white/80">HYBRID</option>
-                                    <option value="ONLINE" className="bg-[#180d42] text-white/80">ONLINE</option>
-                                    <option value="OFFLINE" className="bg-[#180d42] text-white/80">OFFLINE</option>
+                                    <option value="LINK-BASED" className="bg-[#180d42] text-white/80">LINK-BASED</option>
+                                    <option value="MANUAL" className="bg-[#180d42] text-white/80">MANUAL</option>
                                 </select>
                                 <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-white/40">
                                     <svg
@@ -195,55 +199,6 @@ export function AccountSetting({
                                     {trigger}
                                 </button>
                             ))}
-                        </div>
-                    </div>
-
-                    {/* Setting Toggles */}
-                    <div className="mt-1 flex flex-col gap-7">
-                        {/* Toggle 1 */}
-                        <div className="flex items-center justify-between gap-4">
-                            <div className="flex flex-col gap-1.5">
-                                <span className="text-sm font-semibold text-[#D0C8FF]">
-                                    Allow Candidate Substitution
-                                </span>
-                                <span className="text-xs text-white/45">
-                                    Permit replacing a candidate with another during pre-election phase
-                                </span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setAllowSubstitution(!allowSubstitution)}
-                                className={`relative inline-flex h-[22px] w-[38px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#5D44F8] focus:ring-offset-2 focus:ring-offset-[#090215] ${allowSubstitution ? "bg-[#5D44F8]" : "bg-white/20"
-                                    }`}
-                            >
-                                <span
-                                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${allowSubstitution ? "translate-x-4" : "translate-x-0"
-                                        }`}
-                                />
-                            </button>
-                        </div>
-
-                        {/* Toggle 2 */}
-                        <div className="flex items-center justify-between gap-4">
-                            <div className="flex flex-col gap-1.5">
-                                <span className="text-sm font-semibold text-[#D0C8FF]">
-                                    Allow Candidate Withdrawal
-                                </span>
-                                <span className="text-xs text-white/45">
-                                    Allow candidates to withdraw from the election before voting begins
-                                </span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setAllowWithdrawal(!allowWithdrawal)}
-                                className={`relative inline-flex h-[22px] w-[38px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#5D44F8] focus:ring-offset-2 focus:ring-offset-[#090215] ${allowWithdrawal ? "bg-[#5D44F8]" : "bg-white/20"
-                                    }`}
-                            >
-                                <span
-                                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${allowWithdrawal ? "translate-x-4" : "translate-x-0"
-                                        }`}
-                                />
-                            </button>
                         </div>
                     </div>
                 </div>

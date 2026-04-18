@@ -116,8 +116,8 @@ export default function TenantSettingsPage() {
           console.log("🔥 FETCHED CONFIG FROM DB:", config); // <-- Added for debugging
           
           if (config.logo_url) setLogoPreview(config.logo_url);
-          if (config.branding_color_primary) setBrandingColorPrimary(config.branding_color_primary);
-          if (config.branding_color_secondary) setBrandingColorSecondary(config.branding_color_secondary);
+          if (config.main_color) setBrandingColorPrimary(config.main_color);
+          if (config.secondary_color) setBrandingColorSecondary(config.secondary_color);
           if (config.registration_mode) setRegistrationMode(config.registration_mode);
           if (config.active_triggers) setActiveTriggers(config.active_triggers);
           if (config.allow_substitution !== undefined) setAllowSubstitution(config.allow_substitution);
@@ -274,8 +274,6 @@ export default function TenantSettingsPage() {
                     brandingColorSecondary={brandingColorSecondary} setBrandingColorSecondary={setBrandingColorSecondary}
                     registrationMode={registrationMode} setRegistrationMode={setRegistrationMode}
                     activeTriggers={activeTriggers} setActiveTriggers={setActiveTriggers}
-                    allowSubstitution={allowSubstitution} setAllowSubstitution={setAllowSubstitution}
-                    allowWithdrawal={allowWithdrawal} setAllowWithdrawal={setAllowWithdrawal}
                   />
                 </div>
               </div>
