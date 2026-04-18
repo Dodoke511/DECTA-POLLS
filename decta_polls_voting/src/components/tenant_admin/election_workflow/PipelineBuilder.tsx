@@ -377,15 +377,15 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
                 className={`flex flex-col gap-2 group outline-none min-w-[120px] transition-all ${isLocked ? 'opacity-30 cursor-not-allowed' : 'opacity-100 cursor-pointer'}`}
               >
                 <div className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${isActive ? 'bg-white text-[#0E0A1E] scale-110 shadow-lg' : isPast ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-white/20'
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${isActive ? 'bg-white text-[#0E0A1E] scale-110 shadow-lg' : isPast ? 'bg-[#5D44F8] text-white' : 'bg-white/5 text-white/20'
                     }`}>
                     {idx}
                   </div>
-                  <span className={`text-[11px] font-bold uppercase tracking-widest transition-all ${isActive ? 'text-white' : 'text-white/20 group-hover:text-white/40'}`}>
+                  <span className={`text-[11px] font-bold uppercase tracking-widest transition-all ${isActive ? 'text-white' : isPast ? 'text-[#9686f8]' : 'text-white/50 group-hover:text-white/40'}`}>
                     {step.label}
                   </span>
                 </div>
-                <div className={`h-[3px] w-full rounded-full transition-all duration-500 ${isActive ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]' : isPast ? 'bg-emerald-500/40' : 'bg-white/5'
+                <div className={`h-[3px] w-full rounded-full transition-all duration-500 ${isActive ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]' : isPast ? 'bg-[#5D44F8]' : 'bg-white/5'
                   }`} />
               </button>
             );

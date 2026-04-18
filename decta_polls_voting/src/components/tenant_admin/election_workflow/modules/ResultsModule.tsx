@@ -100,53 +100,51 @@ export const ResultsModule = forwardRef<{ save: () => Promise<boolean> }, Result
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
         {/* Results Publication */}
-        <section>
+        <section className="!p-0 ">
           <h4 className="text-[12px] font-bold text-white/90 uppercase tracking-wider flex items-center gap-2 mb-4">
-            <BarChart3 className="w-4 h-4 text-[#4F46E5]" /> Results Publication
+            <BarChart3 className="w-4 h-4 text-[#5D44F8]" /> Results Publication
           </h4>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {(['immediate', 'manual', 'scheduled'] as PublishMode[]).map((mode) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {(['immediate', 'manual', 'scheduled'] as PublishMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => updateConfig({ publish_mode: mode })}
+                className={`p-3 rounded-xl border text-left transition-all ${config.publish_mode === mode ? 'bg-[#4F46E5]/10 border-[#4F46E5]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+              >
+                <span className={`text-[12px] font-bold block capitalize ${config.publish_mode === mode ? 'text-white' : 'text-white/60'}`}>{mode}</span>
+                <p className="text-[10px] text-white/30 mt-1">
+                  {mode === 'immediate' && 'When voting closes'}
+                  {mode === 'manual' && 'Admin publishes manually'}
+                  {mode === 'scheduled' && 'At a specific time'}
+                </p>
+              </button>
+            ))}
+          </div>
+
+          {config.publish_mode === 'scheduled' && (
+            <div className="animate-in slide-in-from-top-2 duration-300">
+              <label className="block text-[11px] text-white/40 uppercase mb-2">Publish Time</label>
+              <input
+                type="datetime-local"
+                value={config.publish_at ? config.publish_at.slice(0, 16) : ''}
+                onChange={(e) => updateConfig({ publish_at: new Date(e.target.value).toISOString() })}
+                className="w-full bg-white/5 border border-white/10 text-white/80 rounded-xl px-4 py-3 text-[13px] focus:outline-none [color-scheme:dark]"
+              />
+            </div>
+          )}
+
+          <div className="mt-4">
+            <label className="block text-[11px] text-white/40 uppercase mb-3">Results Visible To</label>
+            <div className="flex gap-2">
+              {(['public', 'voters', 'organization'] as ResultsVisibility[]).map((vis) => (
                 <button
-                  key={mode}
-                  onClick={() => updateConfig({ publish_mode: mode })}
-                  className={`p-3 rounded-xl border text-left transition-all ${config.publish_mode === mode ? 'bg-[#4F46E5]/10 border-[#4F46E5]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+                  key={vis}
+                  onClick={() => updateConfig({ results_visibility: vis })}
+                  className={`px-4 py-2 rounded-lg border text-[11px] font-bold capitalize transition-all ${config.results_visibility === vis ? 'bg-[#4F46E5]/20 border-[#4F46E5] text-white' : 'bg-white/5 border-white/10 text-white/40'}`}
                 >
-                  <span className={`text-[12px] font-bold block capitalize ${config.publish_mode === mode ? 'text-white' : 'text-white/60'}`}>{mode}</span>
-                  <p className="text-[10px] text-white/30 mt-1">
-                    {mode === 'immediate' && 'When voting closes'}
-                    {mode === 'manual' && 'Admin publishes manually'}
-                    {mode === 'scheduled' && 'At a specific time'}
-                  </p>
+                  {vis}
                 </button>
               ))}
-            </div>
-
-            {config.publish_mode === 'scheduled' && (
-              <div className="animate-in slide-in-from-top-2 duration-300">
-                <label className="block text-[11px] text-white/40 uppercase mb-2">Publish Time</label>
-                <input
-                  type="datetime-local"
-                  value={config.publish_at ? config.publish_at.slice(0, 16) : ''}
-                  onChange={(e) => updateConfig({ publish_at: new Date(e.target.value).toISOString() })}
-                  className="w-full bg-white/5 border border-white/10 text-white/80 rounded-xl px-4 py-3 text-[13px] focus:outline-none [color-scheme:dark]"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-[11px] text-white/40 uppercase mb-3">Results Visible To</label>
-              <div className="flex gap-2">
-                {(['public', 'voters', 'organization'] as ResultsVisibility[]).map((vis) => (
-                  <button
-                    key={vis}
-                    onClick={() => updateConfig({ results_visibility: vis })}
-                    className={`px-4 py-2 rounded-lg border text-[11px] font-bold capitalize transition-all ${config.results_visibility === vis ? 'bg-[#4F46E5]/20 border-[#4F46E5] text-white' : 'bg-white/5 border-white/10 text-white/40'}`}
-                  >
-                    {vis}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         </section>
@@ -154,7 +152,7 @@ export const ResultsModule = forwardRef<{ save: () => Promise<boolean> }, Result
         {/* Display Settings (All Tiers) */}
         <section>
           <h4 className="text-[12px] font-bold text-white/90 uppercase tracking-wider flex items-center gap-2 mb-4">
-            <Eye className="w-4 h-4 text-[#4F46E5]" /> Display Settings
+            <Eye className="w-4 h-4 text-[#5D44F8]" /> Display Settings
           </h4>
           <div className="space-y-3">
             <label className="flex items-center justify-between p-3 rounded-xl bg-white/3 border border-white/5 cursor-pointer hover:bg-white/5 transition-all">
@@ -163,12 +161,16 @@ export const ResultsModule = forwardRef<{ save: () => Promise<boolean> }, Result
                 type="checkbox"
                 checked={config.show_vote_counts}
                 onChange={(e) => updateConfig({ show_vote_counts: e.target.checked })}
-                className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#4F46E5]"
+                className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#4F46E5] accent-[#5D44F8]"
               />
             </label>
-            <label className="flex items-center justify-between p-3 rounded-xl bg-white/3 border border-white/5 cursor-not-allowed opacity-60">
-              <span className="text-[13px] text-white/70">Show winning candidate prominently</span>
-              <input type="checkbox" checked readOnly className="w-4 h-4 rounded border-white/20 bg-white/10 text-[#4F46E5]" />
+            <label className="flex items-center justify-between p-3 rounded-xl bg-white/3 border border-white/5 cursor-pointer hover:bg-white/5 transition-all">
+              <span className="text-[13px] text-white/70">Show winning candidate always on top of list</span>
+              <input 
+                type="checkbox" 
+                checked={config.show_winner_prominently}
+                onChange={(e) => updateConfig({ show_winner_prominently: e.target.checked })}
+                className="w-4 h-4 rounded border-white/20 bg-white/10 text-[#4F46E5] accent-[#4F46E5]" />
             </label>
           </div>
         </section>

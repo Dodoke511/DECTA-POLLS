@@ -93,30 +93,32 @@ export const VotingModule = forwardRef<{ save: () => Promise<boolean> }, VotingM
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
         {/* Schedule */}
-        <section className="!p-0 grid grid-cols-1 md:grid-cols-2 gap-0">
+        <section className="!p-0 ">
           <div className="col-span-full">
             <h4 className="text-[12px] font-bold text-white/90 uppercase tracking-wider flex items-center gap-2 mb-4">
               <Clock className="w-4 h-4 text-[#6648EB]" /> Schedule
             </h4>
           </div>
-          <div>
-            <label className="block text-[11px] text-white/40 uppercase mb-2">Voting Opens</label>
-            <input
-              type="datetime-local"
-              value={config.voting_start.slice(0, 16)}
-              onChange={(e) => updateConfig({ voting_start: new Date(e.target.value).toISOString() })}
-              className="w-full bg-white/5 border border-white/10 text-white/80 rounded-xl p-3 text-[13px] focus:outline-none [color-scheme:dark]"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] text-white/40 uppercase mb-2">Voting Closes</label>
-            <input
-              type="datetime-local"
-              value={config.voting_end.slice(0, 16)}
-              onChange={(e) => updateConfig({ voting_end: new Date(e.target.value).toISOString() })}
-              className="w-full bg-white/5 border border-white/10 text-white/80 rounded-xl p-3 text-[13px] focus:outline-none [color-scheme:dark]"
-            />
-            <p className="text-[10px] text-white/20 mt-2 italic">Transition is always deadline-based for voting</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] text-white/40 uppercase mb-2">Voting Opens</label>
+              <input
+                type="datetime-local"
+                value={config.voting_start.slice(0, 16)}
+                onChange={(e) => updateConfig({ voting_start: new Date(e.target.value).toISOString() })}
+                className="w-full bg-white/5 border border-white/10 text-white/80 rounded-xl p-3 text-[13px] focus:outline-none [color-scheme:dark]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] text-white/40 uppercase mb-2">Voting Closes</label>
+              <input
+                type="datetime-local"
+                value={config.voting_end.slice(0, 16)}
+                onChange={(e) => updateConfig({ voting_end: new Date(e.target.value).toISOString() })}
+                className="w-full bg-white/5 border border-white/10 text-white/80 rounded-xl p-3 text-[13px] focus:outline-none [color-scheme:dark]"
+              />
+              <p className="text-[10px] text-white/20 mt-2 italic">Transition is always deadline-based for voting</p>
+            </div>
           </div>
         </section>
 
@@ -197,7 +199,7 @@ export const VotingModule = forwardRef<{ save: () => Promise<boolean> }, VotingM
                   type="checkbox"
                   checked={config[item.id as keyof VotingConfig] as boolean}
                   onChange={(e) => updateConfig({ [item.id]: e.target.checked })}
-                  className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#6648EB] focus:ring-[#6648EB]"
+                  className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#6648EB] focus:ring-[#6648EB] accent-[#5D44F8]"
                 />
                 <div className="flex items-center gap-2">
                   <item.icon className="w-3.5 h-3.5 text-white/40" />

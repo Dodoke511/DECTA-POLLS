@@ -1,14 +1,15 @@
 import React from 'react';
 
 interface WorkflowTabsProps {
-  activeTab?: 'workflow' | 'appeals' | 'settings';
+  activeTab?: 'workflow' | 'appeals' | 'interface';
+  onTabChange?: (tab: 'workflow' | 'appeals' | 'interface') => void;
 }
 
-export function WorkflowTabs({ activeTab = 'workflow' }: WorkflowTabsProps) {
+export function WorkflowTabs({ activeTab = 'workflow', onTabChange }: WorkflowTabsProps) {
   const tabs = [
     { id: 'workflow' as const, label: 'Workflow' },
     { id: 'appeals' as const, label: 'Appeals' },
-    { id: 'settings' as const, label: 'Settings' },
+    { id: 'interface' as const, label: 'Interface' },
   ];
 
   return (
@@ -19,7 +20,7 @@ export function WorkflowTabs({ activeTab = 'workflow' }: WorkflowTabsProps) {
           return (
             <button
               key={tab.id}
-              disabled={!isActive}
+              onClick={() => onTabChange?.(tab.id)}
               className={`px-4 py-3 text-[13px] font-bold tracking-widest uppercase relative transition-colors select-none ${
                 isActive
                   ? 'text-[#A78BFA]'

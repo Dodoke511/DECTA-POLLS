@@ -13,15 +13,13 @@ interface CreateElectionModalProps {
 
 interface FormData {
   title: string;
-  startDate: string;
-  endDate: string;
+  description: string;
   banner: File | null;
 }
 
 interface FormErrors {
   title?: string;
-  startDate?: string;
-  endDate?: string;
+  description?: string;
   banner?: string;
 }
 
@@ -34,8 +32,7 @@ export function CreateElectionModal({
 }: CreateElectionModalProps) {
   const [form, setForm] = useState<FormData>({
     title: "",
-    startDate: "",
-    endDate: "",
+    description: "",
     banner: null,
   });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -49,11 +46,6 @@ export function CreateElectionModal({
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
     if (!form.title.trim()) newErrors.title = "Election title is required.";
-    if (!form.startDate) newErrors.startDate = "Start date is required.";
-    if (!form.endDate) newErrors.endDate = "End date is required.";
-    if (form.startDate && form.endDate && form.endDate <= form.startDate) {
-      newErrors.endDate = "End date must be after start date.";
-    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -100,8 +92,7 @@ export function CreateElectionModal({
       const payload = new FormData();
       payload.append("tenantId", tenantId);
       payload.append("title", form.title.trim());
-      payload.append("startDate", form.startDate);
-      payload.append("endDate", form.endDate);
+      payload.append("description", form.description.trim());
       if (form.banner) payload.append("banner", form.banner);
 
       const res = await fetch("/api/create_election", {
@@ -125,7 +116,7 @@ export function CreateElectionModal({
 
   const handleClose = () => {
     if (isSubmitting) return;
-    setForm({ title: "", startDate: "", endDate: "", banner: null });
+    setForm({ title: "", description: "", banner: null });
     setBannerPreview(null);
     setErrors({});
     setSubmitError(null);
@@ -180,44 +171,23 @@ export function CreateElectionModal({
             {errors.title && <p className="text-xs text-red-400">{errors.title}</p>}
           </div>
 
-          {/* Dates Row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-[0.15em]">
-                Start Date <span className="text-[#5D44F8]">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  id="election-start-date"
-                  type="datetime-local"
-                  value={form.startDate}
-                  onChange={(e) => {
-                    setForm((prev) => ({ ...prev, startDate: e.target.value }));
-                    if (errors.startDate) setErrors((prev) => ({ ...prev, startDate: undefined }));
-                  }}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50 transition-all [color-scheme:dark]"
-                />
-              </div>
-              {errors.startDate && <p className="text-xs text-red-400">{errors.startDate}</p>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-[0.15em]">
-                End Date <span className="text-[#5D44F8]">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  id="election-end-date"
-                  type="datetime-local"
-                  value={form.endDate}
-                  onChange={(e) => {
-                    setForm((prev) => ({ ...prev, endDate: e.target.value }));
-                    if (errors.endDate) setErrors((prev) => ({ ...prev, endDate: undefined }));
-                  }}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50 transition-all [color-scheme:dark]"
-                />
-              </div>
-              {errors.endDate && <p className="text-xs text-red-400">{errors.endDate}</p>}
-            </div>
+          {/* Description */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold text-white/50 uppercase tracking-[0.15em]">
+              Description <span className="text-white/25">(optional)</span>
+            </label>
+            <textarea
+              id="election-description"
+              value={form.description}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, description: e.target.value }));
+                if (errors.description) setErrors((prev) => ({ ...prev, description: undefined }));
+              }}
+              placeholder="A short welcoming description for voters..."
+              rows={3}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/25 outline-none focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50 transition-all resize-none"
+            />
+            {errors.description && <p className="text-xs text-red-400">{errors.description}</p>}
           </div>
 
           {/* Banner Upload */}

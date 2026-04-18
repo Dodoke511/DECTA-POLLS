@@ -369,7 +369,7 @@ export function PhaseCard({
 
                 {/* Manager role selector */}
                 {metadata.hasManagerRole && (
-                  <div className={metadata.hasTransitionMode ? '' : 'col-span-full'}>
+                  <div>
                     <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                       <Users className="w-3 h-3" /> Manager Role
                     </label>
