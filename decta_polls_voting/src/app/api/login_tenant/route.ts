@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         // This is more robust than email matching on the 'tenants' table.
         const { data: tenantData } = await supabase
             .from('tenant users')
-            .select('tenantID')
+            .select('tenantID, email')
             .eq('id', data.user.id)
             .single();
 
@@ -39,7 +39,8 @@ export async function POST(request: Request) {
             message: 'Login successful',
             user: data.user,
             session: data.session,
-            tenantId: tenantData?.tenantID
+            tenantId: tenantData?.tenantID,
+            tenantEmail: tenantData?.email,
         }, { status: 200 });
     } catch (error: any) {
         console.error('API Route Error:', error);

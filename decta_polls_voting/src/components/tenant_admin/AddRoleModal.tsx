@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 export const PERMISSION_CATEGORIES = [
   {
     category: "System & Tenant Management",
+    minPlan: "STANDARD",
     permissions: [
       { id: "tenant.manage", label: "Manage Tenant" },
       { id: "tenant.settings.update", label: "Update Settings" },
@@ -19,6 +20,7 @@ export const PERMISSION_CATEGORIES = [
   },
   {
     category: "Election Management",
+    minPlan: "STANDARD",
     permissions: [
       { id: "election.create", label: "Create Election" },
       { id: "election.update", label: "Update Election" },
@@ -30,6 +32,7 @@ export const PERMISSION_CATEGORIES = [
   },
   {
     category: "Ballot Designer",
+    minPlan: "STANDARD",
     permissions: [
       { id: "ballot.create", label: "Create Ballot" },
       { id: "ballot.update", label: "Update Ballot" },
@@ -41,10 +44,8 @@ export const PERMISSION_CATEGORIES = [
   },
   {
     category: "Candidate Management",
+    minPlan: "STANDARD",
     permissions: [
-      { id: "candidate.apply", label: "Apply as Candidate" },
-      { id: "candidate.edit_own", label: "Edit Own Candidacy" },
-      { id: "candidate.withdraw", label: "Withdraw Candidacy" },
       { id: "candidate.view", label: "View Candidates" },
       { id: "candidate.review", label: "Review Candidates" },
       { id: "candidate.approve", label: "Approve Candidates" },
@@ -58,6 +59,7 @@ export const PERMISSION_CATEGORIES = [
   },
   {
     category: "Rules, Workflow & Approval",
+    minPlan: "ENTERPRISE",
     permissions: [
       { id: "rules.create", label: "Create Rules" },
       { id: "rules.update", label: "Update Rules" },
@@ -76,8 +78,6 @@ export const PERMISSION_CATEGORIES = [
       { id: "approval.approve", label: "Approve Approval" },
       { id: "approval.reject", label: "Reject Approval" },
       { id: "approval.override", label: "Override Approval" },
-      { id: "appeal.submit", label: "Submit Appeal" },
-      { id: "appeal.view_own", label: "View Own Appeal" },
       { id: "appeal.review", label: "Review Appeal" },
       { id: "appeal.approve", label: "Approve Appeal" },
       { id: "appeal.reject", label: "Reject Appeal" },
@@ -86,8 +86,8 @@ export const PERMISSION_CATEGORIES = [
   },
   {
     category: "Voter Management",
+    minPlan: "STANDARD",
     permissions: [
-      { id: "voter.register_self", label: "Register Self" },
       { id: "voter.import", label: "Import Voters" },
       { id: "voter.approve", label: "Approve Voter" },
       { id: "voter.reject", label: "Reject Voter" },
@@ -97,6 +97,7 @@ export const PERMISSION_CATEGORIES = [
   },
   {
     category: "Results, Audit & Security",
+    minPlan: "STANDARD",
     permissions: [
       { id: "result.compute", label: "Compute Results" },
       { id: "result.view", label: "View Results" },
@@ -118,9 +119,10 @@ interface AddRoleModalProps {
   onSave: (roleName: string, permissions: string[], roleDescription: string) => void;
   isSaving: boolean;
   editingRole?: { id: string, roleName: string, permissions: string[], roleDescription?: string } | null;
+  subscriptionPlan?: string | null;
 }
 
-export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole }: AddRoleModalProps) {
+export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole, subscriptionPlan }: AddRoleModalProps) {
   const [roleName, setRoleName] = useState("");
   const [roleDescription, setRoleDescription] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
@@ -145,8 +147,15 @@ export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole }:
     );
   };
 
+  const availableCategories = PERMISSION_CATEGORIES.filter(cat => {
+    if (!subscriptionPlan) return true;
+    if (subscriptionPlan === 'BASIC') return false; 
+    if (subscriptionPlan === 'STANDARD' && cat.minPlan === 'ENTERPRISE') return false;
+    return true;
+  });
+
   const toggleCategory = (categoryIndex: number) => {
-    const categoryPerms = PERMISSION_CATEGORIES[categoryIndex].permissions.map((p) => p.id);
+    const categoryPerms = availableCategories[categoryIndex].permissions.map((p) => p.id);
     const allSelected = categoryPerms.every((pid) => selectedPermissions.includes(pid));
     if (allSelected) {
       setSelectedPermissions((prev) => prev.filter((pid) => !categoryPerms.includes(pid)));
@@ -194,7 +203,7 @@ export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole }:
           <div className="mb-6">
             <h3 className="mb-4 text-[13px] font-medium tracking-wide text-white/50 uppercase">Role Permissions</h3>
             <div className="flex flex-col gap-6">
-              {PERMISSION_CATEGORIES.map((cat, index) => {
+              {availableCategories.map((cat, index) => {
                 const allCatSelected = cat.permissions.every(p => selectedPermissions.includes(p.id));
                 const someCatSelected = cat.permissions.some(p => selectedPermissions.includes(p.id));
 

@@ -15,23 +15,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // 1. Check if this is a tenant owner (registered in "tenants" table)
-    const { data: tenant } = await supabase
-      .from("tenants")
-      .select("id")
-      .eq("email", email)
-      .single();
-
-    if (tenant) {
-      // Tenant owners get all permissions
-      return NextResponse.json({ permissions: ["*"], role: "tenant_owner" });
-    }
-
-    // 2. Check if this is an invited tenant user
+    // 1. Get the tenant user by email
     const { data: tenantUser, error: userError } = await supabase
       .from("tenant users")
-      .select("id")
-      .eq("email", email)
+      .select("id, tenantID")
+      .ilike("email", email.trim())
       .single();
 
     if (userError || !tenantUser) {
@@ -39,6 +27,20 @@ export async function POST(request: Request) {
         { error: "User not found" },
         { status: 404 }
       );
+    }
+
+    // 2. Check if they are the owner (the oldest user for this tenant)
+    const { data: oldestUser } = await supabase
+      .from("tenant users")
+      .select("id")
+      .eq("tenantID", tenantUser.tenantID)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (oldestUser && oldestUser.id === tenantUser.id) {
+      // Tenant owners get all permissions
+      return NextResponse.json({ permissions: ["*"], role: "tenant_owner" });
     }
 
     // Fetch user's role from userRoles junction table

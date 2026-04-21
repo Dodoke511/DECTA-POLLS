@@ -15,10 +15,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
+    // Find the tenant user to get the tenantID
+    const { data: userData, error: userError } = await supabase
+      .from("tenant users")
+      .select("tenantID")
+      .ilike("email", email.trim())
+      .single();
+
+    if (userError || !userData) {
+      console.warn('[get_tenant_info] No tenant user found for email:', email);
+      return NextResponse.json({ error: "Tenant user not found" }, { status: 404 });
+    }
+
     const { data, error } = await supabase
       .from("tenants")
-      .select("organization, email, type, logo_url, main_color, secondary_color, subscription")
-      .eq("email", email)
+      .select("id, organization, email, type, logo_url, main_color, secondary_color, subscription, slug, created_at, subscription_expires_at")
+      .eq("id", userData.tenantID)
       .single();
 
     console.log('[get_tenant_info] Query result:', { data, error });
@@ -29,8 +41,21 @@ export async function POST(request: Request) {
     }
 
     if (!data) {
-      console.warn('[get_tenant_info] No tenant found for email:', email);
+      console.warn('[get_tenant_info] No tenant found for ID:', userData.tenantID);
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
+    }
+
+    // Fetch the registration mode from the election table
+    const { data: electionData } = await supabase
+      .from("election")
+      .select("voterMode")
+      .eq("tenantID", data.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (electionData && electionData.voterMode) {
+      (data as any).registration_mode = electionData.voterMode;
     }
 
     return NextResponse.json({ data });

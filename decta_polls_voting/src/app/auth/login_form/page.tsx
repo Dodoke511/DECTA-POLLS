@@ -92,7 +92,7 @@ export default function LogInPage() {
             // Store tenant token and email
             const random = Math.random().toString(36).substring(2, 12);
             sessionStorage.setItem('tenantToken', random);
-            sessionStorage.setItem('tenantEmail', email);
+            sessionStorage.setItem('tenantEmail', data.tenantEmail || email);
             if (data.tenantId) {
                 sessionStorage.setItem('tenantUserId', data.tenantId);
             }

@@ -5,11 +5,11 @@ import { TenantAdminHeader } from "@/components/tenant_admin/Header";
 import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { useRouter } from "next/navigation";
 import { AccountSetting } from "@/components/tenant_admin/AccountSetting";
+import { AccountManagement } from "@/components/tenant_admin/AccountManagement";
 import { ViewAssignedRole } from "@/components/tenant_admin/ViewAssignedRole";
 import { AssignUserModal } from "@/components/tenant_admin/AssignUserModal";
 import { AddRoleModal } from "@/components/tenant_admin/AddRoleModal";
-
-
+import PlanSubscription from "@/components/registration/PlanSubscription";
 
 export default function TenantSettingsPage() {
   const router = useRouter();
@@ -17,26 +17,34 @@ export default function TenantSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // States hoisted from AccountSetting
+  const [tenantSlug, setTenantSlug] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [brandingColorPrimary, setBrandingColorPrimary] = useState("FFFFFF");
   const [brandingColorSecondary, setBrandingColorSecondary] = useState("FFFFFF");
   const [registrationMode, setRegistrationMode] = useState("HYBRID");
   const [activeTriggers, setActiveTriggers] = useState<string[]>([
-      "Election Start",
-      "Election End",
-      "Candidate Added",
-      "New Voter Registered",
-      "Results Published",
-      "Vote Cast",
+    "Election Start",
+    "Election End",
+    "Candidate Added",
+    "New Voter Registered",
+    "Results Published",
+    "Vote Cast",
   ]);
   const [allowSubstitution, setAllowSubstitution] = useState(false);
   const [allowWithdrawal, setAllowWithdrawal] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [expirationDate, setExpirationDate] = useState<string | null>(null);
   const [tenantEmail, setTenantEmail] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
-  
+  const [isManagingSubscription, setIsManagingSubscription] = useState(false);
+  const [isSubscriptionRenewed, setIsSubscriptionRenewed] = useState(false);
+
   const handleEditRole = (role: any) => {
     setEditingRole({
       id: role.id,
@@ -46,7 +54,7 @@ export default function TenantSettingsPage() {
     });
     setIsAddRoleModalOpen(true);
   };
-  
+
   // Assign Role States
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isAssigningUser, setIsAssigningUser] = useState(false);
@@ -60,7 +68,7 @@ export default function TenantSettingsPage() {
   const handleAssignUser = async (formData: any) => {
     if (!assigningRoleId || !tenantEmail) return;
     setIsAssigningUser(true);
-    
+
     try {
       const response = await fetch("/api/invite_tenant_user", {
         method: "POST",
@@ -100,6 +108,7 @@ export default function TenantSettingsPage() {
     }
 
     setTenantEmail(email);
+    setEditEmail(email);
 
     // Fetch initial settings
     const fetchSettings = async () => {
@@ -110,11 +119,13 @@ export default function TenantSettingsPage() {
           body: JSON.stringify({ email }),
         });
         const result = await response.json();
-        
+
         if (response.ok && result.data) {
           const config = result.data;
           console.log("🔥 FETCHED CONFIG FROM DB:", config); // <-- Added for debugging
-          
+
+          if (config.slug) setTenantSlug(config.slug);
+          if (config.organization) setOrganizationName(config.organization);
           if (config.logo_url) setLogoPreview(config.logo_url);
           if (config.main_color) setBrandingColorPrimary(config.main_color);
           if (config.secondary_color) setBrandingColorSecondary(config.secondary_color);
@@ -123,6 +134,7 @@ export default function TenantSettingsPage() {
           if (config.allow_substitution !== undefined) setAllowSubstitution(config.allow_substitution);
           if (config.allow_withdrawal !== undefined) setAllowWithdrawal(config.allow_withdrawal);
           if (config.subscription) setSubscriptionPlan(config.subscription);
+          if (config.subscription_expires_at) setExpirationDate(config.subscription_expires_at);
         }
       } catch (err) {
         console.error("Error fetching settings:", err);
@@ -130,11 +142,16 @@ export default function TenantSettingsPage() {
         setLoading(false);
       }
     };
-    
+
     fetchSettings();
   }, [router]);
 
   const handleSaveChanges = async () => {
+    if (newPassword !== "" && newPassword !== confirmPassword) {
+      alert("New password and confirm password do not match.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       let finalLogoUrl = logoPreview;
@@ -149,7 +166,7 @@ export default function TenantSettingsPage() {
           method: "POST",
           body: formData,
         });
-        
+
         const uploadData = await uploadRes.json();
         if (uploadRes.ok && uploadData.publicUrl) {
           finalLogoUrl = uploadData.publicUrl;
@@ -161,6 +178,10 @@ export default function TenantSettingsPage() {
       // 2. Save settings to DB
       const payload = {
         email: tenantEmail,
+        newEmail: editEmail !== tenantEmail ? editEmail : undefined,
+        newPassword: newPassword !== "" ? newPassword : undefined,
+        tenantSlug,
+        organizationName,
         brandingColorPrimary,
         brandingColorSecondary,
         registrationMode,
@@ -168,6 +189,8 @@ export default function TenantSettingsPage() {
         allowSubstitution,
         allowWithdrawal,
         logoUrl: finalLogoUrl,
+        subscriptionPlan,
+        isSubscriptionRenewed,
       };
 
       const res = await fetch("/api/update_tenant_settings", {
@@ -178,6 +201,15 @@ export default function TenantSettingsPage() {
 
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to save settings");
+
+      if (editEmail !== tenantEmail) {
+        setTenantEmail(editEmail);
+        sessionStorage.setItem('tenantEmail', editEmail);
+      }
+
+      setNewPassword("");
+      setConfirmPassword("");
+      setIsSubscriptionRenewed(false);
 
       alert("Settings saved successfully!");
       setLogoFile(null); // Reset file after successful upload/save
@@ -193,7 +225,7 @@ export default function TenantSettingsPage() {
   const handleCreateRole = async (roleName: string, permissions: string[], roleDescription: string) => {
     if (!roleName.trim() || permissions.length === 0) return;
     setIsCreatingRole(true);
-    
+
     try {
       if (editingRole) {
         // UPDATE Existing
@@ -267,7 +299,9 @@ export default function TenantSettingsPage() {
               <div className="flex flex-col gap-1">
                 <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Account Settings</h2>
                 <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
-                  <AccountSetting 
+                  <AccountSetting
+                    tenantSlug={tenantSlug} setTenantSlug={setTenantSlug}
+                    organizationName={organizationName} setOrganizationName={setOrganizationName}
                     logoPreview={logoPreview} setLogoPreview={setLogoPreview}
                     setLogoFile={setLogoFile}
                     brandingColorPrimary={brandingColorPrimary} setBrandingColorPrimary={setBrandingColorPrimary}
@@ -278,10 +312,26 @@ export default function TenantSettingsPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-1">
+                <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Account Management</h2>
+                <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
+                  <AccountManagement
+                    email={editEmail}
+                    setEmail={setEditEmail}
+                    newPassword={newPassword}
+                    setNewPassword={setNewPassword}
+                    confirmPassword={confirmPassword}
+                    setConfirmPassword={setConfirmPassword}
+                    subscriptionPlan={subscriptionPlan}
+                    expirationDate={expirationDate}
+                    onManageSubscription={() => setIsManagingSubscription(true)}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
                 <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>View Assigned Roles</h2>
                 <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
-                  <ViewAssignedRole 
-                    onAssignClick={handleOpenAssignModal} 
+                  <ViewAssignedRole
+                    onAssignClick={handleOpenAssignModal}
                     onEditClick={handleEditRole}
                   />
                 </div>
@@ -295,11 +345,10 @@ export default function TenantSettingsPage() {
                   }}
                   disabled={subscriptionPlan === 'BASIC'}
                   title={subscriptionPlan === 'BASIC' ? "Custom roles are not available in the BASIC plan. Please upgrade to Standard or Enterprise." : ""}
-                  className={`flex h-[52px] min-w-[180px] items-center justify-center rounded-[18px] px-10 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${
-                    subscriptionPlan === 'BASIC' 
-                    ? "bg-white/10 opacity-40 cursor-not-allowed grayscale" 
-                    : "bg-[#4f35cd] hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
-                  }`}
+                  className={`flex h-[52px] min-w-[180px] items-center justify-center rounded-[18px] px-10 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${subscriptionPlan === 'BASIC'
+                      ? "bg-white/10 opacity-40 cursor-not-allowed grayscale"
+                      : "bg-[#4f35cd] hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
+                    }`}
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
                 >
                   {subscriptionPlan === 'BASIC' ? "Role Restricted" : "Add Role"}
@@ -318,7 +367,7 @@ export default function TenantSettingsPage() {
         </main>
       </div>
 
-      <AddRoleModal 
+      <AddRoleModal
         isOpen={isAddRoleModalOpen}
         onClose={() => {
           setIsAddRoleModalOpen(false);
@@ -327,14 +376,31 @@ export default function TenantSettingsPage() {
         onSave={handleCreateRole}
         isSaving={isCreatingRole}
         editingRole={editingRole}
+        subscriptionPlan={subscriptionPlan}
       />
 
-      <AssignUserModal 
-        isOpen={isAssignModalOpen} 
+      <AssignUserModal
+        isOpen={isAssignModalOpen}
         onClose={() => setIsAssignModalOpen(false)}
         onAssign={handleAssignUser}
         isSaving={isAssigningUser}
       />
+
+      {isManagingSubscription && (
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-black">
+          <PlanSubscription
+            onBack={() => setIsManagingSubscription(false)}
+            onContinue={(plan) => {
+              setSubscriptionPlan(plan);
+              setIsSubscriptionRenewed(true);
+              const d = new Date();
+              d.setMonth(d.getMonth() + 1);
+              setExpirationDate(d.toISOString());
+              setIsManagingSubscription(false);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

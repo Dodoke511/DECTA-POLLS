@@ -10,7 +10,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/users/tenant/dashboard": [], // any authenticated tenant user
   "/users/tenant/elections": ["election.create", "election.update", "election.view", "election.activate", "election.archive", "election.delete"],
   "/users/tenant/candidates": ["candidate.view", "candidate.review", "candidate.approve", "candidate.reject", "candidate.override"],
-  "/users/tenant/voters": ["voter.import", "voter.approve", "voter.reject", "voter.remove", "voter.assign_token", "voter.register_self"],
+  "/users/tenant/voters": ["voter.import", "voter.approve", "voter.reject", "voter.remove", "voter.assign_token"],
   "/users/tenant/settings": ["tenant.manage", "tenant.settings.update", "role.create", "role.update", "role.delete", "role.assign"],
 };
 

@@ -65,23 +65,25 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Fetch tenant ID
-    const { data: tenant, error: fetchError } = await supabase
-      .from("tenants")
-      .select("id")
-      .eq("email", email)
+    // 1. Fetch tenant ID via tenant users
+    const { data: adminData, error: adminError } = await supabase
+      .from("tenant users")
+      .select("tenantID")
+      .ilike("email", email.trim())
       .single();
 
-    if (fetchError || !tenant) {
-      console.error("[get_tenant_roles] Error fetching tenant:", fetchError);
+    if (adminError || !adminData) {
+      console.error("[get_tenant_roles] Admin user not found:", adminError);
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
+
+    const tenantId = adminData.tenantID;
 
     // 2. Fetch roles for this tenant
     const { data: roles, error: rolesError } = await supabase
       .from("tenant roles")
       .select("*")
-      .eq("tenantID", tenant.id);
+      .eq("tenantID", tenantId);
 
     if (rolesError) {
       console.error("[get_tenant_roles] Supabase error:", rolesError);
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
     const { data: tenantUsers } = await supabase
       .from("tenant users")
       .select("id, email")
-      .eq("tenantID", tenant.id);
+      .eq("tenantID", tenantId);
       
     const userIds = (tenantUsers ?? []).map((u: any) => u.id);
 

@@ -4,11 +4,15 @@ import React, { useState } from "react";
 import { RiImageAddLine } from "react-icons/ri";
 
 export interface AccountSettingProps {
+    tenantSlug: string;
+    organizationName: string;
     logoPreview: string | null;
     brandingColorPrimary: string;
     brandingColorSecondary: string;
     registrationMode: string;
     activeTriggers: string[];
+    setTenantSlug: React.Dispatch<React.SetStateAction<string>>;
+    setOrganizationName: React.Dispatch<React.SetStateAction<string>>;
     setLogoPreview: React.Dispatch<React.SetStateAction<string | null>>;
     setLogoFile: React.Dispatch<React.SetStateAction<File | null>>;
     setBrandingColorPrimary: React.Dispatch<React.SetStateAction<string>>;
@@ -18,11 +22,15 @@ export interface AccountSettingProps {
 }
 
 export function AccountSetting({
+    tenantSlug,
+    organizationName,
     logoPreview,
     brandingColorPrimary,
     brandingColorSecondary,
     registrationMode,
     activeTriggers,
+    setTenantSlug,
+    setOrganizationName,
     setLogoPreview,
     setLogoFile,
     setBrandingColorPrimary,
@@ -94,10 +102,39 @@ export function AccountSetting({
                         Change Your Logo
                     </p>
                 </div>
-
-                {/* Form Fields (Right Column) */}
                 <div className="flex flex-col gap-10">
-                    {/* Top Row: Branding Color & Voter Registration Mode */}
+                    {/* Top Row: Organization & Tenant Slug */}
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
+                        {/* Organization */}
+                        <div className="flex flex-col gap-3">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-[#D0C8FF]">
+                                Organization
+                            </label>
+                            <input
+                                type="text"
+                                value={organizationName}
+                                onChange={(e) => setOrganizationName(e.target.value)}
+                                placeholder="Enter organization name"
+                                className="h-[42px] w-full rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none transition-all hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50"
+                            />
+                        </div>
+
+                        {/* Tenant Slug */}
+                        <div className="flex flex-col gap-3">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-[#D0C8FF]">
+                                Tenant Slug
+                            </label>
+                            <input
+                                type="text"
+                                value={tenantSlug}
+                                onChange={(e) => setTenantSlug(e.target.value)}
+                                placeholder="Enter tenant slug"
+                                className="h-[42px] w-full rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none transition-all hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Branding Color & Voter Registration Mode */}
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
                         {/* Branding Color */}
                         <div className="flex flex-col gap-3">

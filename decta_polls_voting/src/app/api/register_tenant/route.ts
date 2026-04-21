@@ -102,6 +102,11 @@ export async function POST(request: Request) {
             );
         }
 
+        // Calculate subscription expiration (1 month from now)
+        const expiresAt = new Date();
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
+        const subscription_expires_at = expiresAt.toISOString();
+
         // Insert data into the 'tenants' table
         const { data: tenantData, error: tenantError } = await supabase
             .from('tenants')
@@ -111,6 +116,7 @@ export async function POST(request: Request) {
                     email,
                     type,
                     subscription,
+                    subscription_expires_at,
                     verification: verificationDocUrl,
                     status: tenantStatus,
                     is_verified: isVerified,
