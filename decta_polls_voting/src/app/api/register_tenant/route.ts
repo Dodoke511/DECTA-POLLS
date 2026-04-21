@@ -94,10 +94,10 @@ export async function POST(request: Request) {
         }
 
         // Validate status enum
-        const userStatus = status || 'new'; // Default to 'new' if not provided
-        if (!['new', 'active', 'inactive'].includes(userStatus)) {
+        const userStatus = status || 'PENDING'; // Default to 'PENDING' if not provided
+        if (!['PENDING', 'APPROVED', 'REJECTED'].includes(userStatus)) {
             return NextResponse.json(
-                { error: 'Invalid status value. Must be new, active, or inactive' },
+                { error: 'Invalid status value. Must be PENDING, APPROVED, or REJECTED' },
                 { status: 400 }
             );
         }

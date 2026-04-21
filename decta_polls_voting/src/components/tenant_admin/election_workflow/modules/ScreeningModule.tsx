@@ -5,7 +5,7 @@ import React, {
 } from 'react';
 import {
   Plus, Trash2, Loader2, Shield, Users2, CheckSquare2,
-  ChevronDown, ChevronUp, AlertTriangle, Info, ShieldAlert, Flag,
+  ChevronDown, ChevronUp, AlertTriangle, Info, ShieldAlert, Flag, Rocket
 } from 'lucide-react';
 import {
   PhaseRule, ApprovalRequirement, RuleCheckableField,
@@ -269,6 +269,9 @@ export const ScreeningModule = forwardRef(({
   // Require all decided toggle (stored for future use)
   const [requireAllDecided, setRequireAllDecided] = useState(false);
 
+  // Persistence config
+  const [persistUntilAppealsEnd, setPersistUntilAppealsEnd] = useState(false);
+
   // ── Load config on mount ─────────────────────────────────────────────────
   useEffect(() => {
     if (!electionId || !phaseId) return;
@@ -291,6 +294,7 @@ export const ScreeningModule = forwardRef(({
         if (approval) {
           setIsMultiApprover(approval.minimum_approvals > 1);   // DB column: minimum_approvals
           setMinApprovals(approval.minimum_approvals ?? 1);
+          setPersistUntilAppealsEnd(approval.persist_until_appeals_end ?? false);
         }
         if (Array.isArray(fetchedFields)) {
           setRuleCheckableFields(fetchedFields.map((f: any) => ({
@@ -330,6 +334,7 @@ export const ScreeningModule = forwardRef(({
             })),
             approval: {
               minApprovals: isMultiApprover ? minApprovals : 1,
+              persistUntilAppealsEnd,
             },
           }),
         });
@@ -476,6 +481,35 @@ export const ScreeningModule = forwardRef(({
               A single screener's approval is sufficient to advance a candidate.
             </div>
           )}
+        </div>
+      </Section>
+
+      {/* ── Section C: Workflow Continuity ── */}
+      <Section icon={Rocket} title="Workflow Continuity" accent="#10B981">
+        <div className="space-y-4 mt-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[13px] font-medium text-white/75">Persistent Review Access</p>
+              <p className="text-[11px] text-white/35 mt-0.5">
+                Retain access to screening tools during the Appeals phase to handle rescreening
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPersistUntilAppealsEnd(v => !v)}
+              className="relative w-10 h-5 rounded-full transition-all duration-200 flex-shrink-0"
+              style={{ background: persistUntilAppealsEnd ? '#10B981' : 'rgba(255,255,255,0.1)' }}
+            >
+              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${persistUntilAppealsEnd ? 'left-5' : 'left-0.5'}`} />
+            </button>
+          </div>
+
+          <div className="flex items-start gap-3 p-4 rounded-xl border border-emerald-500/10 bg-emerald-500/5">
+            <Info className="w-4 h-4 text-emerald-400/60 flex-shrink-0 mt-0.5" />
+            <p className="text-[12px] text-emerald-400/60 leading-relaxed">
+              When enabled, the administration's screening dashboard remains active alongside the appeal system. This is recommended if you expect candidates to correct filed information during their appeal.
+            </p>
+          </div>
         </div>
       </Section>
     </div>

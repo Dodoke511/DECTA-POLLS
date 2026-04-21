@@ -267,6 +267,23 @@ function FieldCardBuild({ field, index, dragIndex, onUpdate, onDelete, onDragSta
                   <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${field.required ? 'left-5' : 'left-0.5'}`} />
                 </button>
               </div>
+
+              {features.showRuleCheckable && (
+                <div className="flex items-center justify-between pt-1">
+                  <div>
+                    <span className="text-[12px] text-white/45 font-medium">Rule checkable</span>
+                    <p className="text-[10px] text-white/25 leading-tight">Expose this field for screening rule evaluation</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onUpdate(field._key, { rule_checkable: !field.rule_checkable })}
+                    className="relative w-10 h-5 rounded-full transition-all duration-200 flex-shrink-0"
+                    style={{ background: field.rule_checkable ? '#10B981' : 'rgba(255,255,255,0.1)' }}
+                  >
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${field.rule_checkable ? 'left-5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+              )}
               {field.field_type === 'position_selector' && (
                 <div className="flex items-center gap-2.5 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 mt-1">
                   <Users className="w-3.5 h-3.5 text-emerald-400" />
