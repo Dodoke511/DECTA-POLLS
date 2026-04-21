@@ -17,6 +17,7 @@ interface PublicationConfig {
     layout_style: 'grid' | 'list' | 'detailed';
     show_photo: boolean;
     header_field_map: {
+        full_name?: string[];
         department?: string;
         course?: string;
         tagline?: string;
@@ -77,7 +78,14 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                         setAvailableFields(data.availableFields || []);
 
                         if (data.config) {
-                            setConfig(data.config);
+                            const cfg = data.config;
+                            // Ensure full_name is an array
+                            if (cfg.header_field_map && typeof cfg.header_field_map.full_name === 'string') {
+                                cfg.header_field_map.full_name = [cfg.header_field_map.full_name];
+                            } else if (cfg.header_field_map && !cfg.header_field_map.full_name) {
+                                cfg.header_field_map.full_name = [];
+                            }
+                            setConfig(cfg);
                         }
                         if (data.sections && data.sections.length > 0) {
                             setSections(data.sections);
@@ -145,6 +153,9 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
 
         // Mapped fields cannot be reused in sections
         const mappedIds = new Set<string>();
+        if (config.header_field_map.full_name) {
+            config.header_field_map.full_name.forEach(id => mappedIds.add(id));
+        }
         if (config.header_field_map.department) mappedIds.add(config.header_field_map.department);
         if (config.header_field_map.course) mappedIds.add(config.header_field_map.course);
         if (config.header_field_map.tagline) mappedIds.add(config.header_field_map.tagline);
@@ -202,6 +213,46 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
             setSections(next);
         };
 
+        const addNamePart = (fieldId: string) => {
+            if (!fieldId) return;
+            const currentParts = config.header_field_map.full_name || [];
+            if (currentParts.includes(fieldId)) return;
+            setConfig({
+                ...config,
+                header_field_map: {
+                    ...config.header_field_map,
+                    full_name: [...currentParts, fieldId]
+                }
+            });
+        };
+
+        const removeNamePart = (idx: number) => {
+            const currentParts = config.header_field_map.full_name || [];
+            const next = currentParts.filter((_, i) => i !== idx);
+            setConfig({
+                ...config,
+                header_field_map: {
+                    ...config.header_field_map,
+                    full_name: next
+                }
+            });
+        };
+
+        const moveNamePart = (idx: number, dir: 'up' | 'down') => {
+            const currentParts = config.header_field_map.full_name || [];
+            const next = [...currentParts];
+            const target = dir === 'up' ? idx - 1 : idx + 1;
+            if (target < 0 || target >= next.length) return;
+            [next[idx], next[target]] = [next[target], next[idx]];
+            setConfig({
+                ...config,
+                header_field_map: {
+                    ...config.header_field_map,
+                    full_name: next
+                }
+            });
+        };
+
         return (
             <div className="space-y-10 animate-in fade-in duration-500">
 
@@ -249,31 +300,113 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                                 <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5B4FD9]"></div>
                             </label>
                         </div>
+                        
+                        <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Maximize className="w-4 h-4 text-emerald-400" />
+                                <div>
+                                    <p className="text-[12px] font-bold text-emerald-400/90">Electoral Position</p>
+                                    <p className="text-[10px] text-white/30 italic">Automatically included from Positions phase</p>
+                                </div>
+                            </div>
+                            <div className="text-[9px] font-bold text-emerald-400 border border-emerald-400/30 px-2 py-0.5 rounded uppercase tracking-tighter bg-emerald-400/10">System Map</div>
+                        </div>
 
                         {[
+                            { id: 'full_name', label: 'Primary Display Name (Concatenated)' },
                             { id: 'department', label: 'Department / College' },
                             { id: 'course', label: 'Course / Program' },
                             { id: 'tagline', label: 'Tagline / Subtitle' }
-                        ].map(slot => (
-                            <div key={slot.id} className="p-4 rounded-xl border border-white/10 bg-white/5 space-y-2">
-                                <p className="text-[12px] font-bold text-white/80">{slot.label} Mapping</p>
-                                <select
-                                    value={(config.header_field_map as any)[slot.id] || ""}
-                                    onChange={e => setConfig({
-                                        ...config,
-                                        header_field_map: { ...config.header_field_map, [slot.id]: e.target.value || undefined }
-                                    })}
-                                    className="w-full bg-[#110D1E] border border-white/10 rounded-lg text-[12px] text-white/90 p-2 outline-none appearance-none hover:border-white/20 transition-all cursor-pointer"
-                                >
-                                    <option value="" className="bg-[#110D1E] text-white/50">-- None (Hide) --</option>
-                                    {textFields.map(f => (
-                                        <option key={f.id} value={f.id} className="bg-[#110D1E] text-white">
-                                            {f.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        ))}
+                        ].map(slot => {
+                            if (slot.id === 'full_name') {
+                                const parts = config.header_field_map.full_name || [];
+                                return (
+                                    <div key={slot.id} className={`md:col-span-2 p-4 rounded-xl border bg-white/5 space-y-3 transition-all ${parts.length === 0 ? 'border-amber-500/40 ring-1 ring-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.05)]' : 'border-white/10'}`}>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[12px] font-bold text-white/80">{slot.label}</p>
+                                                <p className="text-[10px] text-white/30 italic">Add multiple parts (e.g. First Name + Last Name)</p>
+                                            </div>
+                                            {parts.length === 0 && <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 animate-pulse">Required</span>}
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2">
+                                            {parts.map((pId, pIdx) => {
+                                                const f = textFields.find(t => t.id === pId);
+                                                return (
+                                                    <div key={pId} className="flex items-center gap-2 px-3 py-2 bg-white/10 border border-white/10 rounded-lg group hover:border-white/20 transition-all">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="flex flex-col gap-1 pr-1 border-r border-white/5 group-hover:border-white/10">
+                                                                <button onClick={() => moveNamePart(pIdx, 'up')} className="hover:text-emerald-400 disabled:opacity-30 disabled:hover:text-white/40" disabled={pIdx === 0}>
+                                                                    <ChevronUp className="w-2.5 h-2.5" />
+                                                                </button>
+                                                                <button onClick={() => moveNamePart(pIdx, 'down')} className="hover:text-emerald-400 disabled:opacity-30 disabled:hover:text-white/40" disabled={pIdx === parts.length - 1}>
+                                                                    <ChevronDown className="w-2.5 h-2.5" />
+                                                                </button>
+                                                            </div>
+                                                            <span className="text-[12px] text-white font-medium">{f?.label || 'Unknown Field'}</span>
+                                                        </div>
+                                                        <button onClick={() => removeNamePart(pIdx)} className="ml-1 text-white/20 hover:text-red-400 transition-colors">
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                )
+                                            })}
+                                            
+                                            <div className="flex-1 min-w-[200px] relative">
+                                                <select
+                                                    className="w-full h-full bg-[#110D1E] border border-white/5 rounded-lg text-[12px] text-white/50 p-2 outline-none appearance-none hover:bg-white/5 hover:border-white/20 transition-all cursor-pointer italic"
+                                                    value=""
+                                                    onChange={e => addNamePart(e.target.value)}
+                                                >
+                                                    <option value="">+ Add Name Part...</option>
+                                                    {textFields.filter(f => !parts.includes(f.id)).map(f => (
+                                                        <option key={f.id} value={f.id} className="bg-[#110D1E] text-white not-italic">{f.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {parts.length > 0 && (
+                                            <div className="pt-2 border-t border-white/5">
+                                                <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mb-2">Display Preview</p>
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    {parts.map((pId, idx) => {
+                                                        const f = textFields.find(t => t.id === pId);
+                                                        return (
+                                                            <React.Fragment key={pId}>
+                                                                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[11px] font-medium">{f?.label || pId}</span>
+                                                                {idx < parts.length - 1 && <span className="text-white/20 text-[10px]">{"<space>"}</span>}
+                                                            </React.Fragment>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            }
+                            return (
+                                <div key={slot.id} className="p-4 rounded-xl border border-white/10 bg-white/5 space-y-2">
+                                    <p className="text-[12px] font-bold text-white/80">{slot.label} Mapping</p>
+                                    <select
+                                        value={(config.header_field_map as any)[slot.id] || ""}
+                                        onChange={e => setConfig({
+                                            ...config,
+                                            header_field_map: { ...config.header_field_map, [slot.id]: e.target.value || undefined }
+                                        })}
+                                        className="w-full bg-[#110D1E] border border-white/10 rounded-lg text-[12px] text-white/90 p-2 outline-none appearance-none hover:border-white/20 transition-all cursor-pointer"
+                                    >
+                                        <option value="" className="bg-[#110D1E] text-white/50">-- None (Hide) --</option>
+                                        {textFields.map(f => (
+                                            <option key={f.id} value={f.id} className="bg-[#110D1E] text-white">
+                                                {f.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
 

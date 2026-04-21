@@ -20,8 +20,8 @@ const plans: Plan[] = [
     name: 'STANDARD',
     features: [
       'Role-Based Verification',
-      'Document Workflow',
-      'Custom White-Labeling',
+      'Screening and Appeals',
+      'Customizable Public Election Space',
       'Monthly Price: ₱449',
     ],
   },
@@ -29,8 +29,8 @@ const plans: Plan[] = [
     name: 'ENTERPRISE',
     features: [
       'Full Forensic Audit Logs',
-      'Enhanced Screening Rules',
-      'Custom White-Labeling',
+      'Candidate Publication',
+      'Customizable Public Election Space',
       'Monthly Price: ₱619',
     ],
   },
@@ -53,8 +53,8 @@ const PlanCard: React.FC<{
     return (
       <div
         className={`group relative transition-all duration-300 ease-in-out cursor-pointer w-full max-w-[320px] p-8 min-h-[400px] flex flex-col rounded-3xl ${isSelected
-            ? 'border-2 border-[#5D44F8] shadow-[0_0_40px_rgba(93,68,248,0.8),0_0_80px_rgba(93,68,248,0.4),inset_0_1px_0_rgba(255,255,255,0.6)] transform scale-105 bg-white/10 backdrop-blur-xl'
-            : 'border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.4)] hover:border-[#5D44F8]/60 hover:shadow-[0_0_25px_rgba(93,68,248,0.5),0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.5)] hover:transform hover:scale-102 bg-white/5 backdrop-blur-lg'
+          ? 'border-2 border-[#5D44F8] shadow-[0_0_40px_rgba(93,68,248,0.8),0_0_80px_rgba(93,68,248,0.4),inset_0_1px_0_rgba(255,255,255,0.6)] transform scale-105 bg-white/10 backdrop-blur-xl'
+          : 'border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.4)] hover:border-[#5D44F8]/60 hover:shadow-[0_0_25px_rgba(93,68,248,0.5),0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.5)] hover:transform hover:scale-102 bg-white/5 backdrop-blur-lg'
           }`}
         style={{
           backdropFilter: isSelected ? 'blur(20px)' : 'blur(12px)',
@@ -93,8 +93,8 @@ const PlanCard: React.FC<{
               <div
                 key={index}
                 className={`flex items-center mb-6 text-base font-source-sans transition-all duration-200 ${isPrice
-                    ? 'text-[#9686F8] font-bold underline underline-offset-4 decoration-dotted hover:text-white cursor-help drop-shadow-sm'
-                    : 'text-white/95 font-medium drop-shadow-sm'
+                  ? 'text-[#9686F8] font-bold underline underline-offset-4 decoration-dotted hover:text-white cursor-help drop-shadow-sm'
+                  : 'text-white/95 font-medium drop-shadow-sm'
                   }`}
                 onClick={(e) => {
                   if (isPrice) {
@@ -213,8 +213,8 @@ export default function PlanSubscription({ onContinue, onBack }: { onContinue: (
           disabled={!selectedPlan}
           onClick={() => selectedPlan && onContinue(selectedPlan)}
           className={`inline-flex items-center justify-center px-8 py-0 h-12 rounded-xl font-montserrat text-white text-xl font-semibold cursor-pointer transition-all duration-300 leading-tight ${selectedPlan
-              ? 'hover:bg-[#4c35d1] hover:shadow-[0_0_40px_rgba(93,68,248,0.4)] transform hover:-translate-y-1'
-              : 'cursor-not-allowed'
+            ? 'hover:bg-[#4c35d1] hover:shadow-[0_0_40px_rgba(93,68,248,0.4)] transform hover:-translate-y-1'
+            : 'cursor-not-allowed'
             }`}
           style={{
             background: selectedPlan ? '#5D44F8' : 'rgba(255, 255, 255, 0.05)',

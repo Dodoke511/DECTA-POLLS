@@ -83,6 +83,7 @@ export async function POST(request: Request) {
         electionID: electionId,
         tenantID: tenantId,
         minimum_approvals: approval.minApprovals ?? 1, // column is minimum_approvals (snake_case)
+        persist_until_appeals_end: approval.persistUntilAppealsEnd ?? false,
       };
 
       const { error: approvalError } = await supabase
