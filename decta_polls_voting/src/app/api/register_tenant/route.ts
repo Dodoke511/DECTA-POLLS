@@ -25,7 +25,7 @@ export async function POST(request: Request) {
         const surname = formData.get('surname') as string;
         const contact = formData.get('contact') as string | null;
         const birth_date = formData.get('birth_date') as string | null;
-        const status = formData.get('status') as string | null;
+        const user_type = formData.get('user_type') as string | null;
         const slug = formData.get('slug') as string;
         const main_color = formData.get('main_color') as string;
         const second_color = formData.get('second_color') as string;
@@ -94,10 +94,10 @@ export async function POST(request: Request) {
         }
 
         // Validate status enum
-        const userStatus = status || 'PENDING'; // Default to 'PENDING' if not provided
-        if (!['PENDING', 'APPROVED', 'REJECTED'].includes(userStatus)) {
+        const userType = user_type || 'admin'; // Default to 'PENDING' if not provided
+        if (!['admin', 'sub-admin', 'voter', 'candidate'].includes(userType)) {
             return NextResponse.json(
-                { error: 'Invalid status value. Must be PENDING, APPROVED, or REJECTED' },
+                { error: 'Invalid status value. Must be admin or sub-admin or voter or candidate' },
                 { status: 400 }
             );
         }
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
                     surname,
                     contact: contact || null,
                     birth_date: birth_date || null,
-                    status: userStatus
+                    user_type: userType
                 }
             ])
             .select();

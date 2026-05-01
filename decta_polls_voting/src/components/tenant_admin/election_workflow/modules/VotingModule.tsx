@@ -22,8 +22,6 @@ export const VotingModule = forwardRef<{ save: () => Promise<boolean> }, VotingM
     const [config, setConfig] = useState<VotingConfig>({
       election_id: electionId,
       tenant_id: '', // Will be set by API
-      voting_start: new Date().toISOString(),
-      voting_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       voting_method: 'standard',
       abstain_allowed: false,
       ballot_layout: 'single_page',
@@ -92,40 +90,10 @@ export const VotingModule = forwardRef<{ save: () => Promise<boolean> }, VotingM
 
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
-        {/* Schedule */}
-        <section className="!p-0 ">
-          <div className="col-span-full">
-            <h4 className="text-[12px] font-bold text-white/90 uppercase tracking-wider flex items-center gap-2 mb-4">
-              <Clock className="w-4 h-4 text-[#6648EB]" /> Schedule
-            </h4>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] text-white/40 uppercase mb-2">Voting Opens</label>
-              <input
-                type="datetime-local"
-                value={config.voting_start.slice(0, 16)}
-                onChange={(e) => updateConfig({ voting_start: new Date(e.target.value).toISOString() })}
-                className="w-full bg-white/5 border border-white/10 text-white/80 rounded-xl p-3 text-[13px] focus:outline-none [color-scheme:dark]"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] text-white/40 uppercase mb-2">Voting Closes</label>
-              <input
-                type="datetime-local"
-                value={config.voting_end.slice(0, 16)}
-                onChange={(e) => updateConfig({ voting_end: new Date(e.target.value).toISOString() })}
-                className="w-full bg-white/5 border border-white/10 text-white/80 rounded-xl p-3 text-[13px] focus:outline-none [color-scheme:dark]"
-              />
-              <p className="text-[10px] text-white/20 mt-2 italic">Transition is always deadline-based for voting</p>
-            </div>
-          </div>
-        </section>
-
         {/* Ballot Settings */}
-        <section>
+        <section className="!p-0">
           <h4 className="text-[12px] font-bold text-white/90 uppercase tracking-wider flex items-center gap-2 mb-4">
-            <Settings2 className="w-4 h-4 text-[#6648EB]" /> Ballot Settings
+            <Settings2 className="w-4 h-4 text-[#6648EB]" /> Voting Settings
           </h4>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

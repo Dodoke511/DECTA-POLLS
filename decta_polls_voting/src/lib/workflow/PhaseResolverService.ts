@@ -97,7 +97,7 @@ export class PhaseResolverService {
 
     if (isScreening) {
       const { count } = await this.supabase
-        .from('candidates')
+        .from('candidate')
         .select('*', { count: 'exact', head: true })
         .eq('electionID', phase.electionID)
         .eq('status', 'pending');
@@ -138,7 +138,7 @@ export class PhaseResolverService {
 
     if (phase.phase_type === 'screening') {
       await this.supabase
-        .from('candidates')
+        .from('candidate')
         .update({ status: newStatus })
         .eq('status', 'pending')
         .eq('electionID', phase.electionID);

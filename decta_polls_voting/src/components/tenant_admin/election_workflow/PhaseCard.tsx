@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Settings2, Lock, ChevronDown, ChevronUp, Zap,
@@ -62,7 +62,7 @@ export function PhaseCard({
   isDisabledByDependency, isLast,
   isFocused, isSucceeding, subscription,
   onChange, onToggle, onSave, onRefresh, authParams,
-}: PhaseCardProps) {
+}: PhaseCardProps): ReactElement {
   const router = useRouter();
   const moduleRef = useRef<{ save: () => Promise<boolean> }>(null);
   const [isRulesExpanded, setIsRulesExpanded] = useState(false);
@@ -88,7 +88,22 @@ export function PhaseCard({
     router.push(`/users/tenant/elections/${electionId}/workflow/${path}?${authParams}`);
   };
 
+  // ── Preflight / Validation ──
+  const isPreflightValid = () => {
+    if (phase.transition_mode === 'manual') return true;
+    
+    // In 'deadline' mode, we MUST have the dates that the phase requires
+    if (metadata.hasStartDate && !phase.start_date) return false;
+    if (metadata.hasDeadline && !phase.deadline) return false;
+    
+    return true;
+  };
+
+  const isSaveDisabled = isSaving || !isPreflightValid();
+
   const handleLocalSave = async () => {
+    if (!isPreflightValid()) return;
+
     setIsSaving(true);
     setSaveStatus('saving');
 
@@ -130,8 +145,8 @@ export function PhaseCard({
             <div className="flex items-center justify-between gap-3 mb-2 group/title relative">
               <input
                 type="text"
-                value={phase.name.trim() === '' ? '' : phase.name}
-                placeholder={metadata.defaultName + " ..." || 'Untitled Phase'}
+                value={(phase.name || '').trim() === '' ? '' : phase.name}
+                placeholder={(metadata.defaultName ?? 'Phase') + " ..." || 'Untitled Phase'}
                 onChange={e => onChange(phase.phase_type, { name: e.target.value })}
                 className={`flex-1 bg-transparent border-none text-[22px] font-bold tracking-tight outline-none transition-all duration-500 cursor-text hover:bg-white/5 rounded-lg px-2 -ml-2 ${isActive ? 'text-white placeholder:text-white' : 'text-white/20 placeholder:text-white/20'}`}
                 title="Edit Phase Name"
@@ -200,38 +215,6 @@ export function PhaseCard({
         {isActive && (
           <div className="px-8 pb-10 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
             <div className="w-full h-px bg-white/[0.05]" />
-
-            {/* ─ Embedded PositionsModule ─ */}
-            {metadata.embedModule && (
-              <PositionsModule electionId={electionId} />
-            )}
-
-            {/* ─ Settings redirect (voting / results) ─ */}
-            {metadata.redirectToSettings && (
-              <button
-                onClick={navigateToSettings}
-                className="flex items-center gap-3 w-full p-4 rounded-xl border border-white/8 bg-white/3 hover:bg-white/6 hover:border-white/15 transition-all group text-left"
-              >
-                <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${accent}20`, border: `1px solid ${accent}30` }}
-                >
-                  <Settings2 className="w-4 h-4" style={{ color: accent }} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-[13px] font-medium text-white/80 group-hover:text-white transition-colors">
-                    Configure {metadata.defaultName} Settings
-                  </p>
-                  <p className="text-[11px] text-white/35">
-                    {metadata.type === 'voting'
-                      ? 'Set ballot type, voter eligibility, and voting period'
-                      : 'Configure results visibility, tallying method, and download access'}
-                  </p>
-                </div>
-                <ChevronDown className="w-4 h-4 text-white/30 group-hover:text-white/60 -rotate-90 transition-colors flex-shrink-0" />
-              </button>
-            )}
-
             {/* ─ Config fields (filing, screening, appeal, publication) ─ */}
             {!metadata.embedModule && !metadata.redirectToSettings && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -262,11 +245,31 @@ export function PhaseCard({
                   </div>
                 )}
 
+                {/* Start Date picker */}
+                {metadata.hasStartDate && (
+                  <div>
+                    <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" /> Phase Opens
+                      {phase.transition_mode === 'deadline' && (
+                        <span className="text-amber-400/80 font-medium normal-case tracking-normal">— required</span>
+                      )}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={phase.start_date ? phase.start_date.slice(0, 16) : ''}
+                      onChange={e => onChange(phase.phase_type, { start_date: e.target.value || null })}
+                      className="w-full bg-[#110D1E]/80 border border-white/10 text-white/80 rounded-xl px-4 py-3 text-[13px] focus:outline-none transition-all [color-scheme:dark]"
+                      onFocus={e => (e.target.style.borderColor = `${accent}60`)}
+                      onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                    />
+                  </div>
+                )}
+
                 {/* Deadline picker */}
                 {metadata.hasDeadline && (
                   <div>
                     <label className="block text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                      <Clock className="w-3 h-3" /> Phase Deadline
+                      <Clock className="w-3 h-3" /> {metadata.hasStartDate ? 'Phase Closes' : 'Phase Deadline'}
                       {phase.transition_mode === 'deadline' && (
                         <span className="text-amber-400/80 font-medium normal-case tracking-normal">— required</span>
                       )}
@@ -450,35 +453,44 @@ export function PhaseCard({
               />
             )}
 
-            <div className='flex justify-end'>
+            <div className="flex justify-end pt-6">
               {/* ─ Individual Save Button ─ */}
-              <div className="pt-6 flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-4 w-full border-t border-white/5 pt-6">
                 <div className="flex-1">
-                  {saveStatus === 'success' && (
-                    <span className="text-emerald-400 text-[12px] font-medium flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2 transition-all">
+                  {!isPreflightValid() && (
+                    <span className="text-amber-400 text-[11px] font-medium flex items-center gap-1.5 animate-in fade-in">
+                      <AlertTriangle className="w-3 h-3" />
+                      {metadata.hasStartDate 
+                        ? 'Configure both Start & End dates for Deadline mode' 
+                        : 'Configure a deadline date for Deadline mode'}
+                    </span>
+                  )}
+                  {isPreflightValid() && saveStatus === 'success' && (
+                    <span className="text-emerald-400 text-[12px] font-medium flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2 duration-300">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Changes persisted to database
                     </span>
                   )}
-                  {saveStatus === 'error' && (
+                  {isPreflightValid() && saveStatus === 'error' && (
                     <span className="text-red-400 text-[12px] font-medium animate-in shake duration-500">
                       Failed to sync changes
                     </span>
                   )}
-                  {saveStatus === 'idle' && (
+                  {isPreflightValid() && saveStatus === 'idle' && (
                     <p className="text-[11px] text-white/20">Last automatic check: Just now</p>
                   )}
                 </div>
 
                 <button
                   onClick={handleLocalSave}
-                  disabled={isSaving}
-                  className="flex items-center gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-40 disabled:cursor-not-allowed text-[13px] font-bold px-6 py-2.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={isSaveDisabled}
+                  className="flex items-center gap-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed text-[13px] font-bold px-6 py-2.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] flex-shrink-0"
+                  title={!isPreflightValid() ? 'Please configure required dates to save' : 'Save all changes'}
                 >
                   {isSaving ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-white/60" />
                   ) : (
-                    <Zap className="w-3.5 h-3.5" style={{ color: accent }} />
+                    <Zap className="w-3.5 h-3.5" style={{ color: !isPreflightValid() ? '#94a3b8' : accent }} />
                   )}
                   {isSaving ? 'Syncing...' : 'Sync & Save Changes'}
                 </button>

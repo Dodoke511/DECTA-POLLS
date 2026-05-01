@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     }
 
     if (!supabaseKey) {
-        return NextResponse.json({ error: "Server configuration error: Service role key missing" }, { status: 500 });
+      return NextResponse.json({ error: "Server configuration error: Service role key missing" }, { status: 500 });
     }
 
     // 1. Verify invitation
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
           surname: surname || invite.surname,
           contact: contact || invite.contact,
           birth_date: birth_date || invite.birth_date,
-          status: 'active'
+          user_type: 'sub-admin'
         }
       ]);
 
@@ -96,11 +96,11 @@ export async function POST(request: Request) {
       .eq("token", token);
 
     if (updateInviteError) {
-        console.warn("[accept_invitation] Failed to update invite status:", updateInviteError);
+      console.warn("[accept_invitation] Failed to update invite status:", updateInviteError);
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Account created successfully! You can now log in.",
       userId: userId
     });

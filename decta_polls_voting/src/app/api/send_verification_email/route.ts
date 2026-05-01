@@ -78,10 +78,21 @@ export async function POST(request: Request) {
       `,
     });
 
+    if (!transporter) {
+      return new Response(
+        JSON.stringify({ message: "Failed to send verification email." }),
+        { status: 500, headers: { "content-type": "application/json" } },
+      );
+    }
+
     const { error: updateError } = await supabase
       .from("tenants")
-      .update({ is_verified: true })
+      .update({
+        is_verified: true,
+        status: "APPROVED",
+      })
       .eq("id", tenantId);
+
 
     if (updateError) {
       return new Response(

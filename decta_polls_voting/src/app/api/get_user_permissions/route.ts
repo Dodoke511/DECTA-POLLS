@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     // 1. Get the tenant user by email
     const { data: tenantUser, error: userError } = await supabase
       .from("tenant users")
-      .select("id, tenantID")
+      .select("id, tenantID, user_type")
       .ilike("email", email.trim())
       .single();
 
@@ -29,18 +29,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Check if they are the owner (the oldest user for this tenant)
+    // 2. Check if they are the owner (the oldest user for this tenant and user type is admin)
     const { data: oldestUser } = await supabase
       .from("tenant users")
       .select("id")
       .eq("tenantID", tenantUser.tenantID)
+      .eq("user_type", 'admin')
       .order("created_at", { ascending: true })
       .limit(1)
       .single();
 
     if (oldestUser && oldestUser.id === tenantUser.id) {
       // Tenant owners get all permissions
-      return NextResponse.json({ permissions: ["*"], role: "tenant_owner" });
+      return NextResponse.json({ permissions: ["*"], role: "tenant_owner", user_type: tenantUser.user_type });
     }
 
     // Fetch user's role from userRoles junction table
@@ -72,6 +73,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       permissions: role.permissions ?? [],
       role: "tenant_user",
+      user_type: tenantUser.user_type,
     });
   } catch (err: any) {
     console.error("[get_user_permissions] Error:", err);

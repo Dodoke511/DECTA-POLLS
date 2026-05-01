@@ -17,6 +17,7 @@ export interface PhaseConfig {
   phase_index: number;
   is_enabled: boolean;
   name: string;
+  start_date?: string | null;
   deadline: string | null;
   role_assigned: string | null;
   transition_mode: TransitionMode;
@@ -36,6 +37,7 @@ export interface PhaseMetadata {
   };
   requiresPhase?: PhaseType;
   hasManagerRole: boolean;
+  hasStartDate: boolean;
   hasDeadline: boolean;
   hasTransitionMode: boolean;
   hasCompletionBehavior: boolean;
@@ -55,6 +57,7 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
       disables: ['Ballot Access', 'Results Access'],
     },
     hasManagerRole: false,
+    hasStartDate: false,
     hasDeadline: true,
     hasTransitionMode: true,
     hasCompletionBehavior: false,
@@ -72,6 +75,7 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
       disables: ['Candidate Application Form', 'Ballot Access'],
     },
     hasManagerRole: true,
+    hasStartDate: false,
     hasDeadline: true,
     hasTransitionMode: true,
     hasCompletionBehavior: true,
@@ -90,6 +94,7 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
     },
     requiresPhase: 'screening',
     hasManagerRole: true,
+    hasStartDate: false,
     hasDeadline: true,
     hasTransitionMode: true,
     hasCompletionBehavior: true,
@@ -107,6 +112,7 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
       disables: ['Candidate Application Form', 'Ballot Access'],
     },
     hasManagerRole: true,
+    hasStartDate: false,
     hasDeadline: true,
     hasTransitionMode: true,
     hasCompletionBehavior: false,
@@ -124,8 +130,9 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
       disables: ['Candidate Application Form', 'Appeal Submission Form'],
     },
     hasManagerRole: true,
-    hasDeadline: false,
-    hasTransitionMode: false,
+    hasStartDate: true,
+    hasDeadline: true,
+    hasTransitionMode: true,
     hasCompletionBehavior: false,
     redirectToSettings: false,
     embedModule: false,
@@ -141,8 +148,9 @@ export const PHASE_PIPELINE: PhaseMetadata[] = [
       disables: ['Ballot Access'],
     },
     hasManagerRole: true,
-    hasDeadline: false,
-    hasTransitionMode: false,
+    hasStartDate: true,
+    hasDeadline: true,
+    hasTransitionMode: true,
     hasCompletionBehavior: false,
     redirectToSettings: false,
     embedModule: false,

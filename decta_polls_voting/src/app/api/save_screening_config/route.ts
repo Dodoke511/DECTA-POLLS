@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       const ruleRecords = rules.map((r: any, i: number) => ({
         electionID: electionId,
         tenantID: tenantId,
-        phaseType: 'filing',
+        phaseType: 'screening',
         label: r.label,
         conditionLogic: r.condition_logic,  // JSONB column
         actionType: r.action_type,

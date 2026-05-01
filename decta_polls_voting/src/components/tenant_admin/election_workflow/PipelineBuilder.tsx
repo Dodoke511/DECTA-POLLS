@@ -55,6 +55,7 @@ function mergeFetchedPhases(electionId: string, fetched: any[], currentPhases: P
         phase_index: meta.index,
         is_enabled: existing.is_enabled,
         name: existing.name || '',
+        start_date: existing.start_date || null,
         deadline: existing.deadline || null,
         role_assigned: existing.role_assigned || null,
         transition_mode: existing.transition_mode || 'manual',
@@ -71,6 +72,7 @@ function mergeFetchedPhases(electionId: string, fetched: any[], currentPhases: P
       is_enabled: REQUIRED_PHASES.includes(meta.type),
       name: '',
       deadline: null,
+      start_date: null,
       role_assigned: null,
       transition_mode: 'manual' as const,
       completion_behavior: 'require_all_reviewed',
@@ -274,6 +276,9 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
   const screeningEnabled = screeningPhase?.is_enabled ?? false;
   const appealEnabled = appealPhase?.is_enabled ?? false;
 
+  const votingPhase = phases.find(p => p.phase_type === 'voting');
+  const resultsPhase = phases.find(p => p.phase_type === 'results');
+
   const preflightChecks: PreflightCheck[] = [
     {
       label: 'At least one electoral position is defined',
@@ -281,9 +286,9 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       active: true,
     },
     {
-      label: 'Filing phase has a deadline configured',
+      label: 'Filing phase deadline is configured',
       passed: !!(filingPhase?.deadline),
-      active: true,
+      active: filingPhase?.transition_mode === 'deadline',
     },
     {
       label: 'Screening phase has a manager role assigned',
@@ -296,14 +301,14 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       active: appealEnabled,
     },
     {
-      label: 'Filing deadline mode requires a deadline to be set',
-      passed: filingPhase?.transition_mode === 'manual' || !!(filingPhase?.deadline),
-      active: filingPhase?.transition_mode === 'deadline',
+      label: 'Voting period (start & end) is configured',
+      passed: !!(votingPhase?.start_date && votingPhase?.deadline),
+      active: votingPhase?.transition_mode === 'deadline',
     },
     {
-      label: 'Voting period (start & end) is configured',
-      passed: !!(electionMeta?.startDate && electionMeta?.endDate),
-      active: true,
+      label: 'Results period (start & end) is configured',
+      passed: !!(resultsPhase?.start_date && resultsPhase?.deadline),
+      active: resultsPhase?.transition_mode === 'deadline',
     },
   ];
 

@@ -13,7 +13,6 @@ export default function LogInPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [superAdminPararms, setSuperAdminPararms] = useState('');
 
     // Forgot-password state
     const [forgotStep, setForgotStep] = useState<ForgotStep>('idle');
@@ -44,6 +43,7 @@ export default function LogInPage() {
     const isFormValid = email.trim() !== '' && password.trim() !== '';
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        const params = new URLSearchParams();
         event.preventDefault();
         if (!isFormValid) {
             setError('Please provide appropriate credentials');
@@ -92,9 +92,13 @@ export default function LogInPage() {
             // Store tenant token and email
             const random = Math.random().toString(36).substring(2, 12);
             sessionStorage.setItem('tenantToken', random);
+            sessionStorage.setItem('supabaseToken', data.session.access_token);
             sessionStorage.setItem('tenantEmail', data.tenantEmail || email);
             if (data.tenantId) {
                 sessionStorage.setItem('tenantUserId', data.tenantId);
+            }
+            if (data.tenantStatus) {
+                sessionStorage.setItem('tenantStatus', data.tenantStatus);
             }
 
             // Fetch and store permissions cookie for middleware + PermissionProvider
@@ -109,14 +113,17 @@ export default function LogInPage() {
                 // Write cookie readable by middleware (server) and client
                 const cookieValue = encodeURIComponent(JSON.stringify(permissions));
                 document.cookie = `decta_permissions=${cookieValue}; path=/; SameSite=Strict`;
-                document.cookie = `decta_role=${permData.role ?? 'tenant_user'}; path=/; SameSite=Strict`;
+                document.cookie = `decta_role=${permData.role ?? 'unauthorized'}; path=/; SameSite=Strict`;
+                document.cookie = `decta_user_type=${permData.user_type ?? 'unauthorized'}; path=/; SameSite=Strict`;
+                params.set('role', permData.role ?? 'unauthorized');
+                params.set('user_type', permData.user_type ?? 'unauthorized');
+                if (data.tenantStatus) {
+                   params.set('status', data.tenantStatus);
+                }
             } catch {
                 // Non-fatal — middleware will redirect to login if cookie is missing
                 console.warn('[login] Could not fetch permissions, proceeding without cookie');
             }
-
-            const params = new URLSearchParams();
-            params.set('role', 'tenant');
             params.set('random', random);
 
             // Navigate to loader page, then to tenant dashboard

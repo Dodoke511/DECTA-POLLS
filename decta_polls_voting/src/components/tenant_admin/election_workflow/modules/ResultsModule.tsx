@@ -24,7 +24,6 @@ export const ResultsModule = forwardRef<{ save: () => Promise<boolean> }, Result
       election_id: electionId,
       tenant_id: '',
       publish_mode: 'immediate',
-      publish_at: null,
       results_visibility: 'public',
       show_vote_counts: true,
       show_winner_prominently: true,
@@ -120,18 +119,6 @@ export const ResultsModule = forwardRef<{ save: () => Promise<boolean> }, Result
               </button>
             ))}
           </div>
-
-          {config.publish_mode === 'scheduled' && (
-            <div className="animate-in slide-in-from-top-2 duration-300">
-              <label className="block text-[11px] text-white/40 uppercase mb-2">Publish Time</label>
-              <input
-                type="datetime-local"
-                value={config.publish_at ? config.publish_at.slice(0, 16) : ''}
-                onChange={(e) => updateConfig({ publish_at: new Date(e.target.value).toISOString() })}
-                className="w-full bg-white/5 border border-white/10 text-white/80 rounded-xl px-4 py-3 text-[13px] focus:outline-none [color-scheme:dark]"
-              />
-            </div>
-          )}
 
           <div className="mt-4">
             <label className="block text-[11px] text-white/40 uppercase mb-3">Results Visible To</label>
