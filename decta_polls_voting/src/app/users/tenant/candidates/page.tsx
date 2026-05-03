@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState, useEffect } from "react";
 import { TenantAdminHeader } from "@/components/tenant_admin/Header";
 import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
@@ -60,7 +62,7 @@ export default function TenantCandidatesPage() {
       });
 
       if (res.ok) {
-        setCandidates(prev => prev.map(c => 
+        setCandidates(prev => prev.map(c =>
           c.id === candidateId ? { ...c, status: newStatus } : c
         ));
       }
@@ -74,9 +76,9 @@ export default function TenantCandidatesPage() {
   const filteredCandidates = candidates.filter(c => {
     const matchesFilter = filter === 'ALL' || c.status === filter;
     const fullName = `${c.user?.first_name} ${c.user?.surname}`.toLowerCase();
-    const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || 
-                          c.user?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          c.election?.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = fullName.includes(searchQuery.toLowerCase()) ||
+      c.user?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.election?.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
@@ -113,8 +115,8 @@ export default function TenantCandidatesPage() {
             <div className="flex items-center gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Search candidates..."
                   className="bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-[var(--tenant-primary)] transition-all w-64"
                   value={searchQuery}
@@ -126,9 +128,8 @@ export default function TenantCandidatesPage() {
                   <button
                     key={f}
                     onClick={() => setFilter(f)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      filter === f ? 'bg-[var(--tenant-primary)] text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === f ? 'bg-[var(--tenant-primary)] text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                      }`}
                   >
                     {f === 'PENDING_VERIFICATION' ? 'Pending' : f.charAt(0) + f.slice(1).toLowerCase()}
                   </button>
@@ -212,7 +213,7 @@ export default function TenantCandidatesPage() {
                             </button>
                           </div>
                         ) : (
-                          <button 
+                          <button
                             onClick={() => handleStatusUpdate(c.id, 'PENDING_VERIFICATION')}
                             className="text-[10px] font-bold text-white/20 hover:text-white/40 transition-colors uppercase tracking-widest"
                           >
