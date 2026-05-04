@@ -10,6 +10,7 @@ import { ViewAssignedRole } from "@/components/tenant_admin/ViewAssignedRole";
 import { AssignUserModal } from "@/components/tenant_admin/AssignUserModal";
 import { AddRoleModal } from "@/components/tenant_admin/AddRoleModal";
 import PlanSubscription from "@/components/registration/PlanSubscription";
+import DarkVeil from '@/components/mainlanding/ui/DarkVeil';
 
 export default function TenantSettingsPage() {
   const router = useRouter();
@@ -276,7 +277,35 @@ export default function TenantSettingsPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
+    return (
+      <div className="min-h-screen relative text-decta-text font-source-sans overflow-hidden selection:bg-decta-brand selection:text-white flex items-center justify-center">
+        {/* Same DarkVeil Background as Landing Page */}
+        <div className="fixed inset-0 -z-[100] pointer-events-none w-full h-full overflow-hidden">
+          <DarkVeil
+            hueShift={0}
+            noiseIntensity={0}
+            scanlineIntensity={0}
+            speed={1.2}
+            scanlineFrequency={0}
+            warpAmount={0}
+            resolutionScale={1}
+          />
+        </div>
+
+        {/* Almost Full Screen Glassmorphism Container */}
+        <div className="glass-card w-[95vw] h-[90vh] flex items-center justify-center mx-auto">
+          <div className="loader font-montserrat font-bold text-white">
+            Loading
+            <div className="words">
+              <span className="word">Settings</span>
+              <span className="word">Account</span>
+              <span className="word">Roles</span>
+              <span className="word">Permissions</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
