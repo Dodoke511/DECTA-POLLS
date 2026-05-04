@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       .from('phase rule')
       .select('*')
       .eq('electionID', electionId)
-      .eq('phaseType', 'filing')
+      .eq('phaseType', 'screening')
       .order('priority', { ascending: false });
 
     if (rulesError) {

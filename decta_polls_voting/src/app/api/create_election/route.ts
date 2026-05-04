@@ -11,17 +11,18 @@ export async function POST(request: Request) {
 
     const tenantId = formData.get('tenantId') as string;
     const title = formData.get('title') as string;
+    const slug = formData.get('slug') as string;
     const description = formData.get('description') as string;
     const bannerFile = formData.get('banner') as File | null;
 
     console.log('tenantId:', tenantId);
     console.log('title:', title);
-    console.log('description:', description);
-    console.log('bannerFile:', bannerFile);
+    console.log('slug:', slug);
 
     const missing = [];
     if (!tenantId) missing.push('tenantId');
     if (!title) missing.push('title');
+    if (!slug) missing.push('slug');
 
     if (missing.length > 0) {
       return NextResponse.json(
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
         {
           tenantID: tenantId,
           title,
+          slug,
           description: description || null,
           status: 'DRAFT',
           banner: bannerUrl,

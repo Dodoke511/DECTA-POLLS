@@ -10,7 +10,6 @@ export interface ResultsConfig {
 
   // Publication
   publish_mode: PublishMode;
-  publish_at: string | null;
   results_visibility: ResultsVisibility;
 
   // Display (all tiers)

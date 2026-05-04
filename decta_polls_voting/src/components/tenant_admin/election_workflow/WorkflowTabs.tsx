@@ -3,14 +3,15 @@ import React from 'react';
 interface WorkflowTabsProps {
   activeTab?: 'workflow' | 'appeals' | 'interface';
   onTabChange?: (tab: 'workflow' | 'appeals' | 'interface') => void;
+  isAppealsVisible?: boolean;
 }
 
-export function WorkflowTabs({ activeTab = 'workflow', onTabChange }: WorkflowTabsProps) {
+export function WorkflowTabs({ activeTab = 'workflow', onTabChange, isAppealsVisible = false }: WorkflowTabsProps) {
   const tabs = [
     { id: 'workflow' as const, label: 'Workflow' },
     { id: 'appeals' as const, label: 'Appeals' },
     { id: 'interface' as const, label: 'Interface' },
-  ];
+  ].filter(tab => tab.id !== 'appeals' || isAppealsVisible);
 
   return (
     <div className="flex justify-center bg-[#140B2D]/80 backdrop-blur-md pt-2 border-b border-white/10">
@@ -21,11 +22,10 @@ export function WorkflowTabs({ activeTab = 'workflow', onTabChange }: WorkflowTa
             <button
               key={tab.id}
               onClick={() => onTabChange?.(tab.id)}
-              className={`px-4 py-3 text-[13px] font-bold tracking-widest uppercase relative transition-colors select-none ${
-                isActive
+              className={`px-4 py-3 text-[13px] font-bold tracking-widest uppercase relative transition-colors select-none ${isActive
                   ? 'text-[#A78BFA]'
                   : 'text-white/30 cursor-default'
-              }`}
+                }`}
             >
               {tab.label}
               {isActive && (

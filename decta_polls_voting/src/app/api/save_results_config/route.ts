@@ -33,8 +33,9 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString(),
     };
 
-    // Remove id from config to let upsert handle it or use existing
+    // Remove id and schema-migrated dates to avoid DB errors
     delete configRecord.id;
+    delete configRecord.publish_at;
 
     const { data, error } = await supabase
       .from('results_config')

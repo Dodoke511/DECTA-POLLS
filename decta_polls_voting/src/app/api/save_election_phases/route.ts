@@ -24,6 +24,7 @@ export async function POST(request: Request) {
         phase_index: p.phase_index,
         is_enabled: p.is_enabled,
         name: p.name || '',
+        start_date: p.start_date || null,
         deadline: p.deadline || null,
         role_assigned: p.role_assigned || null,
         transition_mode: p.transition_mode || 'manual',

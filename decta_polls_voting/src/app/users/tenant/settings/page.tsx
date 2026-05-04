@@ -14,7 +14,7 @@ import DarkVeil from '@/components/mainlanding/ui/DarkVeil';
 
 export default function TenantSettingsPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // States hoisted from AccountSetting
@@ -123,7 +123,7 @@ export default function TenantSettingsPage() {
 
         if (response.ok && result.data) {
           const config = result.data;
-          console.log("🔥 FETCHED CONFIG FROM DB:", config); // <-- Added for debugging
+          //console.log("🔥 FETCHED CONFIG FROM DB:", config); // <-- Added for debugging
 
           if (config.slug) setTenantSlug(config.slug);
           if (config.organization) setOrganizationName(config.organization);
@@ -375,8 +375,8 @@ export default function TenantSettingsPage() {
                   disabled={subscriptionPlan === 'BASIC'}
                   title={subscriptionPlan === 'BASIC' ? "Custom roles are not available in the BASIC plan. Please upgrade to Standard or Enterprise." : ""}
                   className={`flex h-[52px] min-w-[180px] items-center justify-center rounded-[18px] px-10 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${subscriptionPlan === 'BASIC'
-                      ? "bg-white/10 opacity-40 cursor-not-allowed grayscale"
-                      : "bg-[#4f35cd] hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
+                    ? "bg-white/10 opacity-40 cursor-not-allowed grayscale"
+                    : "bg-[#4f35cd] hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
                     }`}
                   style={{ fontFamily: "'Montserrat', sans-serif" }}
                 >

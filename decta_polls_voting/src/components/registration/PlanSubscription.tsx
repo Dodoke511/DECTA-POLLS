@@ -14,24 +14,35 @@ interface Plan {
 const plans: Plan[] = [
   {
     name: 'BASIC',
-    features: ['Standard Encryption', 'Simple Signup', 'Generic Theme', 'Monthly Price: ₱279'],
+    features: [
+      '1 Active Election (Max: 50 elections)',
+      'Up to 200 Voters',
+      'Standard Encryption',
+      'Simple Filing, Voting, and Results',
+      'Predefined Theme',
+      'Monthly Price: ₱85',
+    ],
   },
   {
     name: 'STANDARD',
     features: [
-      'Role-Based Verification',
+      '3 Active Elections (Max: 200 elections)',
+      'Up to 500 Voters',
+      'Role-Based Management',
       'Screening and Appeals',
       'Customizable Public Election Space',
-      'Monthly Price: ₱449',
+      'Monthly Price: ₱170',
     ],
   },
   {
     name: 'ENTERPRISE',
     features: [
-      'Full Forensic Audit Logs',
+      '5 Active Elections (Max: 500 elections)',
+      'Unlimited Voters',
+      'Audit Log System',
       'Candidate Publication',
       'Customizable Public Election Space',
-      'Monthly Price: ₱619',
+      'Monthly Price: ₱270',
     ],
   },
 ];

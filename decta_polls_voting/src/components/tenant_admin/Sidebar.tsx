@@ -9,9 +9,10 @@ import { PERMISSIONS_COOKIE, ROLE_COOKIE } from "@/lib/permissions";
 
 interface SidebarProps {
   activePath: string;
+  isRestricted?: boolean;
 }
 
-export function TenantAdminSidebar({ activePath }: SidebarProps) {
+export function TenantAdminSidebar({ activePath, isRestricted = false }: SidebarProps) {
   const router = useRouter();
   const [token, setToken] = React.useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
@@ -50,6 +51,7 @@ export function TenantAdminSidebar({ activePath }: SidebarProps) {
         activePath={activePath}
         token={token}
         isLoggingOut={isLoggingOut}
+        isRestricted={isRestricted}
         handleLogout={handleLogout}
         getItemStyle={getItemStyle}
         getTextStyle={getTextStyle}
@@ -63,6 +65,7 @@ function SidebarInner({
   activePath,
   token,
   isLoggingOut,
+  isRestricted,
   handleLogout,
   getItemStyle,
   getTextStyle,
@@ -71,12 +74,40 @@ function SidebarInner({
   activePath: string;
   token: string | null;
   isLoggingOut: boolean;
+  isRestricted: boolean;
   handleLogout: () => void;
   getItemStyle: (path: string) => string;
   getTextStyle: (path: string) => string;
   getUrlWithToken: (path: string) => string;
 }) {
   const { canAccess, isLoaded } = usePermissions();
+
+  const RestrictedLink = ({ href, children, path }: { href: string; children: React.ReactNode; path: string }) => {
+    // Dashboard is always accessible, others are locked if restricted
+    const isLocked = isRestricted && path !== "/users/tenant/dashboard";
+    
+    if (isLocked) {
+      return (
+        <div className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium opacity-40 cursor-not-allowed bg-black/20 border border-white/5`}>
+          {children}
+          <div className="absolute right-3">
+             <svg className="w-3 h-3 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+             </svg>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        href={getUrlWithToken(href)}
+        className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle(path)} ${getItemStyle(path)}`}
+      >
+        {children}
+      </Link>
+    );
+  };
 
   return (
     <aside className="super-admin-sidebar flex w-full shrink-0 flex-col rounded-3xl border md:w-[220px] lg:w-[260px] md:rounded-r-none py-6 md:py-8 pl-4 md:pl-5 pr-3 md:pr-4">
@@ -99,62 +130,47 @@ function SidebarInner({
           margin: "6px 0 0",
           opacity: 0.8,
         }}>
-          Tenant Admin
+          {isRestricted ? 'Account Pending' : 'Tenant Admin'}
         </p>
       </div>
 
       <div className="flex flex-1 flex-col gap-2 md:gap-2.5" role="navigation" aria-label="Main Navigation">
         {/* Dashboard — always visible */}
-        <Link
-          href={getUrlWithToken("/users/tenant/dashboard")}
-          className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/tenant/dashboard")} ${getItemStyle("/users/tenant/dashboard")}`}
-        >
+        <RestrictedLink href="/users/tenant/dashboard" path="/users/tenant/dashboard">
           <IconDashboard className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
           <span className="hidden sm:inline">Dashboard</span>
-        </Link>
+        </RestrictedLink>
 
         {/* Elections */}
         {(!isLoaded || canAccess("/users/tenant/elections")) && (
-          <Link
-            href={getUrlWithToken("/users/tenant/elections")}
-            className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/tenant/elections")} ${getItemStyle("/users/tenant/elections")}`}
-          >
+          <RestrictedLink href="/users/tenant/elections" path="/users/tenant/elections">
             <IconElections className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
             <span className="hidden sm:inline">Elections</span>
-          </Link>
+          </RestrictedLink>
         )}
 
         {/* Candidates */}
         {(!isLoaded || canAccess("/users/tenant/candidates")) && (
-          <Link
-            href={getUrlWithToken("/users/tenant/candidates")}
-            className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/tenant/candidates")} ${getItemStyle("/users/tenant/candidates")}`}
-          >
+          <RestrictedLink href="/users/tenant/candidates" path="/users/tenant/candidates">
             <IconCandidates className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
             <span className="hidden sm:inline">Candidates</span>
-          </Link>
+          </RestrictedLink>
         )}
 
         {/* Voters */}
         {(!isLoaded || canAccess("/users/tenant/voters")) && (
-          <Link
-            href={getUrlWithToken("/users/tenant/voters")}
-            className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/tenant/voters")} ${getItemStyle("/users/tenant/voters")}`}
-          >
+          <RestrictedLink href="/users/tenant/voters" path="/users/tenant/voters">
             <IconVoters className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
             <span className="hidden sm:inline">Voters</span>
-          </Link>
+          </RestrictedLink>
         )}
 
         {/* Settings */}
         {(!isLoaded || canAccess("/users/tenant/settings")) && (
-          <Link
-            href={getUrlWithToken("/users/tenant/settings")}
-            className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/tenant/settings")} ${getItemStyle("/users/tenant/settings")}`}
-          >
+          <RestrictedLink href="/users/tenant/settings" path="/users/tenant/settings">
             <IconSettings className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
             <span className="hidden sm:inline">Settings</span>
-          </Link>
+          </RestrictedLink>
         )}
       </div>
 

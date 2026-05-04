@@ -28,19 +28,42 @@ export async function POST(request: Request) {
         }
 
         // Retrieve the tenant from the 'tenant users' table using the authenticated user id.
-        // This is more robust than email matching on the 'tenants' table.
-        const { data: tenantData } = await supabase
+        // Also fetch the tenant status for approval checks.
+        const { data: userData, error: userFetchError } = await supabase
             .from('tenant users')
-            .select('tenantID, email')
+            .select(`
+                tenantID, 
+                email,
+                tenants (
+                    status
+                )
+            `)
             .eq('id', data.user.id)
             .single();
+
+        if (userFetchError || !userData) {
+            // Log out user if we can't find their tenant record
+            await supabase.auth.signOut();
+            return NextResponse.json({ error: 'Unauthorized: No tenant configuration found.' }, { status: 403 });
+        }
+
+        const tenantStatus = (userData as any).tenants?.status || 'PENDING';
+
+        // 1. Block access for REJECTED/DENIED
+        if (['REJECTED', 'DENIED'].includes(tenantStatus)) {
+            await supabase.auth.signOut();
+            return NextResponse.json({ 
+                error: `Your tenant account is ${tenantStatus}. Please contact support.` 
+            }, { status: 403 });
+        }
 
         return NextResponse.json({
             message: 'Login successful',
             user: data.user,
             session: data.session,
-            tenantId: tenantData?.tenantID,
-            tenantEmail: tenantData?.email,
+            tenantId: userData.tenantID,
+            tenantEmail: userData.email,
+            tenantStatus: tenantStatus,
         }, { status: 200 });
     } catch (error: any) {
         console.error('API Route Error:', error);

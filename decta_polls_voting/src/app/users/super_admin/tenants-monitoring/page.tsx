@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { SuperAdminHeader } from "@/components/super_admin/Header";
 import { SuperAdminSidebar } from "@/components/super_admin/Sidebar";
 import { createClient } from "@supabase/supabase-js";
-import { TenantMonitoringStatusActions } from "@/components/super_admin/TenantActions";
+import { TenantMonitoringStatusActions, VerificationDownloadAction } from "@/components/super_admin/TenantActions";
 import { type TenantRow } from "../Dashboard/page";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -66,6 +66,16 @@ export default function TenantsMonitoringPage() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+
+    const handleStatusUpdate = (tenantId: string, newStatus: 'APPROVED' | 'REJECTED') => {
+        setTenants(prevTenants => 
+            prevTenants.map(tenant => 
+                tenant.id === tenantId 
+                    ? { ...tenant, status: newStatus, isVerified: newStatus === 'APPROVED' }
+                    : tenant
+            )
+        );
+    };
 
     useEffect(() => {
         async function fetchData() {
@@ -153,6 +163,7 @@ export default function TenantsMonitoringPage() {
                                     <th className="px-5 py-4">Email</th>
                                     <th className="px-5 py-4">Type</th>
                                     <th className="py-4 pl-5 pr-10 text-right md:pr-14">Subscription</th>
+                                    <th className="py-4 pl-8 pr-5 text-center md:pl-10">Verification</th>
                                     <th className="py-4 pl-8 pr-5 text-center md:pl-10">Status</th>
                                 </tr>
                             </thead>
@@ -170,6 +181,12 @@ export default function TenantsMonitoringPage() {
                                             </span>
                                         </td>
                                         <td className="py-4 pl-8 pr-5 text-center align-middle md:pl-10">
+                                            <VerificationDownloadAction
+                                                verificationUrl={row.verificationUrl}
+                                                verificationFileName={row.verificationFileName}
+                                            />
+                                        </td>
+                                        <td className="py-4 pl-8 pr-5 text-center align-middle md:pl-10">
                                             {row.status === "PENDING" ? (
                                                 <TenantMonitoringStatusActions
                                                     tenantId={row.id}
@@ -177,6 +194,7 @@ export default function TenantsMonitoringPage() {
                                                     tenantOrganization={row.organization}
                                                     verificationUrl={row.verificationUrl}
                                                     isVerified={row.isVerified}
+                                                    onStatusUpdate={handleStatusUpdate}
                                                 />
                                             ) : (
                                                 <span className={`inline-flex rounded-full border ${row.status === "PENDING" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : row.status === "REJECTED" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : "border-[#5D44F8] bg-[#50C878]/[0.18] text-[#50C878]"} px-3 py-1 text-xs font-medium`}>

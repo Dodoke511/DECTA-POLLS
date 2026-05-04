@@ -6,10 +6,6 @@ export interface VotingConfig {
   election_id: string;
   tenant_id: string;
   
-  // Schedule
-  voting_start: string;
-  voting_end: string;
-
   // Ballot settings
   voting_method: VotingMethod;
   abstain_allowed: boolean;

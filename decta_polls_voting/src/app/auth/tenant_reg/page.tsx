@@ -110,7 +110,7 @@ export default function Home() {
             formData.append('surname', adminData.lastName);
             if (adminData.birthDate) formData.append('birth_date', adminData.birthDate);
             if (adminData.contactNumber) formData.append('contact', adminData.contactNumber);
-            formData.append('status', 'new');
+            formData.append('user_type', 'admin');
             formData.append('auth_id', verifyData.user.id);
 
             // Proceed to final registration

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { X, Upload, ImageIcon, Loader2, CalendarDays } from "lucide-react";
+import { X, Upload, ImageIcon, Loader2, Globe, Lock, Unlock } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
 
 interface CreateElectionModalProps {
   isOpen: boolean;
@@ -13,12 +14,14 @@ interface CreateElectionModalProps {
 
 interface FormData {
   title: string;
+  slug: string;
   description: string;
   banner: File | null;
 }
 
 interface FormErrors {
   title?: string;
+  slug?: string;
   description?: string;
   banner?: string;
 }
@@ -32,9 +35,11 @@ export function CreateElectionModal({
 }: CreateElectionModalProps) {
   const [form, setForm] = useState<FormData>({
     title: "",
+    slug: "",
     description: "",
     banner: null,
   });
+  const [slugLocked, setSlugLocked] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,11 +48,56 @@ export function CreateElectionModal({
 
   if (!isOpen) return null;
 
-  const validate = (): boolean => {
+  const validate = async (): Promise<boolean> => {
     const newErrors: FormErrors = {};
     if (!form.title.trim()) newErrors.title = "Election title is required.";
+    
+    if (!form.slug.trim()) {
+      newErrors.slug = "URL slug is required.";
+    } else if (!/^[a-z0-9-]+$/.test(form.slug)) {
+      newErrors.slug = "Slug can only contain lowercase letters, numbers, and hyphens.";
+    } else {
+      // Check for uniqueness
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: `Bearer ${token}` } } }
+      );
+      
+      const { data: existing } = await supabase
+        .from('election')
+        .select('id')
+        .eq('slug', form.slug)
+        .maybeSingle();
+        
+      if (existing) {
+        newErrors.slug = "This URL slug is already taken. Please choose another.";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const generateSlug = (text: string) => {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '') // Remove non-word chars
+      .replace(/[\s_]+/g, '-')   // Replace spaces/underscores with hyphens
+      .replace(/^-+|-+$/g, '');   // Trim hyphens
+  };
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const title = e.target.value;
+    setForm(prev => {
+      const updates: any = { title };
+      if (!slugLocked) {
+        updates.slug = generateSlug(title);
+      }
+      return { ...prev, ...updates };
+    });
+    if (errors.title) setErrors(prev => ({ ...prev, title: undefined }));
+    if (!slugLocked && errors.slug) setErrors(prev => ({ ...prev, slug: undefined }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,15 +133,20 @@ export function CreateElectionModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
-
     setIsSubmitting(true);
     setSubmitError(null);
+
+    const isValid = await validate();
+    if (!isValid) {
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const payload = new FormData();
       payload.append("tenantId", tenantId);
       payload.append("title", form.title.trim());
+      payload.append("slug", form.slug.trim());
       payload.append("description", form.description.trim());
       if (form.banner) payload.append("banner", form.banner);
 
@@ -116,7 +171,8 @@ export function CreateElectionModal({
 
   const handleClose = () => {
     if (isSubmitting) return;
-    setForm({ title: "", description: "", banner: null });
+    setForm({ title: "", slug: "", description: "", banner: null });
+    setSlugLocked(false);
     setBannerPreview(null);
     setErrors({});
     setSubmitError(null);
@@ -152,7 +208,6 @@ export function CreateElectionModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-8 py-6 flex flex-col gap-5">
 
-          {/* Title */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-white/50 uppercase tracking-[0.15em]">
               Election Title <span className="text-[#5D44F8]">*</span>
@@ -161,14 +216,46 @@ export function CreateElectionModal({
               id="election-title"
               type="text"
               value={form.title}
-              onChange={(e) => {
-                setForm((prev) => ({ ...prev, title: e.target.value }));
-                if (errors.title) setErrors((prev) => ({ ...prev, title: undefined }));
-              }}
+              onChange={handleTitleChange}
               placeholder="e.g. CIT-U SSG Elections 2025"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/25 outline-none focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50 transition-all"
             />
-            {errors.title && <p className="text-xs text-red-400">{errors.title}</p>}
+            {errors.title && <p className="text-xs text-red-400 font-medium">{errors.title}</p>}
+          </div>
+
+          {/* Slug */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold text-white/50 uppercase tracking-[0.15em] flex items-center justify-between">
+              <span>URL Slug <span className="text-[#5D44F8]">*</span></span>
+              <button 
+                type="button"
+                onClick={() => setSlugLocked(!slugLocked)}
+                className="text-[10px] text-[#A78BFA] hover:text-[#C4B5FD] flex items-center gap-1 normal-case tracking-normal transition-colors"
+              >
+                {slugLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                {slugLocked ? "Unlock Auto-sync" : "Lock for Custom URL"}
+              </button>
+            </label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+                <Globe className="w-4 h-4 text-white/20" />
+                <span className="text-white/20 text-sm">/</span>
+              </div>
+              <input
+                id="election-slug"
+                type="text"
+                value={form.slug}
+                onChange={(e) => {
+                  const val = e.target.value.toLowerCase().replace(/\s+/g, '-');
+                  setForm(prev => ({ ...prev, slug: val }));
+                  if (errors.slug) setErrors(prev => ({ ...prev, slug: undefined }));
+                  if (!slugLocked) setSlugLocked(true);
+                }}
+                placeholder="election-url-slug"
+                className="w-full rounded-xl border border-white/10 bg-white/5 pl-12 pr-4 py-3 text-sm text-white placeholder-white/25 outline-none focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50 transition-all font-mono"
+              />
+            </div>
+            {errors.slug && <p className="text-xs text-red-400 font-medium">{errors.slug}</p>}
           </div>
 
           {/* Description */}

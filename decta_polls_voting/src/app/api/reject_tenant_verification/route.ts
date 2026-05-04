@@ -21,7 +21,11 @@ export async function POST(request: Request) {
 
   const { error: updateError } = await supabase
     .from("tenants")
-    .update({ is_verified: false, verification: null })
+    .update({
+      is_verified: false,
+      verification: null,
+      status: "REJECTED"
+    })
     .eq("id", tenantId);
 
   if (updateError) {

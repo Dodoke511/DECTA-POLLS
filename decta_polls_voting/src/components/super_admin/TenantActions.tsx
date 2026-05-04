@@ -9,6 +9,7 @@ type VerificationActionsProps = {
   tenantOrganization: string;
   verificationUrl: string | null;
   isVerified: boolean;
+  onStatusUpdate?: (tenantId: string, newStatus: 'APPROVED' | 'REJECTED') => void;
 };
 
 export function VerificationDownloadAction({
@@ -23,9 +24,9 @@ export function VerificationDownloadAction({
   return (
     <a
       href={verificationUrl}
+      target="_blank"
       rel="noopener noreferrer"
-      download={verificationFileName ?? undefined}
-      title={verificationFileName ? `Download ${verificationFileName}` : "Download verification file"}
+      title={verificationFileName ? `View ${verificationFileName}` : "View verification file"}
       className="inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-md text-white/80 transition hover:bg-white/10 hover:text-white"
     >
       <IconDownload className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -33,7 +34,7 @@ export function VerificationDownloadAction({
   );
 }
 
-export function VerificationEmailAction({
+/*export function VerificationEmailAction({ //COMMENTED IT FOR NOW AS I FIND NO USE OF IT 
   tenantId,
   tenantEmail,
   tenantOrganization,
@@ -99,7 +100,7 @@ export function VerificationEmailAction({
       )}
     </div>
   );
-}
+}*/
 
 export function TenantMonitoringStatusActions({
   tenantId,
@@ -107,6 +108,7 @@ export function TenantMonitoringStatusActions({
   tenantOrganization,
   verificationUrl,
   isVerified,
+  onStatusUpdate,
 }: VerificationActionsProps) {
   const [localVerified, setLocalVerified] = useState(isVerified);
   const [localRejected, setLocalRejected] = useState(false);
@@ -119,6 +121,7 @@ export function TenantMonitoringStatusActions({
       setAcceptStatus("loading");
       setMessage("");
 
+      //Approve Tenant verification and send verification email
       const response = await fetch("/api/send_verification_email", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -136,6 +139,7 @@ export function TenantMonitoringStatusActions({
       }
 
       setLocalVerified(true);
+      onStatusUpdate?.(tenantId, 'APPROVED');
     } catch (err) {
       setAcceptStatus("error");
       setMessage(err instanceof Error ? err.message : "Failed to accept.");
@@ -160,6 +164,7 @@ export function TenantMonitoringStatusActions({
 
       setLocalRejected(true);
       setRejectStatus("idle");
+      onStatusUpdate?.(tenantId, 'REJECTED');
     } catch (err) {
       setRejectStatus("error");
       setMessage(err instanceof Error ? err.message : "Failed to reject.");
