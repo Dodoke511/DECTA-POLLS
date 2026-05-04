@@ -1,0 +1,6 @@
+email,first_name,middle_name,surname,contact,birth_date,department
+john.doe@example.com,John,Michael,Doe,09123456789,1990-01-15,Engineering
+jane.smith@example.com,Jane,Anne,Smith,09234567890,1992-05-20,Marketing
+bob.johnson@example.com,Bob,,Johnson,09345678901,1988-11-30,Sales
+alice.williams@example.com,Alice,Marie,Williams,09456789012,1995-03-10,Human Resources
+charlie.brown@example.com,Charlie,,Brown,09567890123,1991-07-25,Finance

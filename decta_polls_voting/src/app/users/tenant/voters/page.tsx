@@ -1,34 +1,319 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { TenantAdminHeader } from "@/components/tenant_admin/Header";
 import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { useRouter } from "next/navigation";
+import { Search, UserPlus, X, Upload } from "lucide-react";
+
+interface Voter {
+  id: string;
+  email: string;
+  firstName?: string;
+  first_name?: string;
+  middleName?: string;
+  middle_name?: string;
+  surname?: string;
+  contact?: string;
+  birthDate?: string;
+  birth_date?: string;
+  status?: string;
+  department?: string;
+  created_at?: string;
+  tenantID: string;
+  user_type: string;
+}
 
 export default function TenantVotersPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [voters, setVoters] = useState<Voter[]>([]);
+  const [tenantId, setTenantId] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const role = params.get('role');
     const random = params.get('random');
     const storedToken = sessionStorage.getItem('tenantToken');
+    const storedTenantId = sessionStorage.getItem('tenantUserId'); // Changed from 'tenantId' to 'tenantUserId'
+
+    console.log('Auth check - Role:', role, 'Token match:', random === storedToken, 'Tenant ID:', storedTenantId);
 
     if (role !== 'tenant' || !random || random !== storedToken) {
       router.push('/auth/login_form');
       return;
     }
 
-    setLoading(false);
+    if (storedTenantId) {
+      setTenantId(storedTenantId);
+      console.log('Tenant ID set:', storedTenantId);
+      fetchVoters(storedTenantId);
+    } else {
+      console.warn('No tenant ID found in session storage');
+      setLoading(false);
+    }
   }, [router]);
+
+  const fetchVoters = async (tenantId: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/get_tenant_voters?tenantId=${tenantId}`);
+      const result = await response.json();
+
+      if (response.ok) {
+        setVoters(result.data || []);
+      } else {
+        console.error("Error fetching voters:", result.error);
+        setVoters([]);
+      }
+    } catch (error) {
+      console.error("Error fetching voters:", error);
+      setVoters([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileSelect = (file: File) => {
+    console.log('File selected:', file.name, 'Type:', file.type, 'Size:', file.size);
+    
+    // Accept .csv files or .txt files (which might contain CSV data)
+    const fileName = file.name.toLowerCase();
+    if (fileName.endsWith('.csv') || fileName.endsWith('.txt')) {
+      setSelectedFile(file);
+      console.log('File accepted:', file.name);
+    } else {
+      alert('Please select a CSV or TXT file');
+      console.log('File rejected - not a CSV or TXT file');
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
+
+  const handleUpload = async () => {
+    console.log('Upload clicked. Selected file:', selectedFile, 'Tenant ID:', tenantId);
+    
+    if (selectedFile && tenantId) {
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('tenantId', tenantId);
+
+        const response = await fetch('/api/upload_voters_csv', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          alert(`Success! ${result.count} voters uploaded.`);
+          setSelectedFile(null);
+          setShowUploadModal(false);
+          fetchVoters(tenantId);
+        } else {
+          alert(`Error: ${result.error}\n${result.hint || ''}`);
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert('Failed to upload CSV file');
+      }
+    } else {
+      console.log('Cannot upload - missing file or tenant ID');
+      alert('Please select a file first');
+    }
+  };
+
+  const handleCancel = () => {
+    setSelectedFile(null);
+    setShowUploadModal(false);
+  };
 
   if (loading) {
     return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
   }
 
+  // Calculate stats from actual voters data
+  const stats = {
+    total: voters.length
+  };
+
+  // Filter voters based on search query
+  const filteredVoters = voters.filter(voter => {
+    const searchLower = searchQuery.toLowerCase();
+    const fullName = `${voter.first_name || ''} ${voter.middle_name || ''} ${voter.surname || ''}`.toLowerCase();
+    return (
+      fullName.includes(searchLower) ||
+      voter.email?.toLowerCase().includes(searchLower) ||
+      voter.contact?.toLowerCase().includes(searchLower)
+    );
+  });
+
   return (
-    <div className="flex h-screen flex-col text-[#f1f0f3]" style={{ background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)" }}>
+    <>
+      {/* Upload CSV Modal - Overlays entire screen */}
+      {showUploadModal && (
+        <div 
+          className="fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center p-4"
+          style={{ 
+            background: "rgba(0, 0, 0, 0.8)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+            zIndex: 99999,
+            position: "fixed"
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCancel();
+          }}
+        >
+          <div 
+            className="w-full max-w-lg rounded-[20px] p-6 relative"
+            style={{
+              background: "#1f1f1f",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
+              zIndex: 100000
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">Upload Voters CSV</h2>
+              <button
+                onClick={handleCancel}
+                className="text-white/60 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* CSV Format Info */}
+            <div className="mb-4 p-3 rounded-[10px]" style={{
+              background: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid rgba(255, 255, 255, 0.1)"
+            }}>
+              <h3 className="text-white font-semibold text-sm mb-2">CSV Format:</h3>
+              <p className="text-white/60 text-xs mb-2">Your CSV file should contain the following columns:</p>
+              <code className="block text-white/80 text-xs mb-1 font-mono">
+                email,first_name,middle_name,surname,contact,birth_date,department
+              </code>
+              <p className="text-white/40 text-xs mb-1">
+                <span className="font-semibold">Example:</span>
+              </p>
+              <code className="block text-white/60 text-xs mb-2 font-mono">
+                john@example.com,John,M,Doe,09123456789,1990-01-15,Engineering
+              </code>
+              <p className="text-red-400/80 text-xs font-semibold mb-1">
+                Required columns: email, first_name, surname
+              </p>
+              <p className="text-white/40 text-xs italic">
+                Optional: middle_name, contact, birth_date, department
+              </p>
+            </div>
+
+            {/* File Upload Area */}
+            <div className="mb-4">
+              <h3 className="text-white font-semibold text-sm mb-2">Select CSV File</h3>
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-[10px] p-8 text-center cursor-pointer transition-all ${
+                  isDragging 
+                    ? 'border-[#5D44F8] bg-[#5D44F8]/10' 
+                    : 'border-white/20 hover:border-white/40'
+                }`}
+                style={{
+                  background: isDragging ? "rgba(93, 68, 248, 0.1)" : "rgba(255, 255, 255, 0.02)"
+                }}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+                <Upload className="w-10 h-10 mx-auto mb-3 text-white/40" />
+                {selectedFile ? (
+                  <div>
+                    <p className="text-white font-semibold text-sm mb-1">{selectedFile.name}</p>
+                    <p className="text-white/60 text-xs">
+                      {(selectedFile.size / 1024).toFixed(2)} KB
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-white font-semibold text-sm mb-1">Click to upload CSV file</p>
+                    <p className="text-white/60 text-xs">or drag and drop</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancel}
+                className="flex-1 px-4 py-2.5 rounded-[10px] text-white text-sm font-semibold transition-all hover:bg-white/10"
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={!selectedFile || !tenantId}
+                className="flex-1 px-4 py-2.5 rounded-[10px] text-white text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: (selectedFile && tenantId) ? "#5D44F8" : "rgba(93, 68, 248, 0.5)",
+                  boxShadow: (selectedFile && tenantId) ? "0 4px 12px rgba(93, 68, 248, 0.3)" : "none"
+                }}
+                title={!selectedFile ? "Please select a file" : !tenantId ? "Tenant ID missing" : "Upload file"}
+              >
+                Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dashboard */}
+      <div className="flex h-screen flex-col text-[#f1f0f3]" style={{ background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)" }}>
       <style dangerouslySetInnerHTML={{
         __html: `
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -42,11 +327,88 @@ export default function TenantVotersPage() {
         <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none">
           <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Voters</h1>
 
-          <div className="grid gap-6">
-            <p className="text-white/60">Voters management content coming soon...</p>
+          {/* Top Section: Stats Card + Search + Add Voter */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            {/* Total Voters Card */}
+            <div className="super-admin-card stat-card p-6 rounded-[20px] flex flex-col items-center justify-center">
+              <div className="text-5xl font-bold mb-2" style={{ color: "#D0C8FF" }}>{stats.total.toLocaleString()}</div>
+              <div className="text-white/60 text-sm">Total Voters</div>
+            </div>
+
+            {/* Search and Add Voter Section */}
+            <div className="lg:col-span-2 flex flex-col gap-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/40 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search Voters"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 rounded-[10px] text-white placeholder:text-white/40 focus:outline-none transition-all"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)"
+                  }}
+                />
+              </div>
+
+              {/* Add Voter Button */}
+              <div className="flex justify-start">
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="super-admin-button px-6 py-3 rounded-[10px] flex items-center gap-2 text-white font-semibold"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Add Voter
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Voters Table */}
+          <div className="rounded-[20px] overflow-hidden" style={{
+            background: "rgba(255, 255, 255, 0.05)",
+            border: "1px solid rgba(255, 255, 255, 0.1)"
+          }}>
+            <div className="overflow-x-auto">
+              {filteredVoters.length === 0 ? (
+                <div className="p-8 text-center text-white/60">
+                  No voters found
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="text-left p-4 text-white/60 font-semibold">Voter Name</th>
+                      <th className="text-left p-4 text-white/60 font-semibold">Email</th>
+                      <th className="text-left p-4 text-white/60 font-semibold">Contact</th>
+                      <th className="text-left p-4 text-white/60 font-semibold">Registration Date</th>
+                      <th className="text-left p-4 text-white/60 font-semibold">Department</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredVoters.map((voter) => (
+                      <tr key={voter.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td className="p-4 text-white">
+                          {`${voter.first_name || ''} ${voter.middle_name || ''} ${voter.surname || ''}`.trim() || 'N/A'}
+                        </td>
+                        <td className="p-4 text-white/80">{voter.email || 'N/A'}</td>
+                        <td className="p-4 text-white/80">{voter.contact || 'N/A'}</td>
+                        <td className="p-4 text-white/80">
+                          {voter.created_at ? new Date(voter.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="p-4 text-white/80">{voter.department || 'N/A'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </main>
       </div>
     </div>
+    </>
   );
 }
