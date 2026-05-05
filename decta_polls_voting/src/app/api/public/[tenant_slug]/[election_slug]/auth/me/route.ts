@@ -4,7 +4,7 @@ import { getElectionUserContext } from '@/lib/public-election/session';
 
 export async function GET(
   request: Request,
-  { params }: { params: { tenant_slug: string; election_slug: string } }
+  { params }: { params: Promise<{ tenant_slug: string; election_slug: string }> }
 ) {
   const { tenant_slug, election_slug } = await params;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
