@@ -1,12 +1,29 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
+
+const TEMPORARY_VOTER_PASSWORD = "12345";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+interface ParsedVoter {
+  tenantID: string;
+  email: string;
+  first_name: string;
+  middle_name: string | null;
+  surname: string;
+  contact: string | null;
+  birth_date: string | null;
+  user_type: string;
+  department: string | null;
+}
+
+function getErrorMessage(err: unknown) {
+  return err instanceof Error ? err.message : "Internal Server Error";
+}
 
 export async function POST(request: Request) {
   try {
@@ -66,12 +83,12 @@ export async function POST(request: Request) {
     }
 
     // Parse CSV rows
-    const voters = [];
-    const errors = [];
+    const voters: ParsedVoter[] = [];
+    const errors: Record<string, unknown>[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(separator).map((v) => v.trim());
-      const row: any = {};
+      const row: Record<string, string | null> = {};
 
       console.log(`Row ${i}:`, values);
 
@@ -89,9 +106,7 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // Prepare voter data with generated UUID
       voters.push({
-        id: randomUUID(), // Generate UUID for the id column
         tenantID: tenantId,
         email: row.email.toLowerCase(),
         first_name: row.first_name,
@@ -117,32 +132,84 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert voters into database - Supabase will auto-generate UUIDs for id column
-    const { data, error } = await supabase
-      .from("tenant users")
-      .insert(voters)
-      .select();
+    const insertedVoters: unknown[] = [];
 
-    if (error) {
-      console.error("[upload_voters_csv] Supabase error:", error);
+    for (const voter of voters) {
+      const { data: existingTenantUser } = await supabase
+        .from("tenant users")
+        .select("id")
+        .eq("tenantID", tenantId)
+        .eq("email", voter.email)
+        .maybeSingle();
+
+      if (existingTenantUser) {
+        errors.push({
+          email: voter.email,
+          error: "Email already exists for this tenant",
+        });
+        continue;
+      }
+
+      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+        email: voter.email,
+        password: TEMPORARY_VOTER_PASSWORD,
+        email_confirm: true,
+        user_metadata: {
+          tenant_id: tenantId,
+          role_type: "Voter",
+          temporary_password: true,
+        },
+      });
+
+      if (authError || !authUser.user) {
+        errors.push({
+          email: voter.email,
+          error: authError?.message || "Failed to create auth user",
+        });
+        continue;
+      }
+
+      const { data: inserted, error: insertError } = await supabase
+        .from("tenant users")
+        .insert({
+          ...voter,
+          id: authUser.user.id,
+          user_type: "Voter",
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        await supabase.auth.admin.deleteUser(authUser.user.id);
+        errors.push({
+          email: voter.email,
+          error: insertError.message,
+        });
+        continue;
+      }
+
+      insertedVoters.push(inserted);
+    }
+
+    if (insertedVoters.length === 0) {
       return NextResponse.json(
         {
-          error: error.message,
-          hint: "Some emails might already exist in the database",
+          error: "No voters were uploaded",
+          details: errors,
         },
-        { status: 500 }
+        { status: 400 }
       );
     }
 
     return NextResponse.json({
       message: "Voters uploaded successfully",
-      count: data?.length || 0,
+      count: insertedVoters.length,
       errors: errors.length > 0 ? errors : undefined,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[upload_voters_csv] API error:", err);
     return NextResponse.json(
-      { error: err.message || "Internal Server Error" },
+      { error: getErrorMessage(err) },
       { status: 500 }
     );
   }

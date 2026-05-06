@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getElectionUserContext } from '@/lib/public-election/session';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Internal server error';
+}
+
 export async function GET(
   request: Request,
-  { params }: { params: { tenant_slug: string; election_slug: string } }
+  { params }: { params: Promise<{ tenant_slug: string; election_slug: string }> }
 ) {
   const { tenant_slug, election_slug } = await params;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -37,8 +41,8 @@ export async function GET(
 
     return NextResponse.json({ userContext });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Me route error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

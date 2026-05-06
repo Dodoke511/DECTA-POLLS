@@ -37,6 +37,11 @@ export async function getElectionUserContext(
     return null;
   }
 
+  if (user.user_metadata?.temporary_password === true) {
+    console.log(`[Session Debug] User still has a temporary password. Blocking public election session.`);
+    return null;
+  }
+
   // Use Service Role to bypass RLS for profile lookup on server
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -60,7 +65,7 @@ export async function getElectionUserContext(
 
   console.log(`[Session Debug] Successfully resolved user: ${tenantUser.first_name} (${tenantUser.user_type})`);
 
-  const userType = tenantUser.user_type as 'Candidate' | 'Voter';
+  const userType = tenantUser.user_type?.toLowerCase() === 'candidate' ? 'Candidate' : 'Voter';
   const isCandidate = userType === 'Candidate';
   const isVoter = userType === 'Voter';
 

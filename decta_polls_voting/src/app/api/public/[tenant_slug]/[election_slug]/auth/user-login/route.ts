@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Internal server error';
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant_slug: string; election_slug: string }> }
@@ -9,6 +13,7 @@ export async function POST(
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const supabase = createClient(supabaseUrl, supabaseKey);
+  const temporaryVoterPassword = '12345';
 
   try {
     const { email, password } = await request.json();
@@ -31,7 +36,7 @@ export async function POST(
     // 2. Resolve election
     const { data: election } = await supabase
       .from('election')
-      .select('id, status')
+      .select('id')
       .eq('slug', election_slug)
       .eq('tenantID', tenant.id)
       .single();
@@ -61,10 +66,20 @@ export async function POST(
       return NextResponse.json({ error: 'No account found for this organization' }, { status: 403 });
     }
 
-    const allowedTypes = ['Voter', 'Candidate'];
-    if (!allowedTypes.includes(tenantUser.user_type)) {
+    const userType = tenantUser.user_type?.toLowerCase();
+    const allowedTypes = ['voter', 'candidate'];
+    if (!allowedTypes.includes(userType)) {
       await supabase.auth.signOut();
       return NextResponse.json({ error: 'Unauthorized user type for this portal' }, { status: 403 });
+    }
+
+    if (userType === 'voter' && password === temporaryVoterPassword) {
+      return NextResponse.json({
+        success: true,
+        requiresPasswordChange: true,
+        session: authData.session,
+        message: 'Temporary password accepted. Please change your password before continuing.',
+      });
     }
 
     // Optional: Check if voted
@@ -72,8 +87,8 @@ export async function POST(
 
     return NextResponse.json({ success: true, session: authData.session });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Login error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

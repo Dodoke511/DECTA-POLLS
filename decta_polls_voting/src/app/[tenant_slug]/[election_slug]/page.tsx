@@ -1,11 +1,17 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { ElectionAuthModule } from '@/components/public-election/auth/ElectionAuthModule';
 
 export default function ElectionLandingPage() {
-  const { election, siteConfig } = useElectionPublic();
+  const { election, siteConfig, userContext, basePath } = useElectionPublic();
+
+  useEffect(() => {
+    if (userContext?.isVoter) {
+      window.location.href = `${basePath}/dashboard`;
+    }
+  }, [basePath, userContext]);
 
   return (
     <div className="relative min-h-[calc(100vh-80px)] flex flex-col items-center justify-center py-20 px-6">
