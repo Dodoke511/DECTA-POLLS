@@ -61,6 +61,7 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [returningVoterMode, setReturningVoterMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -108,6 +109,7 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
       if (data.requiresPasswordChange) {
         setPendingSession(data.session);
         setRequiresPasswordChange(true);
+        setReturningVoterMode(false);
         setPassword('');
         return;
       }
@@ -186,15 +188,23 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
         <button onClick={onBack} className="text-slate-400 hover:text-slate-900 transition-colors p-2 -ml-2 rounded-lg hover:bg-slate-100">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h2 className="text-xl font-bold text-slate-900 ml-2">{role} Login</h2>
+        <h2 className="text-xl font-bold text-slate-900 ml-2">
+          {role === 'Voter' && returningVoterMode ? 'Voter Sign In' : `${role} Login`}
+        </h2>
       </div>
 
       <form onSubmit={requiresPasswordChange ? handlePasswordChange : handleSubmit} className="space-y-4">
         {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-medium">{error}</div>}
 
-        {role === 'Voter' && !requiresPasswordChange && (
+        {role === 'Voter' && !requiresPasswordChange && !returningVoterMode && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm font-medium">
             Enter temporary password 12345 and change it once entered.
+          </div>
+        )}
+
+        {role === 'Voter' && !requiresPasswordChange && returningVoterMode && (
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-sm font-medium">
+            Use the password you created after changing the temporary password.
           </div>
         )}
 
@@ -215,7 +225,7 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
               onChange={e => setEmail(e.target.value)}
             />
             <PasswordField
-              placeholder={role === 'Voter' ? 'Temporary Password' : 'Password'}
+              placeholder={role === 'Voter' && !returningVoterMode ? 'Temporary Password' : 'Password'}
               value={password}
               onChange={setPassword}
               visible={showPassword}
@@ -246,6 +256,42 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
         <button type="submit" disabled={loading} className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center">
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : requiresPasswordChange ? 'Change Password and Continue' : 'Log In securely'}
         </button>
+
+        {role === 'Voter' && !requiresPasswordChange && (
+          <div className="pt-1 text-center text-sm text-slate-500">
+            {returningVoterMode ? (
+              <>
+                First time logging in? Use your temporary password{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReturningVoterMode(false);
+                    setPassword('');
+                    setError('');
+                  }}
+                  className="font-bold text-[var(--tenant-primary)] underline-offset-4 hover:underline"
+                >
+                  Enter 12345
+                </button>
+              </>
+            ) : (
+              <>
+                Coming back as voter?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReturningVoterMode(true);
+                    setPassword('');
+                    setError('');
+                  }}
+                  className="font-bold text-[var(--tenant-primary)] underline-offset-4 hover:underline"
+                >
+                  Sign in
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </form>
     </div>
   );
