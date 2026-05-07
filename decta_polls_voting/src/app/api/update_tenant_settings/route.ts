@@ -18,7 +18,6 @@ export async function POST(request: Request) {
       organizationName,
       brandingColorPrimary,
       brandingColorSecondary,
-      registrationMode,
       activeTriggers,
       allowSubstitution,
       allowWithdrawal,
@@ -75,17 +74,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Update registrationMode in the election table
-    if (registrationMode !== undefined && data?.id) {
-      const { error: electionError } = await supabase
-        .from('election')
-        .update({ voterMode: registrationMode })
-        .eq('tenantID', data.id);
-
-      if (electionError) {
-        console.error("[update_tenant_settings] Error updating election table:", electionError);
-      }
-    }
 
     // Update the email in tenant users and auth.users if newEmail was provided
     if (newEmail !== undefined && adminData?.id) {

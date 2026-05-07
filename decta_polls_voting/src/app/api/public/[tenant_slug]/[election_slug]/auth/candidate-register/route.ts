@@ -115,7 +115,7 @@ export async function POST(
       .insert({
         electionID: election.id,
         userID: authUser.user.id,
-        status: 'PENDING_VERIFICATION',
+        status: 'DRAFT',
         filedDate: now
       });
 
