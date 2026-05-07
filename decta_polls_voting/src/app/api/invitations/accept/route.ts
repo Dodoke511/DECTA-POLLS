@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Server configuration error: Service role key missing" }, { status: 500 });
     }
 
-    // 1. Verify invitation
+    console.log("[accept_invitation] 1. Verifying invitation...");
     const { data: invite, error: inviteError } = await supabase
       .from("tenant invitations")
       .select("*")
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invitation has already been accepted" }, { status: 400 });
     }
 
-    // 2. Create Auth User
+    console.log("[accept_invitation] 2. Creating Auth User...");
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email: email || invite.email,
       password: password,
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
     const userId = authUser.user.id;
 
-    // 3. Insert into "tenant users"
+    console.log("[accept_invitation] 3. Inserting into tenant users...");
     const { error: userTableError } = await supabase
       .from("tenant users")
       .insert([
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create user record: " + userTableError.message }, { status: 500 });
     }
 
-    // 3.5 Insert into "userRoles" junction table
+    console.log("[accept_invitation] 3.5 Inserting into userRoles...");
     if (invite.roleID) {
       const { error: roleError } = await supabase
         .from("userRoles")
@@ -89,16 +89,17 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Update Invitation Status
+    console.log("[accept_invitation] 4. Updating invitation status...");
     const { error: updateInviteError } = await supabase
       .from("tenant invitations")
-      .update({ status: "Accepted" })
+      .update({ status: "Accepted", roleID: null })
       .eq("token", token);
 
     if (updateInviteError) {
       console.warn("[accept_invitation] Failed to update invite status:", updateInviteError);
     }
 
+    console.log("[accept_invitation] Returning success...");
     return NextResponse.json({
       success: true,
       message: "Account created successfully! You can now log in.",

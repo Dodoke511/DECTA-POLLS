@@ -10,6 +10,9 @@ import { ViewAssignedRole } from "@/components/tenant_admin/ViewAssignedRole";
 import { AssignUserModal } from "@/components/tenant_admin/AssignUserModal";
 import { AddRoleModal } from "@/components/tenant_admin/AddRoleModal";
 import PlanSubscription from "@/components/registration/PlanSubscription";
+import DarkVeil from '@/components/mainlanding/ui/DarkVeil';
+import { PermissionGuard } from "@/components/tenant_admin/PermissionGuard";
+import { PermissionProvider } from "@/components/providers/PermissionProvider";
 
 export default function TenantSettingsPage() {
   const router = useRouter();
@@ -23,7 +26,6 @@ export default function TenantSettingsPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [brandingColorPrimary, setBrandingColorPrimary] = useState("FFFFFF");
   const [brandingColorSecondary, setBrandingColorSecondary] = useState("FFFFFF");
-  const [registrationMode, setRegistrationMode] = useState("HYBRID");
   const [activeTriggers, setActiveTriggers] = useState<string[]>([
     "Election Start",
     "Election End",
@@ -129,7 +131,6 @@ export default function TenantSettingsPage() {
           if (config.logo_url) setLogoPreview(config.logo_url);
           if (config.main_color) setBrandingColorPrimary(config.main_color);
           if (config.secondary_color) setBrandingColorSecondary(config.secondary_color);
-          if (config.registration_mode) setRegistrationMode(config.registration_mode);
           if (config.active_triggers) setActiveTriggers(config.active_triggers);
           if (config.allow_substitution !== undefined) setAllowSubstitution(config.allow_substitution);
           if (config.allow_withdrawal !== undefined) setAllowWithdrawal(config.allow_withdrawal);
@@ -184,7 +185,6 @@ export default function TenantSettingsPage() {
         organizationName,
         brandingColorPrimary,
         brandingColorSecondary,
-        registrationMode,
         activeTriggers,
         allowSubstitution,
         allowWithdrawal,
@@ -276,10 +276,39 @@ export default function TenantSettingsPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
+    return (
+      <div className="min-h-screen relative text-decta-text font-source-sans overflow-hidden selection:bg-decta-brand selection:text-white flex items-center justify-center">
+        {/* Same DarkVeil Background as Landing Page */}
+        <div className="fixed inset-0 -z-[100] pointer-events-none w-full h-full overflow-hidden">
+          <DarkVeil
+            hueShift={0}
+            noiseIntensity={0}
+            scanlineIntensity={0}
+            speed={1.2}
+            scanlineFrequency={0}
+            warpAmount={0}
+            resolutionScale={1}
+          />
+        </div>
+
+        {/* Almost Full Screen Glassmorphism Container */}
+        <div className="glass-card w-[95vw] h-[90vh] flex items-center justify-center mx-auto">
+          <div className="loader font-montserrat font-bold text-white">
+            Loading
+            <div className="words">
+              <span className="word">Settings</span>
+              <span className="word">Account</span>
+              <span className="word">Roles</span>
+              <span className="word">Permissions</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
+    <PermissionProvider>
     <div className="flex h-screen flex-col text-[#f1f0f3]" style={{ background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)" }}>
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -296,22 +325,34 @@ export default function TenantSettingsPage() {
 
           <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
             <div className="flex flex-col gap-10">
-              <div className="flex flex-col gap-1">
-                <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Account Settings</h2>
-                <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
-                  <AccountSetting
-                    tenantSlug={tenantSlug} setTenantSlug={setTenantSlug}
-                    organizationName={organizationName} setOrganizationName={setOrganizationName}
-                    logoPreview={logoPreview} setLogoPreview={setLogoPreview}
-                    setLogoFile={setLogoFile}
-                    brandingColorPrimary={brandingColorPrimary} setBrandingColorPrimary={setBrandingColorPrimary}
-                    brandingColorSecondary={brandingColorSecondary} setBrandingColorSecondary={setBrandingColorSecondary}
-                    registrationMode={registrationMode} setRegistrationMode={setRegistrationMode}
-                    activeTriggers={activeTriggers} setActiveTriggers={setActiveTriggers}
-                  />
+              <PermissionGuard require={["settings.global.view", "settings.global.edit", "settings.global.notifications"]} silent>
+                <div className="flex flex-col gap-1">
+                  <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Account Settings</h2>
+                  <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
+                    <AccountSetting
+                      tenantSlug={tenantSlug} setTenantSlug={setTenantSlug}
+                      organizationName={organizationName} setOrganizationName={setOrganizationName}
+                      logoPreview={logoPreview} setLogoPreview={setLogoPreview}
+                      setLogoFile={setLogoFile}
+                      brandingColorPrimary={brandingColorPrimary} setBrandingColorPrimary={setBrandingColorPrimary}
+                      brandingColorSecondary={brandingColorSecondary} setBrandingColorSecondary={setBrandingColorSecondary}
+                      activeTriggers={activeTriggers} setActiveTriggers={setActiveTriggers}
+                    />
+                    <div className="mt-8 flex justify-end border-t border-white/[0.10] pt-6">
+                      <button
+                        onClick={handleSaveChanges}
+                        disabled={isSaving}
+                        className={`flex h-[48px] min-w-[180px] items-center justify-center rounded-[16px] bg-[#4f35cd] px-8 text-[14px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]'}`}
+                        style={{ fontFamily: "'Montserrat', sans-serif" }}
+                      >
+                        {isSaving ? "Saving..." : "Save Changes"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col gap-1">
+              </PermissionGuard>
+              <PermissionGuard require={["settings.account.view", "settings.account.edit", "settings.subscription.manage"]} silent>
+                <div className="flex flex-col gap-1">
                 <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Account Management</h2>
                 <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
                   <AccountManagement
@@ -325,8 +366,20 @@ export default function TenantSettingsPage() {
                     expirationDate={expirationDate}
                     onManageSubscription={() => setIsManagingSubscription(true)}
                   />
+                  <div className="mt-8 flex justify-end border-t border-white/[0.10] pt-6">
+                    <button
+                      onClick={handleSaveChanges}
+                      disabled={isSaving}
+                      className={`flex h-[48px] min-w-[180px] items-center justify-center rounded-[16px] bg-[#4f35cd] px-8 text-[14px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]'}`}
+                      style={{ fontFamily: "'Montserrat', sans-serif" }}
+                    >
+                      {isSaving ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
                 </div>
               </div>
+              </PermissionGuard>
+              <PermissionGuard require={["settings.roles.view", "settings.roles.assign", "settings.roles.edit", "settings.roles.delete"]} silent>
               <div className="flex flex-col gap-1">
                 <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>View Assigned Roles</h2>
                 <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
@@ -334,34 +387,28 @@ export default function TenantSettingsPage() {
                     onAssignClick={handleOpenAssignModal}
                     onEditClick={handleEditRole}
                   />
+                  <div className="mt-8 flex justify-end border-t border-white/[0.10] pt-6">
+                    <button
+                      onClick={() => {
+                        if (subscriptionPlan === 'BASIC') return;
+                        setEditingRole(null);
+                        setIsAddRoleModalOpen(true);
+                      }}
+                      disabled={subscriptionPlan === 'BASIC'}
+                      title={subscriptionPlan === 'BASIC' ? "Custom roles are not available in the BASIC plan. Please upgrade to Standard or Enterprise." : ""}
+                      className={`flex h-[48px] min-w-[180px] items-center justify-center rounded-[16px] px-8 text-[14px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${subscriptionPlan === 'BASIC'
+                        ? "bg-white/10 opacity-40 cursor-not-allowed grayscale"
+                        : "bg-[#4f35cd] hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
+                        }`}
+                      style={{ fontFamily: "'Montserrat', sans-serif" }}
+                    >
+                      {subscriptionPlan === 'BASIC' ? "Role Restricted" : "Add Role"}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-5 mt-4 px-2 pb-10">
-                <button
-                  onClick={() => {
-                    if (subscriptionPlan === 'BASIC') return;
-                    setEditingRole(null);
-                    setIsAddRoleModalOpen(true);
-                  }}
-                  disabled={subscriptionPlan === 'BASIC'}
-                  title={subscriptionPlan === 'BASIC' ? "Custom roles are not available in the BASIC plan. Please upgrade to Standard or Enterprise." : ""}
-                  className={`flex h-[52px] min-w-[180px] items-center justify-center rounded-[18px] px-10 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${subscriptionPlan === 'BASIC'
-                    ? "bg-white/10 opacity-40 cursor-not-allowed grayscale"
-                    : "bg-[#4f35cd] hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
-                    }`}
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
-                >
-                  {subscriptionPlan === 'BASIC' ? "Role Restricted" : "Add Role"}
-                </button>
-                <button
-                  onClick={handleSaveChanges}
-                  disabled={isSaving}
-                  className={`flex h-[52px] min-w-[200px] items-center justify-center rounded-[18px] bg-[#4f35cd] px-10 text-[15px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]'}`}
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
-                >
-                  {isSaving ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
+              </PermissionGuard>
+              <div className="pb-10"></div>
             </div>
           </div>
         </main>
@@ -402,5 +449,6 @@ export default function TenantSettingsPage() {
         </div>
       )}
     </div>
+    </PermissionProvider>
   );
 }

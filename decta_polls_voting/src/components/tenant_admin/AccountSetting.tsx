@@ -9,7 +9,6 @@ export interface AccountSettingProps {
     logoPreview: string | null;
     brandingColorPrimary: string;
     brandingColorSecondary: string;
-    registrationMode: string;
     activeTriggers: string[];
     setTenantSlug: React.Dispatch<React.SetStateAction<string>>;
     setOrganizationName: React.Dispatch<React.SetStateAction<string>>;
@@ -17,7 +16,6 @@ export interface AccountSettingProps {
     setLogoFile: React.Dispatch<React.SetStateAction<File | null>>;
     setBrandingColorPrimary: React.Dispatch<React.SetStateAction<string>>;
     setBrandingColorSecondary: React.Dispatch<React.SetStateAction<string>>;
-    setRegistrationMode: React.Dispatch<React.SetStateAction<string>>;
     setActiveTriggers: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
@@ -27,7 +25,6 @@ export function AccountSetting({
     logoPreview,
     brandingColorPrimary,
     brandingColorSecondary,
-    registrationMode,
     activeTriggers,
     setTenantSlug,
     setOrganizationName,
@@ -35,7 +32,6 @@ export function AccountSetting({
     setLogoFile,
     setBrandingColorPrimary,
     setBrandingColorSecondary,
-    setRegistrationMode,
     setActiveTriggers
 }: AccountSettingProps) {
     const toggleTrigger = (trigger: string) => {
@@ -171,41 +167,6 @@ export function AccountSetting({
                                     <span className="text-sm font-medium text-white/60 group-hover:text-white/80 uppercase">
                                         {brandingColorSecondary}
                                     </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Voter Registration Mode */}
-                        <div className="flex flex-col gap-3">
-                            <label className="text-[11px] font-bold uppercase tracking-wider text-[#D0C8FF]">
-                                Voter Registration Mode
-                            </label>
-                            <div className="relative">
-                                <select
-                                    value={registrationMode}
-                                    onChange={(e) => setRegistrationMode(e.target.value)}
-                                    className="h-[42px] w-full appearance-none rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 pr-10 text-sm font-medium text-white/60 outline-none transition-all hover:bg-white/[0.05] hover:text-white/80 focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50 cursor-pointer"
-                                >
-                                    <option value="HYBRID" className="bg-[#180d42] text-white/80">HYBRID</option>
-                                    <option value="LINK-BASED" className="bg-[#180d42] text-white/80">LINK-BASED</option>
-                                    <option value="MANUAL" className="bg-[#180d42] text-white/80">MANUAL</option>
-                                </select>
-                                <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-white/40">
-                                    <svg
-                                        width="10"
-                                        height="6"
-                                        viewBox="0 0 10 6"
-                                        fill="none"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                        <path
-                                            d="M1 1L5 5L9 1"
-                                            stroke="currentColor"
-                                            strokeWidth="1.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
-                                    </svg>
                                 </div>
                             </div>
                         </div>

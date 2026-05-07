@@ -67,7 +67,7 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
       }
       
       // Redirect to the file page which will now show the Verification Pending screen
-      window.location.href = `/${tenant.slug}/${election.slug}/file`;
+      window.location.href = `/${tenant.slug}/${election.slug}/file/candidacy-form`;
 
     } catch (err: any) {
       setError(err.message);

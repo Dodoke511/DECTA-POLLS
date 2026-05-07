@@ -34,6 +34,24 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
         fetchRoles();
     }, []);
 
+    const handleDeleteRole = async (roleId: string, roleName: string) => {
+        if (!confirm(`Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`)) return;
+        try {
+            const res = await fetch("/api/delete_tenant_role", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roleId }),
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || "Failed to delete role");
+            setAssignedRoles((prev) => prev.filter((r) => r.id !== roleId));
+            alert("Role deleted successfully.");
+        } catch (err: any) {
+            console.error(err);
+            alert(`Error deleting role: ${err.message}`);
+        }
+    };
+
     return (
         <div className="overflow-x-auto w-full" style={{ fontFamily: "'Montserrat', sans-serif" }}>
             <table className="w-full whitespace-nowrap text-left text-sm">
@@ -52,7 +70,7 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
                             STATUS
                         </th>
                         <th className="py-2 text-[11px] font-bold uppercase tracking-wider text-white/45 md:pr-8">
-                            ASSIGN
+                            ACTIONS
                         </th>
                     </tr>
                 </thead>
@@ -111,12 +129,19 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
                                     {row.assignedEmail ? "Assigned" : "Not Assigned"}
                                 </span>
                             </td>
-                            <td className="py-4 md:pr-8">
+                            <td className="py-4 md:pr-8 flex items-center gap-6">
                                 <button
                                     onClick={() => onAssignClick?.(row.id)}
                                     className="rounded-lg bg-[#4f35cd]/20 px-4 py-1.5 text-[12px] font-bold text-[#D0C8FF] border border-[#4f35cd]/50 hover:bg-[#4f35cd]/40 transition-colors"
                                 >
                                     Assign
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteRole(row.id, row.roleName)}
+                                    className="rounded-lg bg-red-500/10 px-4 py-1.5 text-[12px] font-bold text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-colors"
+                                    title="Delete Role"
+                                >
+                                    Delete
                                 </button>
                             </td>
                         </tr>

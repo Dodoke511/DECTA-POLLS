@@ -4,111 +4,114 @@ import React, { useState, useEffect } from "react";
 
 export const PERMISSION_CATEGORIES = [
   {
-    category: "System & Tenant Management",
+    category: "Settings Management",
     minPlan: "STANDARD",
     permissions: [
-      { id: "tenant.manage", label: "Manage Tenant" },
-      { id: "tenant.settings.update", label: "Update Settings" },
-      { id: "user.invite", label: "Invite Users" },
-      { id: "user.remove", label: "Remove Users" },
-      { id: "user.update", label: "Update Users" },
-      { id: "role.create", label: "Create Roles" },
-      { id: "role.update", label: "Update Roles" },
-      { id: "role.delete", label: "Delete Roles" },
-      { id: "role.assign", label: "Assign Roles" },
+      { id: "settings.global.view", label: "Access Global Configuration Panel" },
+      { id: "settings.global.edit", label: "Edit Configurations" },
+      { id: "settings.global.notifications", label: "Manage Notification Triggers" },
+      { id: "settings.account.view", label: "Access Account Management Panel" },
+      { id: "settings.account.edit", label: "Edit Account Info" },
+      { id: "settings.subscription.manage", label: "Manage Subscription" },
+      { id: "settings.roles.view", label: "Access Assigned Roles Panel" },
+      { id: "settings.roles.assign", label: "Assign Roles" },
+      { id: "settings.roles.edit", label: "Edit Permissions" },
+      { id: "settings.roles.delete", label: "Delete Assigned Roles" },
+    ]
+  },
+
+  {
+    category: "Elections: Filing",
+    minPlan: "STANDARD",
+    permissions: [
+      { id: "election.filing.access", label: "Access Filing Page" },
+      { id: "election.filing.insert", label: "Allow Insert" },
+      { id: "election.filing.delete", label: "Allow Delete" },
+      { id: "election.filing.update", label: "Allow Update" },
+      { id: "election.filing.select", label: "Allow Select" },
     ]
   },
   {
-    category: "Election Management",
+    category: "Elections: Screening",
     minPlan: "STANDARD",
     permissions: [
-      { id: "election.create", label: "Create Election" },
-      { id: "election.update", label: "Update Election" },
-      { id: "election.delete", label: "Delete Election" },
-      { id: "election.view", label: "View Election" },
-      { id: "election.activate", label: "Activate Election" },
-      { id: "election.archive", label: "Archive Election" },
+      { id: "election.screening.access", label: "Access Screening Page" },
+      { id: "election.screening.insert", label: "Allow Insert Screening Criteria" },
+      { id: "election.screening.review", label: "Allow Review Screening Criteria" },
+      { id: "election.screening.delete", label: "Allow Delete Screening Criteria" },
+      { id: "election.screening.update", label: "Allow Update Screening Criteria" },
+      { id: "election.screening.approval", label: "Allow Edit and Update Approval Configuration" },
     ]
   },
   {
-    category: "Ballot Designer",
+    category: "Elections: Appeal",
     minPlan: "STANDARD",
     permissions: [
-      { id: "ballot.create", label: "Create Ballot" },
-      { id: "ballot.update", label: "Update Ballot" },
-      { id: "position.create", label: "Create Position" },
-      { id: "position.update", label: "Update Position" },
-      { id: "position.delete", label: "Delete Position" },
-      { id: "position.reorder", label: "Reorder Position" },
+      { id: "election.appeal.access", label: "Access Appeal Page" },
+      { id: "election.appeal.config.update", label: "Allow Update Appeal Configuration" },
+      { id: "election.appeal.config.edit", label: "Allow Edit Appeal Configuration" },
+      { id: "election.appeal.config.insert", label: "Allow Insert Appeal Configuration" },
+      { id: "election.appeal.config.review", label: "Allow Review Appeal Configuration" },
+      { id: "election.appeal.eligibility", label: "Allow Update Appeal Eligibility Rules" },
+      { id: "election.appeal.decision", label: "Allow Update Appeal Decision Mode" },
+      { id: "election.appeal.outcome", label: "Allow Update Appeal Outcome Actions" },
+      { id: "election.appeal.visibility", label: "Allow Update Appeal Visibility Rules" },
+      { id: "election.appeal.withdrawal", label: "Allow Update Candidate Withdrawal Status" },
     ]
   },
+  {
+    category: "Elections: Publication",
+    minPlan: "STANDARD",
+    permissions: [
+      { id: "election.publication.access", label: "Access Publication Page" },
+      { id: "election.publication.insert", label: "Allow Insert Publication Configuration" },
+      { id: "election.publication.delete", label: "Allow Delete Publication Configuration" },
+      { id: "election.publication.update", label: "Allow Update Publication Configuration" },
+    ]
+  },
+
   {
     category: "Candidate Management",
     minPlan: "STANDARD",
     permissions: [
+      { id: "candidate.access", label: "Access Candidates Page" },
       { id: "candidate.view", label: "View Candidates" },
-      { id: "candidate.review", label: "Review Candidates" },
       { id: "candidate.approve", label: "Approve Candidates" },
-      { id: "candidate.reject", label: "Reject Candidates" },
-      { id: "candidate.override", label: "Override Candidate Rules" },
-      { id: "document.upload", label: "Upload Document" },
       { id: "document.view", label: "View Document" },
-      { id: "document.verify", label: "Verify Document" },
       { id: "document.reject", label: "Reject Document" },
-    ]
-  },
-  {
-    category: "Rules, Workflow & Approval",
-    minPlan: "ENTERPRISE",
-    permissions: [
-      { id: "rules.create", label: "Create Rules" },
-      { id: "rules.update", label: "Update Rules" },
-      { id: "rules.delete", label: "Delete Rules" },
-      { id: "rules.view", label: "View Rules" },
-      { id: "rules.apply", label: "Apply Rules" },
-      { id: "rules.override", label: "Override Rules" },
-      { id: "phase.create", label: "Create Phase" },
-      { id: "phase.update", label: "Update Phase" },
-      { id: "phase.delete", label: "Delete Phase" },
-      { id: "phase.activate", label: "Activate Phase" },
-      { id: "phase.close", label: "Close Phase" },
-      { id: "phase.override", label: "Override Phase" },
-      { id: "approval.request", label: "Request Approval" },
-      { id: "approval.review", label: "Review Approval" },
-      { id: "approval.approve", label: "Approve Approval" },
-      { id: "approval.reject", label: "Reject Approval" },
-      { id: "approval.override", label: "Override Approval" },
+      { id: "candidate.review", label: "Review Candidate" },
+      { id: "document.verify", label: "Verify Document" },
+      { id: "appeal.access", label: "Access Appeal Status" },
       { id: "appeal.review", label: "Review Appeal" },
       { id: "appeal.approve", label: "Approve Appeal" },
       { id: "appeal.reject", label: "Reject Appeal" },
-      { id: "appeal.resolve", label: "Resolve Appeal" },
     ]
   },
+
   {
     category: "Voter Management",
     minPlan: "STANDARD",
     permissions: [
+      { id: "voter.view", label: "View Voters Page" },
       { id: "voter.import", label: "Import Voters" },
-      { id: "voter.approve", label: "Approve Voter" },
-      { id: "voter.reject", label: "Reject Voter" },
-      { id: "voter.remove", label: "Remove Voter" },
-      { id: "voter.assign_token", label: "Assign Token" },
+      { id: "voter.delete", label: "Delete Voter" },
     ]
   },
   {
-    category: "Results, Audit & Security",
+    category: "Elections: Voting",
     minPlan: "STANDARD",
     permissions: [
-      { id: "result.compute", label: "Compute Results" },
-      { id: "result.view", label: "View Results" },
-      { id: "result.export", label: "Export Results" },
-      { id: "result.publish", label: "Publish Results" },
-      { id: "result.lock", label: "Lock Results" },
-      { id: "audit.view", label: "View Audit Logs" },
-      { id: "audit.export", label: "Export Audit Logs" },
-      { id: "access.override", label: "Override Access" },
-      { id: "permission.assign", label: "Assign Permissions" },
-      { id: "permission.view", label: "View Permissions" },
+      { id: "election.voting.access", label: "Access Voting Phase" },
+      { id: "election.voting.config.update", label: "Allow Update Voting Configuration" },
+      { id: "election.voting.ballot.update", label: "Allow Update Ballot Display Configuration" },
+    ]
+  },
+  {
+    category: "Elections: Results",
+    minPlan: "STANDARD",
+    permissions: [
+      { id: "election.results.access", label: "Access Results Phase" },
+      { id: "election.results.config.update", label: "Allow Update Result Configuration" },
     ]
   }
 ];
@@ -149,7 +152,7 @@ export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole, s
 
   const availableCategories = PERMISSION_CATEGORIES.filter(cat => {
     if (!subscriptionPlan) return true;
-    if (subscriptionPlan === 'BASIC') return false; 
+    if (subscriptionPlan === 'BASIC') return false;
     if (subscriptionPlan === 'STANDARD' && cat.minPlan === 'ENTERPRISE') return false;
     return true;
   });
@@ -176,7 +179,7 @@ export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole, s
       <div className="super-admin-sidebar w-full max-w-3xl max-h-[85vh] shrink-0 flex pl-8 flex-col !rounded-[28px] border py-6 md:py-8 pr-3 md:pr-4 relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)]">
         <h2 className="mb-2 text-2xl font-bold relative z-10" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>{editingRole ? "Edit Role" : "Add New Role"}</h2>
         <p className="text-[13px] text-white/50 mb-6 relative z-10">{editingRole ? "Modify the permissions or name for this role." : "Configure custom permissions for this specific role variant."}</p>
-        
+
         <div className="flex-1 overflow-y-auto no-scrollbar pr-4 relative z-10">
           <div className="mb-5">
             <label className="mb-2 block text-[13px] font-medium tracking-wide text-white/50 uppercase">Role Name</label>
@@ -213,9 +216,8 @@ export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole, s
                       <h4 className="text-[15px] font-bold text-white/80">{cat.category}</h4>
                       <button
                         onClick={() => toggleCategory(index)}
-                        className={`text-[12px] font-bold tracking-wide transition-colors ${
-                          allCatSelected ? "text-[#5db59b]" : someCatSelected ? "text-[#c28f64]" : "text-[#5D44F8] hover:text-[#D0C8FF]"
-                        }`}
+                        className={`text-[12px] font-bold tracking-wide transition-colors ${allCatSelected ? "text-[#5db59b]" : someCatSelected ? "text-[#c28f64]" : "text-[#5D44F8] hover:text-[#D0C8FF]"
+                          }`}
                       >
                         {allCatSelected ? "Deselect All" : "Select All"}
                       </button>
@@ -254,7 +256,7 @@ export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole, s
             </div>
           </div>
         </div>
-        
+
         <div className="mt-6 flex justify-end gap-3 relative z-10 pt-4 border-t border-white/[0.05]">
           <button
             onClick={onClose}
@@ -265,11 +267,10 @@ export function AddRoleModal({ isOpen, onClose, onSave, isSaving, editingRole, s
           <button
             onClick={handleSave}
             disabled={!roleName.trim() || selectedPermissions.length === 0 || isSaving}
-            className={`rounded-[14px] px-7 py-3 text-[14px] font-bold text-white shadow-[0_4px_20px_rgb(79,53,205,0.4)] transition-all ${
-              !roleName.trim() || selectedPermissions.length === 0 || isSaving
+            className={`rounded-[14px] px-7 py-3 text-[14px] font-bold text-white shadow-[0_4px_20px_rgb(79,53,205,0.4)] transition-all ${!roleName.trim() || selectedPermissions.length === 0 || isSaving
                 ? "opacity-50 cursor-not-allowed bg-white/10"
                 : "bg-[#4f35cd] hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
-            }`}
+              }`}
           >
             {isSaving ? "Saving..." : (editingRole ? "Update Role" : "Save Role")}
           </button>

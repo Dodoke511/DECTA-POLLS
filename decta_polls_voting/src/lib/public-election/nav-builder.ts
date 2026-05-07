@@ -7,10 +7,20 @@ export interface NavItem {
   highlight?: boolean;
 }
 
+interface ElectionNavConfig {
+  nav_filing?: string | null;
+  nav_candidates?: string | null;
+  nav_appeal?: string | null;
+  nav_vote?: string | null;
+  nav_results?: string | null;
+  voter_can_view_candidates?: boolean | null;
+  candidate_can_view_results?: boolean | null;
+}
+
 export function buildRoleAwareNav(
   phases: PhaseState[],
   userContext: ElectionUserContext | null,
-  siteConfig: any,
+  siteConfig: ElectionNavConfig | null,
   basePath: string
 ): NavItem[] {
   const nav: NavItem[] = [];
@@ -38,6 +48,7 @@ export function buildRoleAwareNav(
   }
 
   if (userContext.isVoter) {
+    nav.push({ label: 'Dashboard', href: `${basePath}/dashboard` });
     if (isPhaseReachable(phases, 'publication') && siteConfig?.voter_can_view_candidates !== false) {
       nav.push({ label: navLabels.candidates, href: `${basePath}/candidates` });
     }

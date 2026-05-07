@@ -10,6 +10,16 @@ import { GetStartedModal } from './GetStartedModal';
 import { PhaseCard, TenantRole } from './PhaseCard';
 import { PositionsModule } from './modules/PositionsModule';
 import { Users } from 'lucide-react';
+import { usePermissions } from '@/components/providers/PermissionProvider';
+
+const PHASE_PERMISSION_MAP: Record<PhaseType, string[]> = {
+  filing: ['election.filing.access', 'election.filing.insert', 'election.filing.delete', 'election.filing.update', 'election.filing.select', 'candidate.review', 'candidate.view'],
+  screening: ['election.screening.access', 'election.screening.insert', 'election.screening.review', 'election.screening.delete', 'election.screening.update', 'election.screening.approval', 'screen_candidates', 'candidate.review', 'candidate.approve', 'candidate.reject'],
+  appeal: ['election.appeal.access', 'election.appeal.config.update', 'election.appeal.config.edit', 'election.appeal.config.insert', 'election.appeal.config.review', 'election.appeal.eligibility', 'election.appeal.decision', 'election.appeal.outcome', 'election.appeal.visibility', 'election.appeal.withdrawal', 'appeal.review', 'appeal.approve', 'appeal.reject'],
+  publication: ['election.publication.access', 'election.publication.insert', 'election.publication.delete', 'election.publication.update', 'result.publish', 'election.activate'],
+  voting: ['election.voting.access', 'election.voting.config.update', 'election.voting.ballot.update', 'election.activate', 'voter.assign_token'],
+  results: ['election.results.access', 'election.results.config.update', 'result.compute', 'result.view'],
+};
 
 interface PipelineBuilderProps {
   electionId: string;
@@ -82,6 +92,7 @@ function mergeFetchedPhases(electionId: string, fetched: any[], currentPhases: P
 }
 
 export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps) {
+  const { hasAnyPermission, isOwner, isLoaded: permsLoaded } = usePermissions();
   const [phases, setPhases] = useState<PhaseConfig[]>(buildDefaultPipeline(electionId));
   const [roles, setRoles] = useState<TenantRole[]>([]);
   const [electionMeta, setElectionMeta] = useState<ElectionMeta | null>(null);
@@ -249,23 +260,54 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
   }, [positionsCount, phases]);
 
   const canAccessStep = useCallback((idx: number) => {
-    if (idx === 0) return true;
-    // To access step N, all steps from 0 to N-1 must be complete
+    // Permission check first
+    if (!isOwner && permsLoaded) {
+      if (idx === 0) {
+        if (!hasAnyPermission(['election.create', 'election.update'])) return false;
+      } else {
+        const meta = PHASE_PIPELINE[idx - 1];
+        const requiredPerms = PHASE_PERMISSION_MAP[meta.type] || [];
+        // If they don't have any of the required permissions for this phase, lock it
+        if (requiredPerms.length > 0 && !hasAnyPermission(requiredPerms)) return false;
+      }
+    }
+
+    // Dependency check: To access step N, all previous steps must be complete
     for (let i = 0; i < idx; i++) {
       if (!isStepComplete(i)) return false;
     }
     return true;
-  }, [isStepComplete]);
+  }, [isStepComplete, isOwner, permsLoaded, hasAnyPermission]);
+
+  // Jump to first accessible step if the current one is locked
+  useEffect(() => {
+    if (permsLoaded && !canAccessStep(activeStepIndex)) {
+      // Find first accessible step
+      for (let i = 0; i < PHASE_PIPELINE.length + 1; i++) {
+        if (canAccessStep(i)) {
+          setActiveStepIndex(i);
+          break;
+        }
+      }
+    }
+  }, [permsLoaded, activeStepIndex, canAccessStep]);
 
   const goToNext = () => {
     if (activeStepIndex < steps.length - 1 && isStepComplete(activeStepIndex)) {
-      setActiveStepIndex(prev => prev + 1);
+      if (canAccessStep(activeStepIndex + 1)) {
+        setActiveStepIndex(prev => prev + 1);
+      }
     }
   };
 
   const goToPrev = () => {
-    if (activeStepIndex > 0) {
-      setActiveStepIndex(prev => prev - 1);
+    let prevIdx = activeStepIndex - 1;
+    while (prevIdx >= 0) {
+      if (canAccessStep(prevIdx)) {
+        setActiveStepIndex(prevIdx);
+        break;
+      }
+      prevIdx--;
     }
   };
 
@@ -402,7 +444,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
           {/* Prev Button */}
           <button
             onClick={goToPrev}
-            disabled={activeStepIndex === 0}
+            disabled={activeStepIndex === 0 || !Array.from({ length: activeStepIndex }).some((_, i) => canAccessStep(i))}
             className="sticky top-48 p-4 rounded-2xl bg-white/5 border border-white/5 text-white/40 hover:text-white hover:bg-white/10 disabled:opacity-0 disabled:pointer-events-none transition-all hover:scale-110 active:scale-95 z-20"
           >
             <ChevronDown className="w-6 h-6 rotate-90" />
@@ -458,13 +500,13 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
           {/* Next Button */}
           <button
             onClick={goToNext}
-            disabled={activeStepIndex === steps.length - 1 || !isStepComplete(activeStepIndex)}
+            disabled={activeStepIndex === steps.length - 1 || !isStepComplete(activeStepIndex) || !canAccessStep(activeStepIndex + 1)}
             className={`sticky top-48 p-4 rounded-2xl border transition-all hover:scale-110 active:scale-95 z-20 shadow-lg 
-              ${!isStepComplete(activeStepIndex)
+              ${(!isStepComplete(activeStepIndex) || !canAccessStep(activeStepIndex + 1))
                 ? 'bg-amber-500/5 border-amber-500/10 text-amber-500/40 cursor-not-allowed opacity-50'
                 : 'bg-[#6648EB]/10 border-[#6648EB]/20 text-[#6648EB] hover:text-white hover:bg-[#6648EB] shadow-[#6648EB]/10'
               }`}
-            title={!isStepComplete(activeStepIndex) ? "Please complete current step to proceed" : "Next Step"}
+            title={!isStepComplete(activeStepIndex) ? "Please complete current step to proceed" : !canAccessStep(activeStepIndex + 1) ? "You do not have permission to access the next phase" : "Next Step"}
           >
             <ChevronDown className="w-6 h-6 -rotate-90" />
           </button>
