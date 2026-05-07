@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { isPhaseActive } from '@/lib/public-election/phase-utils';
+import { useRouter } from 'next/navigation';
 import { ElectionAuthModule } from '@/components/public-election/auth/ElectionAuthModule';
 import { Clock, ShieldCheck, CheckCircle2, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 export default function CandidateFilingPage() {
+  const router = useRouter();
   const { userContext, phases, tenant, election, brandColor } = useElectionPublic();
   const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +35,12 @@ export default function CandidateFilingPage() {
         .maybeSingle();
 
       setCandidateStatus(data?.status);
-      setLoading(false);
+      
+      if (data?.status === 'DRAFT') {
+        router.push(`/${tenant.slug}/${election.slug}/file/candidacy-form`);
+      } else {
+        setLoading(false);
+      }
     }
 
     checkStatus();
