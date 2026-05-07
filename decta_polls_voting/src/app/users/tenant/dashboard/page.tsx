@@ -4,11 +4,23 @@ import React, { useState, useEffect } from "react";
 import { TenantAdminHeader } from "@/components/tenant_admin/Header";
 import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { useRouter } from "next/navigation";
+import { getActivePhase, type PhaseState } from "@/lib/public-election/phase-utils";
+
+type ElectionSummary = {
+  id: string;
+  title: string;
+  status: "DRAFT" | "PUBLISHED" | "ACTIVE" | "COMPLETED" | string;
+};
+
+const phaseOrder = ["Filing", "Screening", "Appeal", "Publication", "Voting", "Results"];
 
 export default function TenantDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [tenantStatus, setTenantStatus] = useState<string | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [liveElection, setLiveElection] = useState<ElectionSummary | null>(null);
+  const [currentPhaseLabel, setCurrentPhaseLabel] = useState("No phase is currently active");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -26,7 +38,57 @@ export default function TenantDashboardPage() {
     setLoading(false);
   }, [router]);
 
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      const tenantId = sessionStorage.getItem("tenantUserId");
+      if (!tenantId) {
+        setDashboardLoading(false);
+        return;
+      }
+
+      try {
+        const electionsRes = await fetch(`/api/get_tenant_elections?tenantId=${tenantId}`);
+        const electionsData = await electionsRes.json();
+        const elections: ElectionSummary[] = electionsData?.elections ?? [];
+        const live = elections.find((e) => e.status === "ACTIVE") || elections.find((e) => e.status === "PUBLISHED") || null;
+
+        setLiveElection(live);
+
+        if (live?.id) {
+          const phaseRes = await fetch(`/api/get_election_phases?electionId=${live.id}`);
+          const phaseData = await phaseRes.json();
+          const phases: PhaseState[] = phaseData?.phases ?? [];
+          const activePhase = getActivePhase(phases);
+
+          if (activePhase?.phase_type) {
+            const readable = activePhase.phase_type.charAt(0).toUpperCase() + activePhase.phase_type.slice(1);
+            setCurrentPhaseLabel(readable);
+          } else {
+            setCurrentPhaseLabel("No phase is currently active");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load dashboard details:", error);
+      } finally {
+        setDashboardLoading(false);
+      }
+    };
+
+    if (!loading) {
+      loadDashboardData();
+    }
+  }, [loading]);
+
   const isPending = tenantStatus === 'PENDING';
+  const isVotingPhaseActive = currentPhaseLabel.toLowerCase() === "voting";
+  const currentPhaseIndex = phaseOrder.findIndex((phase) => phase.toLowerCase() === currentPhaseLabel.toLowerCase());
+  const phaseProgressPercent = currentPhaseIndex >= 0 ? ((currentPhaseIndex + 1) / phaseOrder.length) * 100 : 0;
+  const statusTone =
+    liveElection?.status === "ACTIVE"
+      ? "bg-emerald-400/15 text-emerald-300 border-emerald-400/20"
+      : liveElection?.status === "PUBLISHED"
+        ? "bg-sky-400/15 text-sky-300 border-sky-400/20"
+        : "bg-white/10 text-white/70 border-white/15";
 
   if (loading) {
     return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
@@ -65,7 +127,79 @@ export default function TenantDashboardPage() {
           <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Dashboard</h1>
 
           <div className="grid gap-6">
-            <p className="text-white/60">Dashboard content coming soon...</p>
+            <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Public Election Dashboard</p>
+              <h2 className="mt-2 text-xl font-semibold text-white/90">Live Election Overview</h2>
+
+              {dashboardLoading ? (
+                <p className="mt-5 text-sm text-white/60">Loading public dashboard details...</p>
+              ) : (
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4">
+                    <div className="flex items-start justify-between">
+                      <p className="text-xs uppercase tracking-[0.14em] text-white/40">Live Election Status</p>
+                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${statusTone}`}>
+                        {liveElection?.status ?? "NONE"}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-base font-semibold text-white/90">{liveElection?.title ?? "No live election"}</p>
+                    <div className="mt-3 flex items-center gap-2 text-xs text-white/60">
+                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+                      {liveElection ? "Public page is available" : "No election is publicly live"}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4">
+                    <p className="text-xs uppercase tracking-[0.14em] text-white/40">Current Phase</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <p className="text-base font-semibold text-white/90">{liveElection ? currentPhaseLabel : "N/A"}</p>
+                      {liveElection && currentPhaseIndex >= 0 && (
+                        <span className="rounded-md bg-[#5d44f8]/20 px-2 py-0.5 text-[11px] font-medium text-[#c4b9ff]">
+                          {currentPhaseIndex + 1}/{phaseOrder.length}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#6f59ff] to-[#9a8bff] shadow-[0_0_20px_rgba(111,89,255,0.55)] transition-all"
+                        style={{ width: `${phaseProgressPercent}%` }}
+                      />
+                    </div>
+                    <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-white/40">
+                      <span>Filing</span>
+                      <span>Results</span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:col-span-2">
+                    <p className="text-xs uppercase tracking-[0.14em] text-white/40">Vote Tallies</p>
+                    {isVotingPhaseActive ? (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                        {[72, 51, 34].map((value, index) => (
+                          <div key={index} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                            <div className="flex items-center justify-between text-xs text-white/60">
+                              <span>Candidate {index + 1}</span>
+                              <span>{value}%</span>
+                            </div>
+                            <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-300"
+                                style={{ width: `${value}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-lg border border-dashed border-white/20 bg-white/[0.01] px-4 py-3">
+                        <p className="text-sm font-medium text-white/80">Vote tally appears when Voting phase is active.</p>
+                        <p className="mt-1 text-xs text-white/50">A visual chart will automatically appear here once the election enters voting.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
           </div>
         </main>
       </div>
