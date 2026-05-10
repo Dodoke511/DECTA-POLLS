@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { TenantAdminHeader } from "@/components/tenant_admin/Header";
 import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { useRouter } from "next/navigation";
-import { getActivePhase, type PhaseState } from "@/lib/public-election/phase-utils";
+import { PhaseStatusBadge } from "@/components/tenant_admin/PhaseStatusBadge";
+import { PhaseStatus } from "@/lib/workflow/PhaseResolverService";
 
 type ElectionSummary = {
   id: string;
@@ -14,6 +15,24 @@ type ElectionSummary = {
 
 const phaseOrder = ["Filing", "Screening", "Appeal", "Publication", "Voting", "Results"];
 
+function getTimeRemaining(deadline: string): string {
+  const now = new Date();
+  const end = new Date(deadline);
+  const diff = end.getTime() - now.getTime();
+
+  if (diff <= 0) return "Expired";
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (days > 0) return `${days}d ${hours}h remaining`;
+  if (hours > 0) return `${hours}h ${minutes}m remaining`;
+  return `${minutes}m remaining`;
+}
+
+import { TimeWidget } from "@/components/tenant_admin/TimeWidget";
+
 export default function TenantDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -21,6 +40,8 @@ export default function TenantDashboardPage() {
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [liveElection, setLiveElection] = useState<ElectionSummary | null>(null);
   const [currentPhaseLabel, setCurrentPhaseLabel] = useState("No phase is currently active");
+  const [currentPhaseStatus, setCurrentPhaseStatus] = useState<PhaseStatus | null>(null);
+  const [phaseDeadline, setPhaseDeadline] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -55,16 +76,17 @@ export default function TenantDashboardPage() {
         setLiveElection(live);
 
         if (live?.id) {
-          const phaseRes = await fetch(`/api/get_election_phases?electionId=${live.id}`);
+          const phaseRes = await fetch(`/api/workflow/current_phase?electionId=${live.id}`);
           const phaseData = await phaseRes.json();
-          const phases: PhaseState[] = phaseData?.phases ?? [];
-          const activePhase = getActivePhase(phases);
 
-          if (activePhase?.phase_type) {
-            const readable = activePhase.phase_type.charAt(0).toUpperCase() + activePhase.phase_type.slice(1);
+          if (phaseData?.phase_type) {
+            const readable = phaseData.phase_type.charAt(0).toUpperCase() + phaseData.phase_type.slice(1);
             setCurrentPhaseLabel(readable);
+            setCurrentPhaseStatus(phaseData.status || 'active');
+            setPhaseDeadline(phaseData.deadline || null);
           } else {
             setCurrentPhaseLabel("No phase is currently active");
+            setCurrentPhaseStatus(null);
           }
         }
       } catch (error) {
@@ -127,6 +149,7 @@ export default function TenantDashboardPage() {
           <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Dashboard</h1>
 
           <div className="grid gap-6">
+            <TimeWidget />
             <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Public Election Dashboard</p>
               <h2 className="mt-2 text-xl font-semibold text-white/90">Live Election Overview</h2>
@@ -150,7 +173,10 @@ export default function TenantDashboardPage() {
                   </div>
 
                   <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4">
-                    <p className="text-xs uppercase tracking-[0.14em] text-white/40">Current Phase</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs uppercase tracking-[0.14em] text-white/40">Current Phase</p>
+                      {currentPhaseStatus && <PhaseStatusBadge status={currentPhaseStatus} size="sm" />}
+                    </div>
                     <div className="mt-2 flex items-center gap-2">
                       <p className="text-base font-semibold text-white/90">{liveElection ? currentPhaseLabel : "N/A"}</p>
                       {liveElection && currentPhaseIndex >= 0 && (
@@ -159,6 +185,15 @@ export default function TenantDashboardPage() {
                         </span>
                       )}
                     </div>
+                    {/* Deadline Countdown */}
+                    {phaseDeadline && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span className="text-[11px] font-medium text-amber-400/80">
+                          {getTimeRemaining(phaseDeadline)}
+                        </span>
+                      </div>
+                    )}
                     <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-[#6f59ff] to-[#9a8bff] shadow-[0_0_20px_rgba(111,89,255,0.55)] transition-all"

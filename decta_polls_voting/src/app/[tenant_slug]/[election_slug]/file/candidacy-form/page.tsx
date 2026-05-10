@@ -83,7 +83,7 @@ export default function CandidacyFormPage() {
           .from('phase rule')
           .select('*')
           .eq('electionID', election.id);
-        
+
         if (rulesData) {
           setPhaseRules(rulesData);
         }
@@ -94,7 +94,7 @@ export default function CandidacyFormPage() {
           .select('title')
           .eq('electionID', election.id)
           .order('order_index', { ascending: true });
-          
+
         if (positionsData) {
           setPositions(positionsData);
         }
@@ -173,17 +173,17 @@ export default function CandidacyFormPage() {
         const { error: valuesError } = await supabase
           .from('form response value')
           .insert(responseValues);
-          
+
         if (valuesError) throw valuesError;
       }
-      
+
       // 4. Update candidate status to PENDING_VERIFICATION
       const { error: statusUpdateError } = await supabase
         .from('candidate')
         .update({ status: 'PENDING_VERIFICATION' })
         .eq('userID', userContext!.userId)
         .eq('electionID', election.id);
-        
+
       if (statusUpdateError) throw statusUpdateError;
 
       router.push(`/${tenant.slug}/${election.slug}/file`);
@@ -232,7 +232,7 @@ export default function CandidacyFormPage() {
           <p className="text-slate-500 text-lg">
             The election organizers have not yet configured the application fields for this election.
           </p>
-          <button 
+          <button
             onClick={() => router.push(`/${tenant.slug}/${election.slug}/file`)}
             className="mt-8 px-6 py-3 bg-[var(--tenant-primary)] text-white font-bold rounded-xl"
           >
@@ -269,7 +269,7 @@ export default function CandidacyFormPage() {
                 <label className="block text-sm font-bold text-slate-900">
                   {field.label} {field.required && <span className="text-red-500">*</span>}
                 </label>
-                
+
                 {field.fieldType === 'short_text' && (
                   <input
                     type="text"

@@ -397,6 +397,7 @@ export const DynamicFormBuilder = forwardRef(({
     save: async () => {
       try {
         const payload = fields.map((f, i) => ({
+          id: f.id,
           fieldName: f.field_name,
           label: f.label,
           fieldType: f.field_type,

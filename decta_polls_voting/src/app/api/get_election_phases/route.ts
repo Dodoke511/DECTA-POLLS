@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     // Also fetch election dates for pre-flight check
     const { data: election, error: electionError } = await supabase
       .from('election')
-      .select('startDate, endDate, tenantID')
+      .select('startDate, endDate, tenantID, status')
       .eq('id', electionId)
       .single();
 
