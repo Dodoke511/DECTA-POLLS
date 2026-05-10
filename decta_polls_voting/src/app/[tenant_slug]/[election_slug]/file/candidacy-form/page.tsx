@@ -186,7 +186,7 @@ export default function CandidacyFormPage() {
         
       if (statusUpdateError) throw statusUpdateError;
 
-      router.push(`/${tenant.slug}/${election.slug}/file`);
+      router.push(`/${tenant.slug}/${election.slug}/candidate-dashboard`);
     } catch (err: any) {
       console.error('Submission error:', err);
       setError(err.message || 'An error occurred while submitting the form.');

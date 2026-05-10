@@ -59,18 +59,8 @@ export function buildRoleAwareNav(
       nav.push({ label: navLabels.results, href: `${basePath}/results` });
     }
   } else if (userContext.isCandidate) {
-    // Candidates always have access to their filing
-    nav.push({ label: 'My Filing', href: `${basePath}/file` });
-
-    if (isPhaseReachable(phases, 'publication')) {
-      nav.push({ label: navLabels.candidates, href: `${basePath}/candidates` });
-    }
-    if (isPhaseActive(phases, 'appeal')) {
-      nav.push({ label: navLabels.appeal, href: `${basePath}/appeal` });
-    }
-    if (isPhaseReachable(phases, 'results') && siteConfig?.candidate_can_view_results !== false) {
-      nav.push({ label: navLabels.results, href: `${basePath}/results` });
-    }
+    // Candidates have a unified dashboard as their home
+    nav.push({ label: 'My Dashboard', href: `${basePath}/candidate-dashboard`, highlight: true });
   }
 
   return nav;
