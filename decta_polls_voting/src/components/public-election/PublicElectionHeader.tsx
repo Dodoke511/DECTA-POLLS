@@ -1,87 +1,69 @@
 "use client";
 
 import React, { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LogOut, User } from 'lucide-react';
+import { Loader2, LogOut, UserCircle } from 'lucide-react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
+import { createClient } from '@supabase/supabase-js';
 
 export function PublicElectionHeader() {
-  const { tenant, election, navItems, userContext, basePath } = useElectionPublic();
-  const pathname = usePathname();
+  const { tenant, election, siteConfig, userContext, basePath } = useElectionPublic();
   const [loggingOut, setLoggingOut] = useState(false);
+  const logoSrc = siteConfig?.logo_url_override || tenant.logo_url;
+  const title = siteConfig?.public_title || election.title;
 
   const handleLogout = async () => {
     setLoggingOut(true);
-    await fetch(`${basePath}/auth/logout`, { method: 'POST' });
-    
+    await fetch(`/api/public/${tenant.slug}/${election.slug}/auth/logout`, { method: 'POST' });
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    await supabase.auth.signOut();
+
     // Clear cookie for server-side layout detection
     document.cookie = "sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    
+
     window.location.href = basePath; // reload and clear session state
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[var(--tenant-primary)] shadow-lg border-b border-[var(--tenant-secondary)]/30">
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {tenant.logo_url && (
-            <div className="p-1 bg-white rounded-lg shadow-sm">
-              <img src={tenant.logo_url} alt={tenant.name} className="h-10 w-10 rounded-md object-cover" />
+    <header className="sticky top-0 z-50 bg-[var(--tenant-primary)] shadow-lg border-b border-white/10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          {logoSrc && (
+            <div className="h-12 w-12 shrink-0 rounded-full bg-white/95 p-1 shadow-md ring-1 ring-white/40">
+              <img src={logoSrc} alt={`${title} logo`} className="h-full w-full rounded-full object-cover" />
             </div>
           )}
-          <div className="flex flex-col">
-            <h1 className="text-white font-black text-lg leading-tight drop-shadow-sm">{election.title}</h1>
-            <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">{tenant.name}</p>
+          <div className="flex flex-col min-w-0">
+            <h1 className="text-white font-black text-lg sm:text-xl leading-tight drop-shadow-sm truncate">{title}</h1>
+            <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest truncate">{tenant.organization || tenant.name}</p>
           </div>
         </div>
 
-        <nav className="hidden md:flex items-center gap-2">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== basePath);
-            return (
-              <Link 
-                key={item.href} 
-                href={item.href}
-                className={`text-[11px] font-black tracking-[0.15em] uppercase transition-all px-4 py-2 rounded-xl flex items-center gap-2 ${
-                  isActive 
-                    ? 'bg-white text-[var(--tenant-primary)] shadow-md' 
-                    : item.highlight 
-                      ? 'bg-[var(--tenant-secondary)] text-white hover:bg-[var(--tenant-third)] shadow-sm'
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
         <div className="flex items-center gap-4">
-          {userContext ? (
-            <div className="flex items-center gap-3 pl-4 border-l border-white/20">
-              <div className="hidden md:flex flex-col items-end">
-                <span className="text-xs font-bold text-white">{userContext.name}</span>
-                <span className="text-[9px] font-black text-[var(--tenant-secondary)] bg-white/10 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+          {userContext && (
+            <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2 py-2 shadow-sm backdrop-blur-md">
+              <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white">
+                <UserCircle className="h-5 w-5" />
+              </div>
+              <div className="hidden md:flex flex-col pr-1">
+                <span className="max-w-40 truncate text-xs font-bold text-white">{userContext.name}</span>
+                <span className="text-[9px] font-black text-white/70 uppercase tracking-wider">
                   {userContext.userType}
                 </span>
               </div>
-              <button 
+              <button
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="w-10 h-10 rounded-xl bg-[var(--tenant-third)] hover:bg-red-500 text-white shadow-md transition-all flex items-center justify-center group"
+                className="h-10 rounded-full bg-white px-3 sm:px-4 text-sm font-black text-[var(--tenant-primary)] shadow-md transition-all hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-70 flex items-center gap-2"
                 title="Log Out"
               >
-                <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                <span className="hidden sm:inline">Log Out</span>
               </button>
             </div>
-          ) : (
-            <Link 
-              href={basePath}
-              className="px-6 py-2.5 bg-[var(--tenant-secondary)] hover:bg-[var(--tenant-third)] text-white font-black text-xs tracking-widest uppercase rounded-xl shadow-md transition-all active:scale-95"
-            >
-              Sign In
-            </Link>
           )}
         </div>
       </div>
