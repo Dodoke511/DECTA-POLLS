@@ -1,16 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { AuthModuleSection } from './modules/interface_build/AuthModuleSection';
 import { UserAccessSection } from './modules/interface_build/UserAccessSection';
 import { NavigationLabelsSection } from './modules/interface_build/NavigationLabelsSection';
 import { BrandingSection } from './modules/interface_build/BrandingSection';
 import { PreviewSection } from './modules/interface_build/PreviewSection';
 import { authFetch } from '@/lib/authFetch';
+import { canUseInterfaceBuilder, normalizeSubscription, type SubscriptionTier } from '@/lib/subscription-limits';
+
+type SiteConfig = Record<string, unknown>;
+
+interface ElectionInfo {
+  title?: string | null;
+  description?: string | null;
+  slug?: string | null;
+}
+
+interface TenantBranding {
+  main_color?: string | null;
+  secondary_color?: string | null;
+  third_color?: string | null;
+  logo_url?: string | null;
+}
 
 export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
-  const [config, setConfig] = useState<any>(null);
-  const [election, setElection] = useState<any>(null);
-  const [subscription, setSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE'>('BASIC');
-  const [tenantBranding, setTenantBranding] = useState<any>(null);
+  const [config, setConfig] = useState<SiteConfig | null>(null);
+  const [election, setElection] = useState<ElectionInfo | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionTier>('BASIC');
+  const [tenantBranding, setTenantBranding] = useState<TenantBranding | null>(null);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +44,7 @@ export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
           const { config: fetchedConfig, election: fetchedElection, subscription: fetchedSub, tenantBranding: fetchedBranding, tenantSlug: fetchedSlug } = await res.json();
           if (fetchedConfig) setConfig(fetchedConfig);
           if (fetchedElection) setElection(fetchedElection);
-          if (fetchedSub) setSubscription(fetchedSub);
+          if (fetchedSub) setSubscription(normalizeSubscription(fetchedSub));
           if (fetchedBranding) setTenantBranding(fetchedBranding);
           if (fetchedSlug) setTenantSlug(fetchedSlug);
         } else {
@@ -38,8 +55,8 @@ export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
             console.error('Error fetching site config:', err.error);
           }
         }
-      } catch (err: any) {
-        if (err.message === 'UNAUTHORIZED') {
+      } catch (err: unknown) {
+        if (err instanceof Error && err.message === 'UNAUTHORIZED') {
            setError('JWT_EXPIRED');
         }
         console.error('Fetch error:', err);
@@ -51,8 +68,8 @@ export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
     fetchData();
   }, [electionId]);
 
-  const updateConfig = (updates: any) => {
-    setConfig((prev: any) => ({ ...prev, ...updates }));
+  const updateConfig = (updates: SiteConfig) => {
+    setConfig((prev) => ({ ...(prev ?? {}), ...updates }));
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
@@ -93,12 +110,12 @@ export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
             Your authentication session has timed out for security. Please log in again to continue managing the election interface.
           </p>
         </div>
-        <a
+        <Link
           href="/auth/login_form"
           className="px-8 py-3 rounded-xl bg-[#5D44F8] text-white font-bold hover:bg-[#4a35cf] transition-all shadow-lg"
         >
           Log In Again
-        </a>
+        </Link>
       </div>
     );
   }
@@ -119,6 +136,20 @@ export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
     );
   }
 
+  if (!canUseInterfaceBuilder(subscription)) {
+    return (
+      <div className="mx-auto mt-10 max-w-2xl rounded-[28px] border border-white/10 bg-white/[0.035] p-8 text-center shadow-[0_24px_80px_-20px_rgba(0,0,0,0.7)]">
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/60">
+          <span className="text-2xl font-black">B</span>
+        </div>
+        <h2 className="mb-3 text-2xl font-bold text-white">Interface Builder Locked</h2>
+        <p className="mx-auto max-w-md text-sm leading-relaxed text-white/50">
+          Basic accounts use the predefined public election website with a white and grey theme. Upgrade to customize branding, navigation, access, and interface modules.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pt-6">
       <div className="mb-8">
@@ -133,8 +164,8 @@ export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
           config={config}
           onUpdate={updateConfig}
           tenantBranding={tenantBranding}
-          defaultTitle={election?.title}
-          defaultWelcome={election?.description}
+          defaultTitle={election?.title ?? undefined}
+          defaultWelcome={election?.description ?? undefined}
         />
         <AuthModuleSection config={config} onUpdate={updateConfig} />
         <UserAccessSection config={config} onUpdate={updateConfig} subscription={subscription} />
@@ -142,7 +173,7 @@ export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
         <PreviewSection 
           electionId={electionId} 
           tenantSlug={tenantSlug} 
-          electionSlug={election?.slug} 
+          electionSlug={election?.slug ?? undefined} 
         />
       </div>
     </div>

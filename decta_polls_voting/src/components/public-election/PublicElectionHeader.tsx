@@ -15,7 +15,7 @@ export function PublicElectionHeader() {
   const title = siteConfig?.public_title || election.title;
   const voterNavItems = [
     {
-      label: 'Home or dashboard',
+      label: 'Home',
       href: `${basePath}/dashboard`,
       icon: Home,
     },
