@@ -38,6 +38,8 @@ export default function CandidateFilingPage() {
       
       if (data?.status === 'DRAFT') {
         router.push(`/${tenant.slug}/${election.slug}/file/candidacy-form`);
+      } else if (data?.status === 'APPROVED') {
+        router.push(`/${tenant.slug}/${election.slug}/candidate-dashboard`);
       } else {
         setLoading(false);
       }
@@ -117,39 +119,12 @@ export default function CandidateFilingPage() {
     );
   }
 
-  // At this point, user is an APPROVED Candidate.
+  // APPROVED candidates are handled by the useEffect redirect above.
+  // This fallback just shows a spinner for the brief moment before redirect.
   return (
-    <div className="max-w-5xl mx-auto py-16 px-6">
-      <div className="mb-12 border-b border-slate-100 pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">My Filing</h1>
-          <p className="text-slate-500 font-medium">Complete your candidacy details and submit for review.</p>
-        </div>
-
-        {!isFilingActive ? (
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 text-xs font-black uppercase tracking-widest rounded-full border border-amber-100">
-            <Clock className="w-4 h-4" />
-            Filing Phase Closed
-          </div>
-        ) : (
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 text-xs font-black uppercase tracking-widest rounded-full border border-emerald-100">
-            <CheckCircle2 className="w-4 h-4" />
-            Phase Active
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-[32px] p-12 border border-slate-200 shadow-2xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full -mr-32 -mt-32 transition-transform group-hover:scale-110 duration-700" />
-        <div className="relative z-10 flex flex-col items-center text-center py-12">
-          <div className="w-20 h-20 bg-slate-50 rounded-3xl border border-slate-100 flex items-center justify-center mb-8 shadow-sm group-hover:shadow-md transition-all">
-            <ShieldCheck className="w-10 h-10 text-slate-200" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-3">Candidacy Form</h3>
-          <p className="text-slate-400 max-w-xs mx-auto mb-8">The official candidacy application module will be available here soon.</p>
-          <div className="h-1 w-12 bg-slate-100 rounded-full" />
-        </div>
-      </div>
+    <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center gap-4">
+      <Loader2 className="w-8 h-8 animate-spin text-[var(--tenant-primary)]" />
+      <p className="text-slate-400 font-medium animate-pulse">Redirecting to your dashboard...</p>
     </div>
   );
 }

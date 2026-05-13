@@ -43,7 +43,7 @@ export async function POST(request: Request) {
                 <h2>DECTA Polls Registration</h2>
                 <p>Use the following 6-digit code to verify your email address:</p>
                 <h1 style="color: #5D44F8; letter-spacing: 5px; font-size: 32px;">${otp}</h1>
-                <p><strong>This code will expire in 60 seconds.</strong></p>
+                <p><strong>This code will expire in 90 seconds.</strong></p>
                 <p>If you did not request this, please ignore this email.</p>
             </div>
             `,
