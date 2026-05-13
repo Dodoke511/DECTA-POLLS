@@ -6,6 +6,7 @@ import { WorkflowHeader } from '@/components/tenant_admin/election_workflow/Work
 import { WorkflowTabs } from '@/components/tenant_admin/election_workflow/WorkflowTabs';
 import { PipelineBuilder } from '@/components/tenant_admin/election_workflow/PipelineBuilder';
 import { ElectionInterfaceTab } from '@/components/tenant_admin/election_workflow/ElectionInterfaceTab';
+import { AppealsModule as AppealsListingModule } from '@/components/tenant_admin/election_workflow/modules/AppealsListingModule';
 import { PermissionProvider } from '@/components/providers/PermissionProvider';
 
 export default function ElectionWorkflowPage() {
@@ -29,6 +30,10 @@ export default function ElectionWorkflowPage() {
 
     setElectionTitle(searchParams.get('electionTitle'));
     setBanner(searchParams.get('banner'));
+
+    // Support direct tab navigation (e.g., from candidates page "View Appeals" button)
+    const tab = searchParams.get('tab');
+    if (tab === 'appeals') setActiveTab('appeals');
 
     if (role !== 'tenant' || !random || random !== storedToken) {
       router.push('/auth/login_form');
@@ -89,9 +94,7 @@ export default function ElectionWorkflowPage() {
             <ElectionInterfaceTab electionId={electionId} />
           )}
           {activeTab === 'appeals' && (
-            <div className="flex items-center justify-center h-full text-white/50 text-sm tracking-widest uppercase">
-              Appeals Module Coming Soon
-            </div>
+            <AppealsListingModule electionId={electionId} />
           )}
         </main>
       </div>

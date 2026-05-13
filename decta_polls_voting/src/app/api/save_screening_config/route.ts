@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       .from('phase rule')
       .delete()
       .eq('electionID', electionId)
-      .eq('phaseType', 'filing');
+      .eq('phaseType', 'screening');
 
     if (deleteError) {
       return NextResponse.json({ error: `Failed to clear old rules: ${deleteError.message}` }, { status: 500 });

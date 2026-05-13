@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState, useRef, type ReactElement } from 'react';
+import React, { useState, useRef, forwardRef, useImperativeHandle, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Settings2, Lock, ChevronDown, ChevronUp, Zap,
   Clock, Users, AlertTriangle, BookOpen, Loader2, CheckCircle2,
-  Archive, LayoutDashboard, Settings, ArrowRight, Save, Trash2, CheckSquare2
+  Archive, LayoutDashboard, Settings, ArrowRight, Save, Trash2, CheckSquare2,
+  FastForward
 } from 'lucide-react';
+import { PhaseStatus } from '@/lib/workflow/PhaseResolverService';
+import { PhaseStatusBadge } from '@/components/tenant_admin/PhaseStatusBadge';
 import { PhaseConfig, PhaseMetadata, PhaseType, TransitionMode } from '@/lib/types/phase';
 import { PositionsModule } from './modules/PositionsModule';
 import { DynamicFormBuilder } from './modules/CandidateFormBuilder';
@@ -37,6 +40,8 @@ interface PhaseCardProps {
   onSave: () => Promise<boolean>;
   onRefresh?: () => void;
   authParams: string;
+  runtimeStatus?: PhaseStatus;
+  isElectionActive?: boolean;
 }
 
 const ACCENT: Record<PhaseType, string> = {
@@ -57,17 +62,43 @@ const PHASE_PERMISSION_MAP: Record<PhaseType, string[]> = {
   results: ['election.results.access', 'election.results.config.update', 'result.compute', 'result.view'],
 };
 
-export function PhaseCard({
+export const PhaseCard = forwardRef(({
   phase, metadata, roles, electionId,
   isDisabledByDependency, isLast,
   isFocused, isSucceeding, subscription,
   onChange, onToggle, onSave, onRefresh, authParams,
-}: PhaseCardProps): ReactElement {
+  runtimeStatus, isElectionActive,
+}: PhaseCardProps, ref): ReactElement => {
   const router = useRouter();
   const moduleRef = useRef<{ save: () => Promise<boolean> }>(null);
   const [isRulesExpanded, setIsRulesExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [showAdvanceConfirm, setShowAdvanceConfirm] = useState(false);
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [advanceError, setAdvanceError] = useState<string | null>(null);
+
+  const canAdvance = isElectionActive && (runtimeStatus === 'active' || runtimeStatus === 'for_transition');
+
+  const handleAdvancePhase = async () => {
+    setIsAdvancing(true);
+    setAdvanceError(null);
+    try {
+      const res = await fetch('/api/workflow/advance_phase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ electionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to advance phase');
+      setShowAdvanceConfirm(false);
+      onRefresh?.();
+    } catch (err: any) {
+      setAdvanceError(err.message);
+    } finally {
+      setIsAdvancing(false);
+    }
+  };
 
   const requiredPerms = PHASE_PERMISSION_MAP[metadata.type] || [];
   const filteredRoles = roles.filter(role => {
@@ -91,11 +122,11 @@ export function PhaseCard({
   // ── Preflight / Validation ──
   const isPreflightValid = () => {
     if (phase.transition_mode === 'manual') return true;
-    
+
     // In 'deadline' mode, we MUST have the dates that the phase requires
     if (metadata.hasStartDate && !phase.start_date) return false;
     if (metadata.hasDeadline && !phase.deadline) return false;
-    
+
     return true;
   };
 
@@ -125,7 +156,12 @@ export function PhaseCard({
       setTimeout(() => setSaveStatus('idle'), 4000);
     }
     setIsSaving(false);
+    return metaSuccess && moduleSuccess;
   };
+
+  useImperativeHandle(ref, () => ({
+    save: handleLocalSave
+  }));
 
   return (
     <div className={`relative transition-all duration-300 w-full ${isDisabledByDependency ? 'opacity-40 pointer-events-none' : ''}`}>
@@ -202,12 +238,15 @@ export function PhaseCard({
               {metadata.description}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-bold text-white/25 uppercase tracking-[0.2em] self-center mr-1">Phase Type:</span>
             <span className="text-[12px] px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               {metadata.type}
             </span>
+            {isElectionActive && runtimeStatus && (
+              <PhaseStatusBadge status={runtimeStatus} size="sm" />
+            )}
           </div>
         </div>
 
@@ -432,8 +471,8 @@ export function PhaseCard({
 
             {/* ─ Embedded VotingModule (voting) ─ */}
             {metadata.type === 'voting' && (
-              <VotingModule 
-                ref={moduleRef} 
+              <VotingModule
+                ref={moduleRef}
                 electionId={electionId}
                 roles={roles}
                 roleAssigned={phase.role_assigned}
@@ -443,8 +482,8 @@ export function PhaseCard({
 
             {/* ─ Embedded ResultsModule (results) ─ */}
             {metadata.type === 'results' && (
-              <ResultsModule 
-                ref={moduleRef} 
+              <ResultsModule
+                ref={moduleRef}
                 electionId={electionId}
                 subscription={subscription}
                 roles={roles}
@@ -460,8 +499,8 @@ export function PhaseCard({
                   {!isPreflightValid() && (
                     <span className="text-amber-400 text-[11px] font-medium flex items-center gap-1.5 animate-in fade-in">
                       <AlertTriangle className="w-3 h-3" />
-                      {metadata.hasStartDate 
-                        ? 'Configure both Start & End dates for Deadline mode' 
+                      {metadata.hasStartDate
+                        ? 'Configure both Start & End dates for Deadline mode'
                         : 'Configure a deadline date for Deadline mode'}
                     </span>
                   )}
@@ -494,6 +533,17 @@ export function PhaseCard({
                   )}
                   {isSaving ? 'Syncing...' : 'Sync & Save Changes'}
                 </button>
+
+                {/* Advance Phase Button */}
+                {canAdvance && (
+                  <button
+                    onClick={() => setShowAdvanceConfirm(true)}
+                    className="flex items-center gap-2 bg-gradient-to-r from-[#6648EB] to-[#8B5CF6] hover:from-[#7c5fff] hover:to-[#9f75ff] text-white text-[13px] font-bold px-6 py-2.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#6648EB]/20 flex-shrink-0"
+                  >
+                    <FastForward className="w-3.5 h-3.5" />
+                    Advance Phase
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -504,6 +554,57 @@ export function PhaseCard({
       {!isLast && !isFocused && (
         <div className="absolute top-[45px] -right-4 w-8 h-px bg-white/10 z-[-1]" />
       )}
+
+      {/* ─ Advance Phase Confirmation Modal ─ */}
+      {showAdvanceConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isAdvancing && setShowAdvanceConfirm(false)} />
+          <div className="relative w-full max-w-md bg-[#140B2D] border border-white/10 rounded-[32px] p-8 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#6648EB]/10 rounded-full blur-3xl" />
+            <div className="relative text-center space-y-6">
+              <div className="w-20 h-20 bg-[#6648EB]/10 rounded-full flex items-center justify-center mx-auto border border-[#6648EB]/20">
+                <FastForward className="w-10 h-10 text-[#6648EB]" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-white">Advance Phase?</h3>
+                <p className="text-white/60 text-sm leading-relaxed">
+                  This will complete the <span className="text-white font-bold capitalize">{phase.name || metadata.defaultName}</span> phase and activate the next phase in the pipeline.
+                </p>
+                {advanceError && (
+                  <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                    <p className="text-red-400 text-[12px] font-medium">{advanceError}</p>
+                  </div>
+                )}
+                <div className="mt-4 p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl">
+                  <p className="text-amber-400 text-[11px] font-medium uppercase tracking-wider">
+                    ⚠ This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button
+                  disabled={isAdvancing}
+                  onClick={() => setShowAdvanceConfirm(false)}
+                  className="flex-1 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/70 font-bold hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={isAdvancing}
+                  onClick={handleAdvancePhase}
+                  className="flex-1 px-6 py-3 rounded-2xl bg-gradient-to-r from-[#6648EB] to-[#8B5CF6] text-white font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#6648EB]/20"
+                >
+                  {isAdvancing ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Advancing...</>
+                  ) : 'Yes, Advance'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+});
+
+PhaseCard.displayName = 'PhaseCard';

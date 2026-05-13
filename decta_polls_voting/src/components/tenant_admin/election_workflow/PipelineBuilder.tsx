@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Loader2, CheckCircle2, XCircle, AlertTriangle,
   Rocket, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { PhaseConfig, PhaseType, PHASE_PIPELINE, REQUIRED_PHASES, OPTIONAL_PHASES } from '@/lib/types/phase';
+import { PhaseStatus } from '@/lib/workflow/PhaseResolverService';
+import { resolvePhaseStatusClient } from '@/lib/workflow/phase-guards';
 import { GetStartedModal } from './GetStartedModal';
 import { PhaseCard, TenantRole } from './PhaseCard';
 import { PositionsModule } from './modules/PositionsModule';
@@ -100,9 +102,12 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
   const [subscription, setSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE'>('BASIC');
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const activePhaseRef = useRef<{ save: () => Promise<boolean> }>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [showPreflight, setShowPreflight] = useState(false);
+  const [runtimeStatuses, setRuntimeStatuses] = useState<Record<string, PhaseStatus>>({});
+  const [electionStatus, setElectionStatus] = useState<string | null>(null);
 
   const refreshPhases = useCallback(async (isInitial = false) => {
     try {
@@ -113,7 +118,20 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
           const merged = mergeFetchedPhases(electionId, fetched ?? [], current);
           return merged;
         });
-        if (election) setElectionMeta(election);
+        if (election) {
+          setElectionMeta(election);
+          if (election.status) setElectionStatus(election.status);
+          // Resolve runtime statuses from DB timestamps
+          const now = new Date();
+          const statuses: Record<string, PhaseStatus> = {};
+          (fetched ?? []).forEach((p: any) => {
+            statuses[p.phase_type] = resolvePhaseStatusClient({
+              ...p,
+              transition_mode: p.transition_mode || 'manual',
+            }, now);
+          });
+          setRuntimeStatuses(statuses);
+        }
 
         if (isInitial && fetched) {
           // If we have the full pipeline (6 phases) instead of just the 3 auto-seeded required phases,
@@ -292,9 +310,34 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     }
   }, [permsLoaded, activeStepIndex, canAccessStep]);
 
-  const goToNext = () => {
-    if (activeStepIndex < steps.length - 1 && isStepComplete(activeStepIndex)) {
-      if (canAccessStep(activeStepIndex + 1)) {
+  const goToNext = async () => {
+    let currentStepComplete = isStepComplete(activeStepIndex);
+
+    if (activeStepIndex > 0 && activePhaseRef.current) {
+      const saveSuccess = await activePhaseRef.current.save();
+      if (!saveSuccess) return;
+      currentStepComplete = true; // successfully saved
+    }
+
+    const canAccessNext = () => {
+      const nextIdx = activeStepIndex + 1;
+      if (!isOwner && permsLoaded) {
+        const meta = PHASE_PIPELINE[nextIdx - 1];
+        const requiredPerms = PHASE_PERMISSION_MAP[meta.type] || [];
+        if (requiredPerms.length > 0 && !hasAnyPermission(requiredPerms)) return false;
+      }
+      for (let i = 0; i < nextIdx; i++) {
+        if (i === activeStepIndex) {
+          if (!currentStepComplete) return false;
+        } else {
+          if (!isStepComplete(i)) return false;
+        }
+      }
+      return true;
+    };
+
+    if (activeStepIndex < steps.length - 1 && currentStepComplete) {
+      if (canAccessNext()) {
         setActiveStepIndex(prev => prev + 1);
       }
     }
@@ -398,6 +441,21 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
           <p className="text-[12px] text-white/40 mt-1">Configure your election workflow here.</p>
         </div>
         <div className="flex items-center gap-4">
+          {electionStatus && (
+            <div className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border ${electionStatus === 'ACTIVE' ? 'bg-emerald-500/10 border-emerald-500/20' :
+              electionStatus === 'PUBLISHED' ? 'bg-sky-500/10 border-sky-500/20' :
+                'bg-white/5 border-white/10'
+              }`}>
+              <div className={`w-2 h-2 rounded-full ${electionStatus === 'ACTIVE' ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]' :
+                electionStatus === 'PUBLISHED' ? 'bg-sky-400' :
+                  'bg-white/30'
+                }`} />
+              <span className={`text-[11px] font-black uppercase tracking-widest ${electionStatus === 'ACTIVE' ? 'text-emerald-400' :
+                electionStatus === 'PUBLISHED' ? 'text-sky-400' :
+                  'text-white/50'
+                }`}>{electionStatus}</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
             <div className={`w-2 h-2 rounded-full ${allPassed ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
             <span className="text-[11px] font-bold text-white/50 uppercase tracking-widest">
@@ -476,13 +534,14 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
                   return (
                     <PhaseCard
                       key={meta.type}
+                      ref={activePhaseRef}
                       phase={phase}
                       metadata={meta}
                       roles={roles}
                       electionId={electionId}
                       isDisabledByDependency={isDisabledByDependency}
                       isLast={idx === PHASE_PIPELINE.length - 1}
-                      isFocused={true} // In wizard mode, the single shown card is always "focused"
+                      isFocused={true}
                       isSucceeding={false}
                       subscription={subscription}
                       onChange={handleChange}
@@ -490,6 +549,8 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
                       onSave={() => handleSave()}
                       onRefresh={() => refreshPhases()}
                       authParams={authParams}
+                      runtimeStatus={runtimeStatuses[meta.type]}
+                      isElectionActive={electionStatus === 'ACTIVE'}
                     />
                   );
                 })}
@@ -500,13 +561,13 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
           {/* Next Button */}
           <button
             onClick={goToNext}
-            disabled={activeStepIndex === steps.length - 1 || !isStepComplete(activeStepIndex) || !canAccessStep(activeStepIndex + 1)}
+            disabled={activeStepIndex === steps.length - 1 || (!isStepComplete(activeStepIndex) && activeStepIndex === 0) || !canAccessStep(activeStepIndex + 1)}
             className={`sticky top-48 p-4 rounded-2xl border transition-all hover:scale-110 active:scale-95 z-20 shadow-lg 
-              ${(!isStepComplete(activeStepIndex) || !canAccessStep(activeStepIndex + 1))
+              ${((!isStepComplete(activeStepIndex) && activeStepIndex === 0) || !canAccessStep(activeStepIndex + 1))
                 ? 'bg-amber-500/5 border-amber-500/10 text-amber-500/40 cursor-not-allowed opacity-50'
                 : 'bg-[#6648EB]/10 border-[#6648EB]/20 text-[#6648EB] hover:text-white hover:bg-[#6648EB] shadow-[#6648EB]/10'
               }`}
-            title={!isStepComplete(activeStepIndex) ? "Please complete current step to proceed" : !canAccessStep(activeStepIndex + 1) ? "You do not have permission to access the next phase" : "Next Step"}
+            title={(!isStepComplete(activeStepIndex) && activeStepIndex === 0) ? "Please complete current step to proceed" : !canAccessStep(activeStepIndex + 1) ? "You do not have permission to access the next phase" : "Save & Next Step"}
           >
             <ChevronDown className="w-6 h-6 -rotate-90" />
           </button>

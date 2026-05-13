@@ -4,6 +4,8 @@ import { UserAccessSection } from './modules/interface_build/UserAccessSection';
 import { NavigationLabelsSection } from './modules/interface_build/NavigationLabelsSection';
 import { BrandingSection } from './modules/interface_build/BrandingSection';
 import { PreviewSection } from './modules/interface_build/PreviewSection';
+import { authFetch } from '@/lib/authFetch';
+
 export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
   const [config, setConfig] = useState<any>(null);
   const [election, setElection] = useState<any>(null);
@@ -17,21 +19,10 @@ export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
   useEffect(() => {
     const fetchData = async () => {
       setError(null);
-      const token = sessionStorage.getItem('supabaseToken');
-
-      if (!token || token.split('.').length !== 3) {
-        setError('SESSION_MISSING');
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       try {
-        const res = await fetch(`/api/interface/get_config?electionId=${electionId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const res = await authFetch(`/api/interface/get_config?electionId=${electionId}`);
+        
         if (res.ok) {
           const { config: fetchedConfig, election: fetchedElection, subscription: fetchedSub, tenantBranding: fetchedBranding, tenantSlug: fetchedSlug } = await res.json();
           if (fetchedConfig) setConfig(fetchedConfig);
@@ -41,13 +32,16 @@ export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
           if (fetchedSlug) setTenantSlug(fetchedSlug);
         } else {
           const err = await res.json();
-          if (err.error === 'JWT expired') {
+          if (err.error === 'JWT expired' || res.status === 401) {
             setError('JWT_EXPIRED');
           } else {
             console.error('Error fetching site config:', err.error);
           }
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err.message === 'UNAUTHORIZED') {
+           setError('JWT_EXPIRED');
+        }
         console.error('Fetch error:', err);
       } finally {
         setLoading(false);
@@ -58,24 +52,16 @@ export function ElectionInterfaceTab({ electionId }: { electionId: string }) {
   }, [electionId]);
 
   const updateConfig = (updates: any) => {
-    // 1. Immediate UI update (Optimistic)
     setConfig((prev: any) => ({ ...prev, ...updates }));
 
-    // 2. Clear existing timer
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
-    // 3. Set new timer to save after 500ms of inactivity
     saveTimeoutRef.current = setTimeout(async () => {
       const tenantUserId = sessionStorage.getItem('tenantUserId');
-      const token = sessionStorage.getItem('supabaseToken');
 
       try {
-        const res = await fetch('/api/interface/save_config', {
+        const res = await authFetch('/api/interface/save_config', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
           body: JSON.stringify({
             electionId,
             updates,

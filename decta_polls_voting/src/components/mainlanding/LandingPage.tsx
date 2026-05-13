@@ -33,7 +33,7 @@ export default function LandingPage() {
   const handleBuildClick = async () => {
     setBuildLoading(true);
     // Navigate to loader page with build parameters
-    router.push('/loader?destination=/auth/tenant_reg&type=build');
+    router.push('/loader?destination=' + encodeURIComponent('/auth/tenant_reg') + '&type=build');
   };
 
   const handleLoginClick = async () => {

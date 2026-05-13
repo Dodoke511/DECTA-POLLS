@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   description: "A dynamic white-label voting engine designed for seamless branding and ironclad data isolation across every tenant.",
 };
 
+import { GlobalSessionProvider } from "@/components/providers/GlobalSessionProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,7 +32,9 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} ${sourceSans.variable} antialiased`}
       >
-        {children}
+        <GlobalSessionProvider>
+          {children}
+        </GlobalSessionProvider>
       </body>
     </html>
   );
