@@ -1,10 +1,31 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { canUsePhase, normalizeSubscription } from '@/lib/subscription-limits';
+import type { PhaseType } from '@/lib/types/phase';
+import type { TransitionMode } from '@/lib/types/phase';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+interface IncomingPhase {
+  id?: string;
+  phase_type: PhaseType;
+  phase_index: number;
+  is_enabled: boolean;
+  name?: string | null;
+  start_date?: string | null;
+  deadline?: string | null;
+  role_assigned?: string | null;
+  transition_mode?: TransitionMode;
+  completion_behavior?: 'require_all_reviewed' | 'auto_resolve_pending';
+  auto_resolve_action?: 'auto_reject' | 'auto_approve';
+}
+
+interface PhaseRecord extends IncomingPhase {
+  electionID: string;
+}
 
 export async function POST(request: Request) {
   try {
@@ -17,12 +38,35 @@ export async function POST(request: Request) {
       );
     }
 
-    const records = phases.map((p: any) => {
-      const row: any = {
+    const { data: election, error: electionError } = await supabase
+      .from('election')
+      .select('tenantID')
+      .eq('id', electionId)
+      .single();
+
+    if (electionError) {
+      return NextResponse.json({ error: electionError.message }, { status: 500 });
+    }
+
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('subscription')
+      .eq('id', election.tenantID)
+      .single();
+
+    if (tenantError) {
+      return NextResponse.json({ error: tenantError.message }, { status: 500 });
+    }
+
+    const subscription = normalizeSubscription(tenant?.subscription);
+
+    const records = (phases as IncomingPhase[]).map((p) => {
+      const phaseType = p.phase_type;
+      const row: PhaseRecord = {
         electionID: electionId,
-        phase_type: p.phase_type,
+        phase_type: phaseType,
         phase_index: p.phase_index,
-        is_enabled: p.is_enabled,
+        is_enabled: canUsePhase(subscription, phaseType) ? p.is_enabled : false,
         name: p.name || '',
         start_date: p.start_date || null,
         deadline: p.deadline || null,
@@ -35,6 +79,8 @@ export async function POST(request: Request) {
       // Crucial: Only include the id key if it actually exists. 
       // Providing { id: undefined } or { id: null } can crash PosegREST if it's a primary key.
       if (p.id) row.id = p.id;
+      if (row.completion_behavior === undefined) delete row.completion_behavior;
+      if (row.auto_resolve_action === undefined) delete row.auto_resolve_action;
 
       return row;
     });
@@ -49,8 +95,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ message: 'Pipeline saved successfully.' }, { status: 200 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('API save error:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Internal Server Error' }, { status: 500 });
   }
 }

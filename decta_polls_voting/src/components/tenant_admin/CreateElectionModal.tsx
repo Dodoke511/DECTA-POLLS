@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { X, Upload, ImageIcon, Loader2, Globe, Lock, Unlock } from "lucide-react";
+import { X, ImageIcon, Loader2, Globe, Lock, Unlock } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 interface CreateElectionModalProps {
@@ -90,7 +90,7 @@ export function CreateElectionModal({
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const title = e.target.value;
     setForm(prev => {
-      const updates: any = { title };
+      const updates: Partial<FormData> = { title };
       if (!slugLocked) {
         updates.slug = generateSlug(title);
       }
@@ -162,8 +162,8 @@ export function CreateElectionModal({
       }
 
       onSuccess(data.electionId, token, form.title, data.banner);
-    } catch (err: any) {
-      setSubmitError(err.message || "An unexpected error occurred.");
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }
@@ -181,24 +181,24 @@ export function CreateElectionModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-6"
       style={{ backdropFilter: "blur(12px)", background: "rgba(3,7,15,0.75)" }}
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
       <div
-        className="relative w-full max-w-lg rounded-3xl border border-white/10 shadow-[0_0_80px_rgba(93,68,248,0.25)] overflow-hidden"
+        className="relative my-4 flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 shadow-[0_0_80px_rgba(93,68,248,0.25)] sm:my-0 sm:max-h-[calc(100dvh-3rem)] sm:rounded-3xl"
         style={{ background: "linear-gradient(135deg, rgba(45,21,112,0.6) 0%, rgba(24,13,66,0.9) 60%, rgba(9,2,21,0.95) 100%)" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-8 pt-8 pb-6 border-b border-white/10">
-          <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">New Election</h2>
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 px-5 py-5 sm:px-8 sm:pt-8 sm:pb-6">
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">New Election</h2>
             <p className="text-sm text-white/40 mt-1">Fill in the details to create a draft.</p>
           </div>
           <button
             onClick={handleClose}
             disabled={isSubmitting}
-            className="p-2 rounded-xl border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-all disabled:opacity-40"
+            className="shrink-0 rounded-xl border border-white/10 p-2 text-white/50 transition-all hover:bg-white/10 hover:text-white disabled:opacity-40"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -206,7 +206,7 @@ export function CreateElectionModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-8 py-6 flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="decta-scrollbar flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 sm:px-8 sm:py-6">
 
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-white/50 uppercase tracking-[0.15em]">
@@ -225,12 +225,12 @@ export function CreateElectionModal({
 
           {/* Slug */}
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-[0.15em] flex items-center justify-between">
+            <label className="flex items-start justify-between gap-3 text-xs font-semibold uppercase tracking-[0.15em] text-white/50 sm:items-center">
               <span>URL Slug <span className="text-[#5D44F8]">*</span></span>
               <button 
                 type="button"
                 onClick={() => setSlugLocked(!slugLocked)}
-                className="text-[10px] text-[#A78BFA] hover:text-[#C4B5FD] flex items-center gap-1 normal-case tracking-normal transition-colors"
+                className="flex max-w-[12rem] items-center justify-end gap-1 text-right text-[10px] normal-case tracking-normal text-[#A78BFA] transition-colors hover:text-[#C4B5FD] sm:max-w-none sm:text-left"
               >
                 {slugLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                 {slugLocked ? "Unlock Auto-sync" : "Lock for Custom URL"}
@@ -286,8 +286,7 @@ export function CreateElectionModal({
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileInputRef.current?.click()}
-              className="relative cursor-pointer rounded-xl border-2 border-dashed border-white/15 hover:border-[#5D44F8]/60 bg-white/5 hover:bg-white/8 transition-all overflow-hidden"
-              style={{ minHeight: "120px" }}
+              className="relative min-h-[120px] cursor-pointer overflow-hidden rounded-xl border-2 border-dashed border-white/15 bg-white/5 transition-all hover:border-[#5D44F8]/60 hover:bg-white/8"
             >
               {bannerPreview ? (
                 <div className="relative w-full h-32 group">
@@ -330,7 +329,7 @@ export function CreateElectionModal({
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
             <button
               type="button"
               onClick={handleClose}

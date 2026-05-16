@@ -182,7 +182,6 @@ export function AccountSetting({
                                 "Election Start",
                                 "Election End",
                                 "Candidate Added",
-                                "New Voter Registered",
                                 "Results Published",
                                 "Vote Cast",
                             ].map((trigger) => (

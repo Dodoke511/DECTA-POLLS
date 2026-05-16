@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { TenantAdminHeader } from "@/components/tenant_admin/Header";
 import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { useRouter } from "next/navigation";
-import { Search, UserPlus, X, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, Search, UserPlus, X, Upload } from "lucide-react";
 
 interface Voter {
   id: string;
@@ -28,10 +28,17 @@ export default function TenantVotersPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All Status");
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<{
+    type: "success" | "error";
+    title: string;
+    message: string;
+    details?: string;
+    count?: number;
+  } | null>(null);
   const [voters, setVoters] = useState<Voter[]>([]);
   const [tenantId, setTenantId] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,9 +94,14 @@ export default function TenantVotersPage() {
     const fileName = file.name.toLowerCase();
     if (fileName.endsWith('.csv') || fileName.endsWith('.txt')) {
       setSelectedFile(file);
+      setUploadResult(null);
       console.log('File accepted:', file.name);
     } else {
-      alert('Please select a CSV or TXT file');
+      setUploadResult({
+        type: "error",
+        title: "Unsupported file",
+        message: "Please select a CSV or TXT file.",
+      });
       console.log('File rejected - not a CSV or TXT file');
     }
   };
@@ -125,6 +137,8 @@ export default function TenantVotersPage() {
     console.log('Upload clicked. Selected file:', selectedFile, 'Tenant ID:', tenantId);
     
     if (selectedFile && tenantId) {
+      setIsUploading(true);
+      setUploadResult(null);
       try {
         const formData = new FormData();
         formData.append('file', selectedFile);
@@ -138,25 +152,47 @@ export default function TenantVotersPage() {
         const result = await response.json();
 
         if (response.ok) {
-          alert(`Success! ${result.count} voters uploaded.`);
+          const count = Number(result.count ?? 0);
+          setUploadResult({
+            type: "success",
+            title: "Voters Added",
+            message: `${count.toLocaleString()} ${count === 1 ? "voter has" : "voters have"} been uploaded successfully.`,
+            count,
+          });
           setSelectedFile(null);
-          setShowUploadModal(false);
           fetchVoters(tenantId);
         } else {
-          alert(`Error: ${result.error}\n${result.hint || ''}`);
+          setUploadResult({
+            type: "error",
+            title: "Upload Failed",
+            message: result.error || "The CSV could not be uploaded.",
+            details: result.hint,
+          });
         }
       } catch (error) {
         console.error('Upload error:', error);
-        alert('Failed to upload CSV file');
+        setUploadResult({
+          type: "error",
+          title: "Upload Failed",
+          message: "Failed to upload CSV file. Please try again.",
+        });
+      } finally {
+        setIsUploading(false);
       }
     } else {
       console.log('Cannot upload - missing file or tenant ID');
-      alert('Please select a file first');
+      setUploadResult({
+        type: "error",
+        title: "File Required",
+        message: tenantId ? "Please select a file first." : "Tenant session is missing. Please log in again.",
+      });
     }
   };
 
   const handleCancel = () => {
     setSelectedFile(null);
+    setUploadResult(null);
+    setIsUploading(false);
     setShowUploadModal(false);
   };
 
@@ -198,25 +234,97 @@ export default function TenantVotersPage() {
           }}
         >
           <div 
-            className="w-full max-w-lg rounded-[20px] p-6 relative"
+            className="glass-card w-full max-w-xl rounded-[24px] p-6 relative overflow-hidden"
             style={{
-              background: "#1f1f1f",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
+              background: "linear-gradient(145deg, rgba(24,13,66,0.92), rgba(9,2,21,0.96))",
+              border: "1px solid rgba(255, 255, 255, 0.16)",
+              boxShadow: "0 28px 90px rgba(0, 0, 0, 0.65), 0 0 60px rgba(93,68,248,0.16)",
               zIndex: 100000
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="pointer-events-none absolute -top-24 right-8 h-48 w-48 rounded-full bg-[#5D44F8]/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-28 left-8 h-48 w-48 rounded-full bg-emerald-400/10 blur-3xl" />
+
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Upload Voters CSV</h2>
+            <div className="relative flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  {uploadResult?.type === "success" ? "Upload Complete" : "Upload Voters CSV"}
+                </h2>
+                <p className="mt-1 text-xs text-white/40">
+                  {uploadResult?.type === "success"
+                    ? "Your voter list has been synchronized."
+                    : "Import voters into this tenant account."}
+                </p>
+              </div>
               <button
                 onClick={handleCancel}
-                className="text-white/60 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg"
+                className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-xl border border-white/10"
+                aria-label="Close upload modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {uploadResult?.type === "success" ? (
+              <div className="relative">
+                <div className="rounded-[22px] border border-emerald-400/20 bg-emerald-400/[0.06] p-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+                  <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-emerald-300/25 bg-emerald-400/10 shadow-[0_0_40px_rgba(52,211,153,0.18)]">
+                    <CheckCircle2 className="h-10 w-10 text-emerald-300" />
+                  </div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-emerald-300/80">
+                    Success
+                  </p>
+                  <h3 className="mt-2 text-3xl font-bold tracking-tight text-white">
+                    {uploadResult.count?.toLocaleString() ?? "New"} {uploadResult.count === 1 ? "Voter" : "Voters"} Added
+                  </h3>
+                  <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-white/58">
+                    {uploadResult.message}
+                  </p>
+                </div>
+
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    onClick={() => {
+                      setUploadResult(null);
+                      fileInputRef.current?.click();
+                    }}
+                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white/70 transition-all hover:bg-white/10 hover:text-white"
+                  >
+                    Upload Another
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="flex-1 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#140B2D] shadow-[0_0_24px_rgba(255,255,255,0.12)] transition-all hover:bg-white/90"
+                  >
+                    View Voters
+                  </button>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+              </div>
+            ) : (
+              <>
+                {uploadResult?.type === "error" && (
+                  <div className="relative mb-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
+                      <div>
+                        <p className="text-sm font-bold text-red-100">{uploadResult.title}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-red-100/70">{uploadResult.message}</p>
+                        {uploadResult.details && (
+                          <p className="mt-1 text-xs text-red-100/50">{uploadResult.details}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
             {/* CSV Format Info */}
             <div className="mb-4 p-3 rounded-[10px]" style={{
@@ -287,6 +395,7 @@ export default function TenantVotersPage() {
             <div className="flex gap-3">
               <button
                 onClick={handleCancel}
+                disabled={isUploading}
                 className="flex-1 px-4 py-2.5 rounded-[10px] text-white text-sm font-semibold transition-all hover:bg-white/10"
                 style={{
                   background: "rgba(255, 255, 255, 0.05)",
@@ -297,17 +406,26 @@ export default function TenantVotersPage() {
               </button>
               <button
                 onClick={handleUpload}
-                disabled={!selectedFile || !tenantId}
-                className="flex-1 px-4 py-2.5 rounded-[10px] text-white text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!selectedFile || !tenantId || isUploading}
+                className="flex-1 px-4 py-2.5 rounded-[10px] text-white text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{
                   background: (selectedFile && tenantId) ? "#5D44F8" : "rgba(93, 68, 248, 0.5)",
                   boxShadow: (selectedFile && tenantId) ? "0 4px 12px rgba(93, 68, 248, 0.3)" : "none"
                 }}
                 title={!selectedFile ? "Please select a file" : !tenantId ? "Tenant ID missing" : "Upload file"}
               >
-                Upload
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Upload"
+                )}
               </button>
             </div>
+              </>
+            )}
           </div>
         </div>
       )}

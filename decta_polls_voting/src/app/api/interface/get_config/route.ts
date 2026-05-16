@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { BASIC_PUBLIC_SITE_COLORS, normalizeSubscription } from '@/lib/subscription-limits';
 
 export async function GET(request: Request) {
   try {
@@ -58,19 +59,29 @@ export async function GET(request: Request) {
       .eq('id', electionRes.data.tenantID)
       .single();
 
+    const subscription = normalizeSubscription(tenantData?.subscription);
+    const basicConfig = subscription === 'BASIC'
+      ? {
+          ...(configRes.data || {}),
+          override_color: BASIC_PUBLIC_SITE_COLORS.primary,
+          secondary_override_color: BASIC_PUBLIC_SITE_COLORS.secondary,
+          third_override_color: BASIC_PUBLIC_SITE_COLORS.third,
+        }
+      : configRes.data;
+
     return NextResponse.json({
-      config: configRes.data,
+      config: basicConfig,
       election: electionRes.data,
-      subscription: tenantData?.subscription || 'BASIC',
+      subscription,
       tenantSlug: tenantData?.slug,
       tenantBranding: {
-        main_color: tenantData?.main_color,
-        secondary_color: tenantData?.secondary_color,
-        third_color: tenantData?.third_color,
+        main_color: subscription === 'BASIC' ? BASIC_PUBLIC_SITE_COLORS.primary : tenantData?.main_color,
+        secondary_color: subscription === 'BASIC' ? BASIC_PUBLIC_SITE_COLORS.secondary : tenantData?.secondary_color,
+        third_color: subscription === 'BASIC' ? BASIC_PUBLIC_SITE_COLORS.third : tenantData?.third_color,
         logo_url: tenantData?.logo_url
       }
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Internal Server Error' }, { status: 500 });
   }
 }

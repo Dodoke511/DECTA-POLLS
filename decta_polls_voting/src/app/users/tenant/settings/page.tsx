@@ -30,7 +30,6 @@ export default function TenantSettingsPage() {
     "Election Start",
     "Election End",
     "Candidate Added",
-    "New Voter Registered",
     "Results Published",
     "Vote Cast",
   ]);

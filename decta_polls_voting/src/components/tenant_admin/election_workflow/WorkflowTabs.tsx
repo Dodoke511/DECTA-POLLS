@@ -4,13 +4,14 @@ interface WorkflowTabsProps {
   activeTab?: 'workflow' | 'appeals' | 'interface';
   onTabChange?: (tab: 'workflow' | 'appeals' | 'interface') => void;
   isAppealsVisible?: boolean;
+  canUseInterface?: boolean;
 }
 
-export function WorkflowTabs({ activeTab = 'workflow', onTabChange, isAppealsVisible = false }: WorkflowTabsProps) {
+export function WorkflowTabs({ activeTab = 'workflow', onTabChange, isAppealsVisible = false, canUseInterface = true }: WorkflowTabsProps) {
   const tabs = [
     { id: 'workflow' as const, label: 'Workflow' },
     { id: 'appeals' as const, label: 'Appeals' },
-    { id: 'interface' as const, label: 'Interface' },
+    { id: 'interface' as const, label: canUseInterface ? 'Interface' : 'Interface Locked', disabled: !canUseInterface },
   ].filter(tab => tab.id !== 'appeals' || isAppealsVisible);
 
   return (
@@ -21,8 +22,12 @@ export function WorkflowTabs({ activeTab = 'workflow', onTabChange, isAppealsVis
           return (
             <button
               key={tab.id}
-              onClick={() => onTabChange?.(tab.id)}
-              className={`px-4 py-3 text-[13px] font-bold tracking-widest uppercase relative transition-colors select-none ${isActive
+              onClick={() => !tab.disabled && onTabChange?.(tab.id)}
+              disabled={tab.disabled}
+              title={tab.disabled ? 'Basic accounts use the predefined public election website.' : undefined}
+              className={`px-4 py-3 text-[13px] font-bold tracking-widest uppercase relative transition-colors select-none ${tab.disabled
+                  ? 'text-white/18 cursor-not-allowed'
+                  : isActive
                   ? 'text-[#A78BFA]'
                   : 'text-white/30 cursor-default'
                 }`}

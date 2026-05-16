@@ -1,15 +1,40 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Loader2, LogOut, UserCircle } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { BarChart3, CheckSquare, Home, Loader2, LogOut, UsersRound, UserCircle } from 'lucide-react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { createClient } from '@supabase/supabase-js';
 
 export function PublicElectionHeader() {
   const { tenant, election, siteConfig, userContext, basePath } = useElectionPublic();
+  const pathname = usePathname();
   const [loggingOut, setLoggingOut] = useState(false);
   const logoSrc = siteConfig?.logo_url_override || tenant.logo_url;
   const title = siteConfig?.public_title || election.title;
+  const voterNavItems = [
+    {
+      label: 'Home',
+      href: `${basePath}/dashboard`,
+      icon: Home,
+    },
+    {
+      label: 'Candidates page',
+      href: `${basePath}/candidates`,
+      icon: UsersRound,
+    },
+    {
+      label: 'Vote now',
+      href: `${basePath}/vote`,
+      icon: CheckSquare,
+    },
+    {
+      label: 'Results page',
+      href: `${basePath}/results`,
+      icon: BarChart3,
+    },
+  ];
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -44,25 +69,54 @@ export function PublicElectionHeader() {
 
         <div className="flex items-center gap-4">
           {userContext && (
-            <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2 py-2 shadow-sm backdrop-blur-md">
-              <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white">
-                <UserCircle className="h-5 w-5" />
+            <div className="flex items-center gap-2">
+              {userContext.isVoter && (
+                <nav className="flex items-center gap-1" aria-label="Voter navigation">
+                  {voterNavItems.map(({ label, href, icon: Icon }) => {
+                    const isActive = pathname === href;
+
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        aria-label={label}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`group relative flex h-10 w-10 items-center justify-center rounded-full text-white transition-all hover:bg-white hover:text-[var(--tenant-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                          isActive ? 'bg-white text-[var(--tenant-primary)] shadow-md' : 'bg-white/10'
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" style={{ color: isActive ? 'var(--tenant-primary)' : undefined }} />
+                        <div
+                          className="pointer-events-none absolute left-1/2 top-[calc(100%+0.45rem)] z-50 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/60 bg-white px-2.5 py-1.5 text-[10px] font-black leading-none tracking-normal text-[var(--tenant-primary)] opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                        >
+                          {label}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </nav>
+              )}
+
+              <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2 py-2 shadow-sm backdrop-blur-md">
+                <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white">
+                  <UserCircle className="h-5 w-5" />
+                </div>
+                <div className="hidden md:flex flex-col pr-1">
+                  <span className="max-w-40 truncate text-xs font-bold text-white">{userContext.name}</span>
+                  <span className="text-[9px] font-black text-white/70 uppercase tracking-wider">
+                    {userContext.userType}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="h-10 rounded-full bg-white px-3 sm:px-4 text-sm font-black text-[var(--tenant-primary)] shadow-md transition-all hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-70 flex items-center gap-2"
+                  title="Log Out"
+                >
+                  {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                  <span className="hidden sm:inline">Log Out</span>
+                </button>
               </div>
-              <div className="hidden md:flex flex-col pr-1">
-                <span className="max-w-40 truncate text-xs font-bold text-white">{userContext.name}</span>
-                <span className="text-[9px] font-black text-white/70 uppercase tracking-wider">
-                  {userContext.userType}
-                </span>
-              </div>
-              <button
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className="h-10 rounded-full bg-white px-3 sm:px-4 text-sm font-black text-[var(--tenant-primary)] shadow-md transition-all hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-70 flex items-center gap-2"
-                title="Log Out"
-              >
-                {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-                <span className="hidden sm:inline">Log Out</span>
-              </button>
             </div>
           )}
         </div>

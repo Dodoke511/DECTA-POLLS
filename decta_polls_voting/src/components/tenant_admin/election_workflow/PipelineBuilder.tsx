@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  Loader2, CheckCircle2, XCircle, AlertTriangle,
+  CheckCircle2, XCircle, AlertTriangle,
   Rocket, ChevronDown, ChevronUp,
 } from 'lucide-react';
-import { PhaseConfig, PhaseType, PHASE_PIPELINE, REQUIRED_PHASES, OPTIONAL_PHASES } from '@/lib/types/phase';
+import { PhaseConfig, PhaseType, PHASE_PIPELINE, REQUIRED_PHASES } from '@/lib/types/phase';
 import { PhaseStatus } from '@/lib/workflow/PhaseResolverService';
 import { resolvePhaseStatusClient } from '@/lib/workflow/phase-guards';
 import { GetStartedModal } from './GetStartedModal';
@@ -13,6 +13,7 @@ import { PhaseCard, TenantRole } from './PhaseCard';
 import { PositionsModule } from './modules/PositionsModule';
 import { Users } from 'lucide-react';
 import { usePermissions } from '@/components/providers/PermissionProvider';
+import { canUsePhase, enforcePhaseAccess, normalizeSubscription, type SubscriptionTier } from '@/lib/subscription-limits';
 
 const PHASE_PERMISSION_MAP: Record<PhaseType, string[]> = {
   filing: ['election.filing.access', 'election.filing.insert', 'election.filing.delete', 'election.filing.update', 'election.filing.select', 'candidate.review', 'candidate.view'],
@@ -28,15 +29,19 @@ interface PipelineBuilderProps {
   authParams: string;
 }
 
-interface ElectionMeta {
-  startDate: string | null;
-  endDate: string | null;
-}
-
 interface PreflightCheck {
   label: string;
   passed: boolean;
   active: boolean; // whether this check should be shown
+}
+
+interface FetchedPhase extends Partial<PhaseConfig> {
+  id?: string;
+  phase_type: PhaseType;
+}
+
+interface PositionSummary {
+  title?: string | null;
 }
 
 function buildDefaultPipeline(electionId: string): PhaseConfig[] {
@@ -54,9 +59,9 @@ function buildDefaultPipeline(electionId: string): PhaseConfig[] {
   }));
 }
 
-function mergeFetchedPhases(electionId: string, fetched: any[], currentPhases: PhaseConfig[]): PhaseConfig[] {
+function mergeFetchedPhases(electionId: string, fetched: FetchedPhase[], currentPhases: PhaseConfig[]): PhaseConfig[] {
   return PHASE_PIPELINE.map(meta => {
-    const existing = fetched.find((p: any) => p.phase_type === meta.type);
+    const existing = fetched.find(p => p.phase_type === meta.type);
     const local = currentPhases.find(p => p.phase_type === meta.type);
 
     if (existing) {
@@ -65,7 +70,7 @@ function mergeFetchedPhases(electionId: string, fetched: any[], currentPhases: P
         electionID: electionId,
         phase_type: meta.type,
         phase_index: meta.index,
-        is_enabled: existing.is_enabled,
+        is_enabled: existing.is_enabled ?? REQUIRED_PHASES.includes(meta.type),
         name: existing.name || '',
         start_date: existing.start_date || null,
         deadline: existing.deadline || null,
@@ -97,9 +102,9 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
   const { hasAnyPermission, isOwner, isLoaded: permsLoaded } = usePermissions();
   const [phases, setPhases] = useState<PhaseConfig[]>(buildDefaultPipeline(electionId));
   const [roles, setRoles] = useState<TenantRole[]>([]);
-  const [electionMeta, setElectionMeta] = useState<ElectionMeta | null>(null);
   const [positionsCount, setPositionsCount] = useState<number>(0);
-  const [subscription, setSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE'>('BASIC');
+  const [subscription, setSubscription] = useState<SubscriptionTier>('BASIC');
+  const subscriptionRef = useRef<SubscriptionTier>('BASIC');
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const activePhaseRef = useRef<{ save: () => Promise<boolean> }>(null);
@@ -109,6 +114,10 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
   const [runtimeStatuses, setRuntimeStatuses] = useState<Record<string, PhaseStatus>>({});
   const [electionStatus, setElectionStatus] = useState<string | null>(null);
 
+  useEffect(() => {
+    subscriptionRef.current = subscription;
+  }, [subscription]);
+
   const refreshPhases = useCallback(async (isInitial = false) => {
     try {
       const phasesRes = await fetch(`/api/get_election_phases?electionId=${electionId}`);
@@ -116,18 +125,26 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
         const { phases: fetched, election } = await phasesRes.json();
         setPhases(current => {
           const merged = mergeFetchedPhases(electionId, fetched ?? [], current);
-          return merged;
+          return enforcePhaseAccess(merged, subscriptionRef.current);
         });
         if (election) {
-          setElectionMeta(election);
           if (election.status) setElectionStatus(election.status);
           // Resolve runtime statuses from DB timestamps
           const now = new Date();
           const statuses: Record<string, PhaseStatus> = {};
-          (fetched ?? []).forEach((p: any) => {
+          ((fetched ?? []) as FetchedPhase[]).forEach((p) => {
             statuses[p.phase_type] = resolvePhaseStatusClient({
-              ...p,
+              electionID: electionId,
+              phase_type: p.phase_type,
+              phase_index: p.phase_index ?? PHASE_PIPELINE.find(meta => meta.type === p.phase_type)?.index ?? 0,
+              is_enabled: p.is_enabled ?? REQUIRED_PHASES.includes(p.phase_type),
+              name: p.name ?? '',
+              start_date: p.start_date ?? null,
+              deadline: p.deadline ?? null,
+              role_assigned: p.role_assigned ?? null,
               transition_mode: p.transition_mode || 'manual',
+              completion_behavior: p.completion_behavior,
+              auto_resolve_action: p.auto_resolve_action,
             }, now);
           });
           setRuntimeStatuses(statuses);
@@ -165,7 +182,9 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
 
         if (subRes.ok) {
           const { subscription: fetchedSub } = await subRes.json();
-          if (fetchedSub) setSubscription(fetchedSub);
+          const normalizedSub = normalizeSubscription(fetchedSub);
+          setSubscription(normalizedSub);
+          setPhases(current => enforcePhaseAccess(current, normalizedSub));
         }
         if (rolesRes.ok) {
           const { roles: fetchedRoles } = await rolesRes.json();
@@ -174,7 +193,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
         if (positionsRes.ok) {
           const { positions } = await positionsRes.json();
           setPositionsCount(Array.isArray(positions)
-            ? positions.filter((p: any) => p.title?.trim()).length
+            ? (positions as PositionSummary[]).filter((p) => p.title?.trim()).length
             : 0);
         }
       } catch (err) {
@@ -199,7 +218,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       if (res.ok) {
         const { positions } = await res.json();
         setPositionsCount(Array.isArray(positions)
-          ? positions.filter((p: any) => p.title?.trim()).length
+          ? (positions as PositionSummary[]).filter((p) => p.title?.trim()).length
           : 0);
       }
     } catch (err) {
@@ -213,6 +232,8 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
   }, []);
 
   const handleToggle = useCallback((phaseType: PhaseType, enabled: boolean) => {
+    if (!canUsePhase(subscription, phaseType)) return;
+
     setPhases(prev => {
       let next = prev.map(p => p.phase_type === phaseType ? { ...p, is_enabled: enabled } : p);
       // Cascade: screening OFF → appeal OFF
@@ -221,10 +242,10 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       }
       return next;
     });
-  }, []);
+  }, [subscription]);
 
   const handleSave = async (updatedPhases?: PhaseConfig[]) => {
-    const payload = updatedPhases || phases;
+    const payload = enforcePhaseAccess(updatedPhases || phases, subscription);
     try {
       const res = await fetch('/api/save_election_phases', {
         method: 'POST',
@@ -233,13 +254,19 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
+        const errorText = await res.text();
+        let errorData: unknown = errorText;
+        try {
+          errorData = errorText ? JSON.parse(errorText) : { error: `Save failed with status ${res.status}` };
+        } catch {
+          errorData = { error: errorText || `Save failed with status ${res.status}` };
+        }
         console.error('Save failed:', errorData);
         return false;
       }
 
       if (updatedPhases) {
-        setPhases(updatedPhases);
+        setPhases(payload);
         setIsInitialized(true);
       }
       return true;
@@ -278,6 +305,9 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
   }, [positionsCount, phases]);
 
   const canAccessStep = useCallback((idx: number) => {
+    if (idx < 0 || idx > PHASE_PIPELINE.length) return false;
+    if (idx > 0 && !canUsePhase(subscription, PHASE_PIPELINE[idx - 1].type)) return false;
+
     // Permission check first
     if (!isOwner && permsLoaded) {
       if (idx === 0) {
@@ -295,7 +325,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       if (!isStepComplete(i)) return false;
     }
     return true;
-  }, [isStepComplete, isOwner, permsLoaded, hasAnyPermission]);
+  }, [isStepComplete, isOwner, permsLoaded, hasAnyPermission, subscription]);
 
   // Jump to first accessible step if the current one is locked
   useEffect(() => {
@@ -319,8 +349,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       currentStepComplete = true; // successfully saved
     }
 
-    const canAccessNext = () => {
-      const nextIdx = activeStepIndex + 1;
+    const canAccessNext = (nextIdx: number) => {
       if (!isOwner && permsLoaded) {
         const meta = PHASE_PIPELINE[nextIdx - 1];
         const requiredPerms = PHASE_PERMISSION_MAP[meta.type] || [];
@@ -337,8 +366,11 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     };
 
     if (activeStepIndex < steps.length - 1 && currentStepComplete) {
-      if (canAccessNext()) {
-        setActiveStepIndex(prev => prev + 1);
+      for (let nextIdx = activeStepIndex + 1; nextIdx < steps.length; nextIdx++) {
+        if (canAccessStep(nextIdx) && canAccessNext(nextIdx)) {
+          setActiveStepIndex(nextIdx);
+          break;
+        }
       }
     }
   };
@@ -423,6 +455,8 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     { type: 'positions', label: 'Electoral Positions', icon: null },
     ...PHASE_PIPELINE.map(m => ({ type: m.type, label: m.defaultName, icon: null }))
   ];
+  const hasNextStep = Array.from({ length: steps.length - activeStepIndex - 1 })
+    .some((_, i) => canAccessStep(activeStepIndex + i + 1));
 
   return (
     <div className="w-full max-w-[1400px] mx-auto mt-8 mb-24 px-6 animate-in fade-in duration-1000">
@@ -561,13 +595,13 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
           {/* Next Button */}
           <button
             onClick={goToNext}
-            disabled={activeStepIndex === steps.length - 1 || (!isStepComplete(activeStepIndex) && activeStepIndex === 0) || !canAccessStep(activeStepIndex + 1)}
+            disabled={!hasNextStep || (!isStepComplete(activeStepIndex) && activeStepIndex === 0)}
             className={`sticky top-48 p-4 rounded-2xl border transition-all hover:scale-110 active:scale-95 z-20 shadow-lg 
-              ${((!isStepComplete(activeStepIndex) && activeStepIndex === 0) || !canAccessStep(activeStepIndex + 1))
+              ${((!isStepComplete(activeStepIndex) && activeStepIndex === 0) || !hasNextStep)
                 ? 'bg-amber-500/5 border-amber-500/10 text-amber-500/40 cursor-not-allowed opacity-50'
                 : 'bg-[#6648EB]/10 border-[#6648EB]/20 text-[#6648EB] hover:text-white hover:bg-[#6648EB] shadow-[#6648EB]/10'
               }`}
-            title={(!isStepComplete(activeStepIndex) && activeStepIndex === 0) ? "Please complete current step to proceed" : !canAccessStep(activeStepIndex + 1) ? "You do not have permission to access the next phase" : "Save & Next Step"}
+            title={(!isStepComplete(activeStepIndex) && activeStepIndex === 0) ? "Please complete current step to proceed" : !hasNextStep ? "No available next phase for your plan" : "Save & Next Step"}
           >
             <ChevronDown className="w-6 h-6 -rotate-90" />
           </button>
