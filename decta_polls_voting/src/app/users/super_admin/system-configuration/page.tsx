@@ -38,7 +38,18 @@ export function GlobalConfiguration() {
         if (res.ok) {
           const { settings: fetched } = await res.json();
           if (fetched && Object.keys(fetched).length > 0) {
-            setSettings((prev: any) => ({ ...prev, ...fetched }));
+            setSettings((prev: any) => {
+              const next = { ...prev };
+              // Properly merge nested categories to avoid losing default keys
+              Object.keys(fetched).forEach(cat => {
+                if (typeof fetched[cat] === 'object' && fetched[cat] !== null && prev[cat]) {
+                  next[cat] = { ...prev[cat], ...fetched[cat] };
+                } else {
+                  next[cat] = fetched[cat];
+                }
+              });
+              return next;
+            });
           }
         }
       } catch (err) {
@@ -106,7 +117,7 @@ export function GlobalConfiguration() {
               <label className="mb-2 block text-sm font-semibold text-white/70">Minimum Password Length</label>
               <input
                 type="text"
-                value={settings.security.min_password_length}
+                value={settings.security?.min_password_length || ""}
                 onChange={e => updateNested('security', 'min_password_length', e.target.value)}
                 className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 style={{ color: '#f1f0f3' }}
@@ -116,7 +127,7 @@ export function GlobalConfiguration() {
               <label className="mb-2 block text-sm font-semibold text-white/70">Session Timeout (minutes)</label>
               <input
                 type="text"
-                value={settings.security.session_timeout}
+                value={settings.security?.session_timeout || ""}
                 onChange={e => updateNested('security', 'session_timeout', e.target.value)}
                 className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 style={{ color: '#f1f0f3' }}
@@ -126,7 +137,7 @@ export function GlobalConfiguration() {
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
-                checked={settings.security.enable_password_expiry}
+                checked={!!settings.security?.enable_password_expiry}
                 onChange={e => updateNested('security', 'enable_password_expiry', e.target.checked)}
                 className="h-5 w-5 cursor-pointer rounded border-white/[0.2] bg-white/[0.05] accent-[#6B3FF5]"
               />
@@ -137,7 +148,7 @@ export function GlobalConfiguration() {
               <label className="mb-2 block text-sm font-semibold text-white/70">Max Login Attempts</label>
               <input
                 type="text"
-                value={settings.security.max_login_attempts}
+                value={settings.security?.max_login_attempts || ""}
                 onChange={e => updateNested('security', 'max_login_attempts', e.target.value)}
                 className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 style={{ color: '#f1f0f3' }}
@@ -158,7 +169,7 @@ export function GlobalConfiguration() {
               <label className="mb-2 block text-sm font-semibold text-white/70">Audit Log Retention (days)</label>
               <input
                 type="text"
-                value={settings.retention.audit_log_days}
+                value={settings.retention?.audit_log_days || ""}
                 onChange={e => updateNested('retention', 'audit_log_days', e.target.value)}
                 className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 style={{ color: '#f1f0f3' }}
@@ -168,7 +179,7 @@ export function GlobalConfiguration() {
               <label className="mb-2 block text-sm font-semibold text-white/70">Election Data Retention (days)</label>
               <input
                 type="text"
-                value={settings.retention.election_data_days}
+                value={settings.retention?.election_data_days || ""}
                 onChange={e => updateNested('retention', 'election_data_days', e.target.value)}
                 className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 style={{ color: '#f1f0f3' }}

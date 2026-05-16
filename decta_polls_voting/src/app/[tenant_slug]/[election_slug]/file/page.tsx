@@ -35,10 +35,10 @@ export default function CandidateFilingPage() {
         .maybeSingle();
 
       setCandidateStatus(data?.status);
-      
+
       if (data?.status === 'DRAFT') {
         router.push(`/${tenant.slug}/${election.slug}/file/candidacy-form`);
-      } else if (data?.status === 'APPROVED') {
+      } else if (data?.status === 'APPROVED' || data?.status === 'FLAGGED') {
         router.push(`/${tenant.slug}/${election.slug}/candidate-dashboard`);
       } else {
         setLoading(false);

@@ -2,7 +2,7 @@ import React from 'react';
 import { PhaseState, isPhaseActive } from '@/lib/public-election/phase-utils';
 
 interface RoleSelectorProps {
-  onSelect: (view: 'candidate-register' | 'user-login') => void;
+  onSelect: (view: 'candidate-register' | 'candidate-login' | 'user-login') => void;
   config: any;
   phases: PhaseState[];
 }
@@ -37,13 +37,10 @@ export function RoleSelector({ onSelect, config, phases }: RoleSelectorProps) {
 
         <div className="relative">
           <button
-            onClick={() => canRegisterCandidate && onSelect('candidate-register')}
-            disabled={!canRegisterCandidate}
-            className={`w-full relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 shadow-sm hover:shadow-md ${
-              !canRegisterCandidate ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            onClick={() => onSelect(canRegisterCandidate ? 'candidate-register' : 'candidate-login')}
+            className="w-full relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 shadow-sm hover:shadow-md"
           >
-            <div className={`absolute inset-0 bg-slate-200 ${canRegisterCandidate ? 'group-hover:bg-[var(--tenant-primary)]' : ''} transition-colors`} />
+            <div className="absolute inset-0 bg-slate-200 group-hover:bg-[var(--tenant-primary)] transition-colors" />
             <div className="relative bg-white group-hover:bg-slate-50 px-6 py-4 rounded-xl flex items-center justify-center transition-colors">
               <span className="text-slate-900 font-bold tracking-wider uppercase text-sm group-hover:text-[var(--tenant-primary)] transition-colors">
                 {config?.candidate_reg_label || 'I am a Candidate'}
@@ -51,8 +48,9 @@ export function RoleSelector({ onSelect, config, phases }: RoleSelectorProps) {
             </div>
           </button>
           {!canRegisterCandidate && (
-            <p className="text-xs text-red-500 font-medium mt-2">
-              Candidate registration is closed
+            <p className="text-[10px] text-slate-400 font-medium mt-2 flex items-center justify-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
+              Registration closed • Sign-in available
             </p>
           )}
         </div>
