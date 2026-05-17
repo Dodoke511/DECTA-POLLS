@@ -9,7 +9,6 @@ import {
 import { createClient } from '@supabase/supabase-js';
 import {
   Loader2,
-  FileText,
   Eye,
   Scale,
   Users,
@@ -22,11 +21,12 @@ import {
   Lock,
   ExternalLink,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type TabId = 'candidacy' | 'appeals' | 'candidates' | 'vote' | 'results';
+const VALID_TABS: TabId[] = ['candidacy', 'appeals', 'candidates', 'vote', 'results'];
 
 interface CandidateRecord {
   id: string;
@@ -48,14 +48,6 @@ interface FormResponseValue {
 }
 
 // ─── Tab Config ───────────────────────────────────────────────────────────────
-
-const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'candidacy', label: 'Candidacy', icon: FileText },
-  { id: 'appeals', label: 'Appeals', icon: Scale },
-  { id: 'candidates', label: 'Candidates', icon: Users },
-  { id: 'vote', label: 'Vote Now', icon: Vote },
-  { id: 'results', label: 'Results', icon: BarChart3 },
-];
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
@@ -95,6 +87,7 @@ function PhaseGate({ message }: { message: string }) {
 export default function CandidateDashboardPage() {
   const { userContext, tenant, election, phases, siteConfig } = useElectionPublic();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<TabId>('candidacy');
   const [loading, setLoading] = useState(true);
@@ -124,6 +117,11 @@ export default function CandidateDashboardPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab') as TabId | null;
+    setActiveTab(requestedTab && VALID_TABS.includes(requestedTab) ? requestedTab : 'candidacy');
+  }, [searchParams]);
 
   // ── Guard & initial load ───────────────────────────────────────────────────
 
@@ -551,39 +549,6 @@ export default function CandidateDashboardPage() {
           <p className="text-slate-500 mt-1 font-medium">
             {siteConfig?.public_title || election.title}
           </p>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex gap-1 p-1 bg-white border border-slate-200 rounded-2xl shadow-sm mb-8 overflow-x-auto no-scrollbar">
-          {TABS.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-
-            // Determine if tab should show as "locked" visually
-            const locked =
-              (tab.id === 'appeals' && !isAppealActive) ||
-              (tab.id === 'candidates' && !isPublicationReachable) ||
-              (tab.id === 'vote' && !isVotingActive) ||
-              (tab.id === 'results' && !isResultsReachable);
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex-1 justify-center ${
-                  isActive
-                    ? 'bg-[var(--tenant-primary)] text-white shadow-md'
-                    : locked
-                    ? 'text-slate-300 hover:text-slate-400'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline">{tab.label}</span>
-                {locked && !isActive && <Lock className="w-3 h-3 shrink-0 opacity-60" />}
-              </button>
-            );
-          })}
         </div>
 
         {/* Tab Content */}
