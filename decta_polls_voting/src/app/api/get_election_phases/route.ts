@@ -16,10 +16,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Missing electionId.' }, { status: 400 });
     }
 
-    // Fetch existing phases
+    // Fetch existing phases — select only the columns the client actually uses
     const { data: existingPhases, error: fetchError } = await supabase
       .from('election phase')
-      .select('*')
+      .select('id, electionID, phase_type, phase_index, is_enabled, name, start_date, deadline, role_assigned, transition_mode, completion_behavior, auto_resolve_action, started_at, completed_at')
       .eq('electionID', electionId)
       .order('phase_index', { ascending: true });
 
@@ -56,16 +56,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ phases: seeded ?? [] }, { status: 200 });
     }
 
-    // Also fetch election dates for pre-flight check
-    const { data: election, error: electionError } = await supabase
+    // Also fetch election dates, slugs, and tenant slug for pre-flight / advance confirmation
+    const { data: election } = await supabase
       .from('election')
-      .select('startDate, endDate, tenantID, status')
+      .select(`startDate, endDate, tenantID, status, slug, tenants ( slug )`)
       .eq('id', electionId)
       .single();
 
+    const electionOut = election
+      ? {
+          ...election,
+          tenant_slug: (election as any).tenants?.slug ?? null,
+          election_slug: (election as any).slug ?? null,
+        }
+      : null;
+
     return NextResponse.json({
       phases: existingPhases,
-      election: election ?? null,
+      election: electionOut,
     }, { status: 200 });
 
   } catch (err: any) {

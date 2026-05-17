@@ -42,6 +42,12 @@ interface PhaseCardProps {
   authParams: string;
   runtimeStatus?: PhaseStatus;
   isElectionActive?: boolean;
+  tenantSlug?: string | null;
+  electionSlug?: string | null;
+  /** Pre-fetched positions from PipelineBuilder — avoids an extra DB round-trip in CandidateFormBuilder */
+  positions?: { title?: string | null }[];
+  /** Called after the card mounts so PipelineBuilder can re-enable the Next button */
+  onReady?: () => void;
 }
 
 const ACCENT: Record<PhaseType, string> = {
@@ -68,19 +74,36 @@ export const PhaseCard = forwardRef(({
   isFocused, isSucceeding, subscription,
   onChange, onToggle, onSave, onRefresh, authParams,
   runtimeStatus, isElectionActive,
+  tenantSlug, electionSlug, positions, onReady,
 }: PhaseCardProps, ref): ReactElement => {
   const router = useRouter();
   const moduleRef = useRef<{ save: () => Promise<boolean> }>(null);
+
+  // Signal to PipelineBuilder that this card has painted and Next can be re-enabled
+  React.useEffect(() => { onReady?.(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [isRulesExpanded, setIsRulesExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [showAdvanceConfirm, setShowAdvanceConfirm] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [advanceError, setAdvanceError] = useState<string | null>(null);
+  // Deadline-mode slug confirmation
+  const [slugInput, setSlugInput] = useState({ tenant: '', election: '' });
 
   const canAdvance = isElectionActive && (runtimeStatus === 'active' || runtimeStatus === 'for_transition');
 
   const handleAdvancePhase = async () => {
+    // If deadline mode, validate slug inputs match actual slugs
+    if (phase.transition_mode === 'deadline') {
+      if (slugInput.tenant.trim() !== (tenantSlug ?? '').trim()) {
+        setAdvanceError('Tenant slug does not match. Please try again.');
+        return;
+      }
+      if (slugInput.election.trim() !== (electionSlug ?? '').trim()) {
+        setAdvanceError('Election slug does not match. Please try again.');
+        return;
+      }
+    }
     setIsAdvancing(true);
     setAdvanceError(null);
     try {
@@ -92,12 +115,19 @@ export const PhaseCard = forwardRef(({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to advance phase');
       setShowAdvanceConfirm(false);
+      setSlugInput({ tenant: '', election: '' });
       onRefresh?.();
     } catch (err: any) {
       setAdvanceError(err.message);
     } finally {
       setIsAdvancing(false);
     }
+  };
+
+  const openAdvanceConfirm = () => {
+    setSlugInput({ tenant: '', election: '' });
+    setAdvanceError(null);
+    setShowAdvanceConfirm(true);
   };
 
   const requiredPerms = PHASE_PERMISSION_MAP[metadata.type] || [];
@@ -451,6 +481,7 @@ export const PhaseCard = forwardRef(({
                 electionId={electionId}
                 toolName="candidate_application"
                 title="Candidate Application Form"
+                initialPositions={positions}
               />
             )}
 
@@ -516,7 +547,10 @@ export const PhaseCard = forwardRef(({
                     </span>
                   )}
                   {isPreflightValid() && saveStatus === 'idle' && (
-                    <p className="text-[11px] text-white/20">Last automatic check: Just now</p>
+                    <p className="text-[11px] text-white/25 flex items-center gap-1.5">
+                      <span className="text-amber-400/50">●</span>
+                      Unsaved — press <span className="font-bold text-white/40">Sync &amp; Save</span> to persist changes
+                    </p>
                   )}
                 </div>
 
@@ -537,7 +571,7 @@ export const PhaseCard = forwardRef(({
                 {/* Advance Phase Button */}
                 {canAdvance && (
                   <button
-                    onClick={() => setShowAdvanceConfirm(true)}
+                    onClick={openAdvanceConfirm}
                     className="flex items-center gap-2 bg-gradient-to-r from-[#6648EB] to-[#8B5CF6] hover:from-[#7c5fff] hover:to-[#9f75ff] text-white text-[13px] font-bold px-6 py-2.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#6648EB]/20 flex-shrink-0"
                   >
                     <FastForward className="w-3.5 h-3.5" />
@@ -580,17 +614,64 @@ export const PhaseCard = forwardRef(({
                     ⚠ This action cannot be undone.
                   </p>
                 </div>
+
+                {/* ── Deadline-mode extra verification ── */}
+                {phase.transition_mode === 'deadline' && (
+                  <div className="mt-4 space-y-3 text-left animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
+                      <p className="text-red-400 text-[11px] font-semibold uppercase tracking-wider mb-1">
+                        ⚠ Deadline-mode override detected
+                      </p>
+                      <p className="text-white/50 text-[11px] leading-relaxed">
+                        This phase uses automatic deadline-based transitions. Manually advancing it will override the configured schedule. To confirm, type the <span className="font-bold text-white/70">tenant slug</span> and <span className="font-bold text-white/70">election slug</span> exactly.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1.5">
+                        Tenant Slug
+                      </label>
+                      <input
+                        type="text"
+                        value={slugInput.tenant}
+                        onChange={e => setSlugInput(s => ({ ...s, tenant: e.target.value }))}
+                        placeholder={tenantSlug ? `Type "${tenantSlug}" to confirm` : 'Tenant slug'}
+                        className="w-full bg-[#110D1E]/80 border border-white/10 text-white/80 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#6648EB]/50 transition-all placeholder:text-white/20 [color-scheme:dark]"
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1.5">
+                        Election Slug
+                      </label>
+                      <input
+                        type="text"
+                        value={slugInput.election}
+                        onChange={e => setSlugInput(s => ({ ...s, election: e.target.value }))}
+                        placeholder={electionSlug ? `Type "${electionSlug}" to confirm` : 'Election slug'}
+                        className="w-full bg-[#110D1E]/80 border border-white/10 text-white/80 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-[#6648EB]/50 transition-all placeholder:text-white/20 [color-scheme:dark]"
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex gap-4 pt-4">
                 <button
                   disabled={isAdvancing}
-                  onClick={() => setShowAdvanceConfirm(false)}
+                  onClick={() => { setShowAdvanceConfirm(false); setSlugInput({ tenant: '', election: '' }); setAdvanceError(null); }}
                   className="flex-1 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/70 font-bold hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
-                  disabled={isAdvancing}
+                  disabled={isAdvancing || (
+                    phase.transition_mode === 'deadline' && (
+                      slugInput.tenant.trim() !== (tenantSlug ?? '').trim() ||
+                      slugInput.election.trim() !== (electionSlug ?? '').trim()
+                    )
+                  )}
                   onClick={handleAdvancePhase}
                   className="flex-1 px-6 py-3 rounded-2xl bg-gradient-to-r from-[#6648EB] to-[#8B5CF6] text-white font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#6648EB]/20"
                 >

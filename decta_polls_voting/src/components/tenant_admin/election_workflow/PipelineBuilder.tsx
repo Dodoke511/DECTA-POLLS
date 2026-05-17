@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   CheckCircle2, XCircle, AlertTriangle,
-  Rocket, ChevronDown, ChevronUp,
+  Rocket, ChevronDown, ChevronUp, Bell,
 } from 'lucide-react';
 import { PhaseConfig, PhaseType, PHASE_PIPELINE, REQUIRED_PHASES } from '@/lib/types/phase';
 import { PhaseStatus } from '@/lib/workflow/PhaseResolverService';
@@ -103,6 +103,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
   const [phases, setPhases] = useState<PhaseConfig[]>(buildDefaultPipeline(electionId));
   const [roles, setRoles] = useState<TenantRole[]>([]);
   const [positionsCount, setPositionsCount] = useState<number>(0);
+  const [positions, setPositions] = useState<PositionSummary[]>([]);
   const [subscription, setSubscription] = useState<SubscriptionTier>('BASIC');
   const subscriptionRef = useRef<SubscriptionTier>('BASIC');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -111,8 +112,11 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
 
   const [isLoading, setIsLoading] = useState(true);
   const [showPreflight, setShowPreflight] = useState(false);
+  const [showUnsavedBanner, setShowUnsavedBanner] = useState(false);
   const [runtimeStatuses, setRuntimeStatuses] = useState<Record<string, PhaseStatus>>({});
   const [electionStatus, setElectionStatus] = useState<string | null>(null);
+  const [tenantSlug, setTenantSlug] = useState<string | null>(null);
+  const [electionSlug, setElectionSlug] = useState<string | null>(null);
 
   useEffect(() => {
     subscriptionRef.current = subscription;
@@ -129,6 +133,8 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
         });
         if (election) {
           if (election.status) setElectionStatus(election.status);
+          if (election.tenant_slug) setTenantSlug(election.tenant_slug);
+          if (election.election_slug) setElectionSlug(election.election_slug);
           // Resolve runtime statuses from DB timestamps
           const now = new Date();
           const statuses: Record<string, PhaseStatus> = {};
@@ -139,12 +145,15 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
               phase_index: p.phase_index ?? PHASE_PIPELINE.find(meta => meta.type === p.phase_type)?.index ?? 0,
               is_enabled: p.is_enabled ?? REQUIRED_PHASES.includes(p.phase_type),
               name: p.name ?? '',
-              start_date: p.start_date ?? null,
+              start_date: (p as any).start_date ?? null,
               deadline: p.deadline ?? null,
               role_assigned: p.role_assigned ?? null,
               transition_mode: p.transition_mode || 'manual',
               completion_behavior: p.completion_behavior,
               auto_resolve_action: p.auto_resolve_action,
+              // These two fields drive manual-mode resolution — MUST be forwarded from the DB row
+              started_at: (p as any).started_at ?? null,
+              completed_at: (p as any).completed_at ?? null,
             }, now);
           });
           setRuntimeStatuses(statuses);
@@ -169,32 +178,44 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     const loadInitialData = async () => {
       setIsLoading(true);
       try {
-        const election = await refreshPhases(true);
-        const tenantId = election?.tenantID;
+        // ── Fire subscription + phases in parallel — fastest cold start ──────────
+        // refreshPhases will run with the default 'BASIC' ref, but we immediately
+        // re-apply enforcePhaseAccess once the real tier is known.
+        const [subRes, election] = await Promise.all([
+          fetch(`/api/get_tenant_subscription?electionId=${electionId}`),
+          refreshPhases(true),
+        ]);
 
-        const [rolesRes, positionsRes, subRes] = await Promise.all([
+        // Resolve subscription and fix any incorrect phase enforcement from BASIC default
+        if (subRes.ok) {
+          const { subscription: fetchedSub } = await subRes.json();
+          const normalizedSub = normalizeSubscription(fetchedSub);
+          subscriptionRef.current = normalizedSub;
+          setSubscription(normalizedSub);
+          // Re-enforce with the real tier to undo any BASIC-default enforcement
+          setPhases(current => enforcePhaseAccess(current, normalizedSub));
+        }
+
+        // ── Remaining parallel fetches (needs tenantId from election) ──────────
+        const tenantId = election?.tenantID;
+        const [rolesRes, positionsRes] = await Promise.all([
           tenantId
             ? fetch(`/api/get_tenant_roles?tenantId=${tenantId}`)
             : Promise.resolve({ ok: false } as Response),
           fetch(`/api/get_positions?electionId=${electionId}`),
-          fetch(`/api/get_tenant_subscription?electionId=${electionId}`),
         ]);
 
-        if (subRes.ok) {
-          const { subscription: fetchedSub } = await subRes.json();
-          const normalizedSub = normalizeSubscription(fetchedSub);
-          setSubscription(normalizedSub);
-          setPhases(current => enforcePhaseAccess(current, normalizedSub));
-        }
         if (rolesRes.ok) {
           const { roles: fetchedRoles } = await rolesRes.json();
           setRoles(fetchedRoles ?? []);
         }
         if (positionsRes.ok) {
-          const { positions } = await positionsRes.json();
-          setPositionsCount(Array.isArray(positions)
-            ? (positions as PositionSummary[]).filter((p) => p.title?.trim()).length
-            : 0);
+          const { positions: fetchedPositions } = await positionsRes.json();
+          const validPositions = Array.isArray(fetchedPositions)
+            ? (fetchedPositions as PositionSummary[]).filter((p) => p.title?.trim())
+            : [];
+          setPositions(validPositions);
+          setPositionsCount(validPositions.length);
         }
       } catch (err) {
         console.error('PipelineBuilder initial load error:', err);
@@ -205,21 +226,31 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     loadInitialData();
   }, [electionId, refreshPhases]);
 
-  // ── Refresh when navigating steps ──────────────────────────────────────────
+  // ── No DB refresh on step navigation ───────────────────────────────────────
+  // Data is fetched once on mount and after explicit Sync & Save.
+  // Removing this effect eliminates ~2 DB queries per step click.
+
+  // ── Show unsaved-changes banner + mark phase card loading when navigating ─────
+  const prevStepRef = useRef(activeStepIndex);
+  const [isPhaseCardLoading, setIsPhaseCardLoading] = useState(false);
   useEffect(() => {
-    if (!isLoading && activeStepIndex > 0) {
-      refreshPhases();
+    if (!isLoading && prevStepRef.current !== activeStepIndex && activeStepIndex > 0) {
+      setShowUnsavedBanner(true);
+      setIsPhaseCardLoading(true); // block Next until PhaseCard signals it's mounted
     }
-  }, [activeStepIndex, refreshPhases, isLoading]);
+    prevStepRef.current = activeStepIndex;
+  }, [activeStepIndex, isLoading]);
 
   const refreshPositions = async () => {
     try {
       const res = await fetch(`/api/get_positions?electionId=${electionId}`);
       if (res.ok) {
-        const { positions } = await res.json();
-        setPositionsCount(Array.isArray(positions)
-          ? (positions as PositionSummary[]).filter((p) => p.title?.trim()).length
-          : 0);
+        const { positions: fetchedPositions } = await res.json();
+        const validPositions = Array.isArray(fetchedPositions)
+          ? (fetchedPositions as PositionSummary[]).filter((p) => p.title?.trim())
+          : [];
+        setPositions(validPositions);
+        setPositionsCount(validPositions.length);
       }
     } catch (err) {
       console.error('Refresh positions error:', err);
@@ -292,16 +323,57 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     const phase = phases.find(p => p.phase_type === meta.type);
     if (!phase) return false;
 
-    // A phase is "complete" enough to move past it if:
-    // 1. It's optional and disabled (skipped)
-    // 2. It has been saved to the DB (has an id) AND has a customized name
-    // (Note: Future logic for "phase rule" check can be added here once implemented)
+    // Optional phase that has been deliberately disabled — counts as skipped/complete
     if (!phase.is_enabled && !meta.required) return true;
 
-    const hasBeenSaved = !!phase.id;
-    const hasName = !!phase.name && phase.name.trim() !== "";
+    // ── 1. Name is always required ───────────────────────────────────────────
+    const hasName = (!!phase.name && phase.name.trim() !== '') || !!phase.id;
+    if (!hasName) return false;
 
-    return hasBeenSaved && hasName;
+    // ── 2. Deadline mode: required dates per phase ───────────────────────────
+    const isDeadlineMode = phase.transition_mode === 'deadline';
+
+    if (isDeadlineMode) {
+      // Phases with only a closing deadline (filing, screening, appeal, publication)
+      if (meta.hasDeadline && !meta.hasStartDate && !phase.deadline) return false;
+      // Phases with both open and close dates (voting, results)
+      if (meta.hasStartDate && (!phase.start_date || !phase.deadline)) return false;
+    }
+
+    // ── 3. Phase-specific required fields ────────────────────────────────────
+    // Role is required only in manual mode — that designates who manually advances the phase.
+    // In deadline mode the system auto-transitions, so a role is not a hard gate here.
+    const requiresRole = phase.transition_mode === 'manual';
+
+    switch (meta.type) {
+      case 'filing':
+        // No extra required fields beyond name + date handling above
+        break;
+
+      case 'screening':
+        if (requiresRole && !phase.role_assigned) return false;
+        break;
+
+      case 'appeal':
+        // Appeal requires Screening to be enabled (enforced at the DB level too)
+        if (!phases.find(p => p.phase_type === 'screening')?.is_enabled) return false;
+        if (requiresRole && !phase.role_assigned) return false;
+        break;
+
+      case 'publication':
+        if (meta.hasManagerRole && requiresRole && !phase.role_assigned) return false;
+        break;
+
+      case 'voting':
+        if (requiresRole && !phase.role_assigned) return false;
+        break;
+
+      case 'results':
+        if (requiresRole && !phase.role_assigned) return false;
+        break;
+    }
+
+    return true;
   }, [positionsCount, phases]);
 
   const canAccessStep = useCallback((idx: number) => {
@@ -340,34 +412,13 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     }
   }, [permsLoaded, activeStepIndex, canAccessStep]);
 
-  const goToNext = async () => {
-    let currentStepComplete = isStepComplete(activeStepIndex);
-
-    if (activeStepIndex > 0 && activePhaseRef.current) {
-      const saveSuccess = await activePhaseRef.current.save();
-      if (!saveSuccess) return;
-      currentStepComplete = true; // successfully saved
-    }
-
-    const canAccessNext = (nextIdx: number) => {
-      if (!isOwner && permsLoaded) {
-        const meta = PHASE_PIPELINE[nextIdx - 1];
-        const requiredPerms = PHASE_PERMISSION_MAP[meta.type] || [];
-        if (requiredPerms.length > 0 && !hasAnyPermission(requiredPerms)) return false;
-      }
-      for (let i = 0; i < nextIdx; i++) {
-        if (i === activeStepIndex) {
-          if (!currentStepComplete) return false;
-        } else {
-          if (!isStepComplete(i)) return false;
-        }
-      }
-      return true;
-    };
+  const goToNext = () => {
+    // Navigation only — no auto-save. Use "Sync & Save" button to persist changes.
+    const currentStepComplete = isStepComplete(activeStepIndex);
 
     if (activeStepIndex < steps.length - 1 && currentStepComplete) {
       for (let nextIdx = activeStepIndex + 1; nextIdx < steps.length; nextIdx++) {
-        if (canAccessStep(nextIdx) && canAccessNext(nextIdx)) {
+        if (canAccessStep(nextIdx)) {
           setActiveStepIndex(nextIdx);
           break;
         }
@@ -503,32 +554,67 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       <div className="relative mt-4">
         {/* Step Indicator / Progress Bar */}
         <div className="flex items-center justify-center gap-2 mb-10 overflow-x-auto no-scrollbar pb-2">
-          {steps.map((step, idx) => {
-            const isActive = activeStepIndex === idx;
-            const isPast = idx < activeStepIndex;
-            const isLocked = !canAccessStep(idx);
+          {(() => {
+            // Determine which wizard step corresponds to the currently live election phase.
+            // steps[0] = Positions setup (not a phase); steps[1..6] map to PHASE_PIPELINE[0..5].
+            // runtimeStatuses is keyed by PhaseType; 'active' or 'for_transition' = live.
+            const livePhaseType = Object.entries(runtimeStatuses).find(
+              ([, status]) => status === 'active' || status === 'for_transition'
+            )?.[0];
+            const livePhaseStepIndex = livePhaseType
+              ? PHASE_PIPELINE.findIndex(m => m.type === livePhaseType) + 1  // +1 because step 0 = Positions
+              : -1;
 
-            return (
-              <button
-                key={step.type}
-                onClick={() => !isLocked && setActiveStepIndex(idx)}
-                disabled={isLocked}
-                className={`flex flex-col gap-2 group outline-none min-w-[120px] transition-all ${isLocked ? 'opacity-30 cursor-not-allowed' : 'opacity-100 cursor-pointer'}`}
-              >
-                <div className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${isActive ? 'bg-white text-[#0E0A1E] scale-110 shadow-lg' : isPast ? 'bg-[#5D44F8] text-white' : 'bg-white/5 text-white/20'
-                    }`}>
-                    {idx}
+            return steps.map((step, idx) => {
+              const isActive = activeStepIndex === idx;
+              const isPast = idx < activeStepIndex;
+              const isLocked = !canAccessStep(idx);
+              const isLivePhase = electionStatus === 'ACTIVE' && livePhaseStepIndex === idx;
+
+              return (
+                <button
+                  key={step.type}
+                  onClick={() => !isLocked && setActiveStepIndex(idx)}
+                  disabled={isLocked}
+                  className={`flex flex-col gap-2 group outline-none min-w-[120px] transition-all ${isLocked ? 'opacity-30 cursor-not-allowed' : 'opacity-100 cursor-pointer'}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${isActive ? 'bg-white text-[#0E0A1E] scale-110 shadow-lg' : isPast ? 'bg-[#5D44F8] text-white' : 'bg-white/5 text-white/20'
+                        }`}>
+                        {idx}
+                      </div>
+                      {/* Live election phase pip */}
+                      {isLivePhase && (
+                        <span
+                          className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse ring-2 ring-[#0E0A1E]"
+                          title="This phase is currently live"
+                        />
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-[11px] font-bold uppercase tracking-widest transition-all ${isActive ? 'text-white' : isPast ? 'text-[#9686f8]' : 'text-white/50 group-hover:text-white/40'}`}>
+                        {step.label}
+                      </span>
+                      {isLivePhase && (
+                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400/80 animate-pulse">
+                          ● Live
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className={`text-[11px] font-bold uppercase tracking-widest transition-all ${isActive ? 'text-white' : isPast ? 'text-[#9686f8]' : 'text-white/50 group-hover:text-white/40'}`}>
-                    {step.label}
-                  </span>
-                </div>
-                <div className={`h-[3px] w-full rounded-full transition-all duration-500 ${isActive ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]' : isPast ? 'bg-[#5D44F8]' : 'bg-white/5'
-                  }`} />
-              </button>
-            );
-          })}
+                  <div className={`h-[3px] w-full rounded-full transition-all duration-500 ${isLivePhase
+                      ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]'
+                      : isActive
+                        ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]'
+                        : isPast
+                          ? 'bg-[#5D44F8]'
+                          : 'bg-white/5'
+                    }`} />
+                </button>
+              );
+            });
+          })()}
         </div>
 
         {/* Phase View with Nav Buttons */}
@@ -543,9 +629,9 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
           </button>
 
           {/* Active Phase Card Container */}
-          <div className="w-full max-w-[900px] animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="w-full max-w-[900px] animate-in fade-in slide-in-from-bottom-2 duration-300">
             {activeStepIndex === 0 ? (
-              <div className="animate-in fade-in zoom-in-95 duration-500">
+              <div className="animate-in fade-in zoom-in-95 duration-200">
                 <div className="mb-8 px-4 py-6 rounded-[32px] bg-white/[0.02] border border-white/5">
                   <div className="flex items-center gap-2 mb-2 ml-2">
                     <Users className="w-6 h-6" />
@@ -556,7 +642,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
                 </div>
               </div>
             ) : (
-              <div className="animate-in fade-in zoom-in-95 duration-500">
+              <div className="animate-in fade-in zoom-in-95 duration-200">
                 {PHASE_PIPELINE.map((meta, idx) => {
                   if (idx + 1 !== activeStepIndex) return null;
 
@@ -585,6 +671,10 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
                       authParams={authParams}
                       runtimeStatus={runtimeStatuses[meta.type]}
                       isElectionActive={electionStatus === 'ACTIVE'}
+                      tenantSlug={tenantSlug}
+                      electionSlug={electionSlug}
+                      positions={positions}
+                      onReady={() => setIsPhaseCardLoading(false)}
                     />
                   );
                 })}
@@ -595,18 +685,70 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
           {/* Next Button */}
           <button
             onClick={goToNext}
-            disabled={!hasNextStep || (!isStepComplete(activeStepIndex) && activeStepIndex === 0)}
+            disabled={!hasNextStep || !isStepComplete(activeStepIndex) || isLoading || isPhaseCardLoading}
             className={`sticky top-48 p-4 rounded-2xl border transition-all hover:scale-110 active:scale-95 z-20 shadow-lg 
-              ${((!isStepComplete(activeStepIndex) && activeStepIndex === 0) || !hasNextStep)
+              ${(!isStepComplete(activeStepIndex) || !hasNextStep || isLoading || isPhaseCardLoading)
                 ? 'bg-amber-500/5 border-amber-500/10 text-amber-500/40 cursor-not-allowed opacity-50'
                 : 'bg-[#6648EB]/10 border-[#6648EB]/20 text-[#6648EB] hover:text-white hover:bg-[#6648EB] shadow-[#6648EB]/10'
               }`}
-            title={(!isStepComplete(activeStepIndex) && activeStepIndex === 0) ? "Please complete current step to proceed" : !hasNextStep ? "No available next phase for your plan" : "Save & Next Step"}
+            title={(() => {
+              if (!hasNextStep) return 'No available next phase for your plan';
+              if (isStepComplete(activeStepIndex)) return 'Go to next step (your changes are not saved yet — use Sync & Save)';
+
+              if (activeStepIndex === 0) return 'Please add at least one electoral position to proceed';
+
+              const meta = PHASE_PIPELINE[activeStepIndex - 1];
+              const phase = phases.find(p => p.phase_type === meta.type);
+              if (!phase) return 'Phase configuration not found';
+
+              if (!phase.name?.trim() && !phase.id) return `Enter a name for the ${meta.defaultName} phase`;
+
+              if (phase.transition_mode === 'deadline') {
+                if (meta.hasStartDate && !phase.start_date) return `Set the ${meta.defaultName} start date`;
+                if (meta.hasDeadline && !phase.deadline) return `Set the ${meta.defaultName} deadline date`;
+              }
+
+              if ((meta.type === 'screening' || meta.type === 'appeal' || meta.type === 'voting' || meta.type === 'results' || (meta.type === 'publication' && meta.hasManagerRole)) && phase.transition_mode === 'manual' && !phase.role_assigned) {
+                return `Assign a Manager Role for the ${meta.defaultName} phase`;
+              }
+              if (meta.type === 'appeal' && !phases.find(p => p.phase_type === 'screening')?.is_enabled) {
+                return 'Enable the Screening phase before configuring Appeal';
+              }
+
+              return 'Complete all required fields to proceed';
+            })()}
           >
             <ChevronDown className="w-6 h-6 -rotate-90" />
           </button>
         </div>
       </div>
+
+      {/* ── Unsaved Changes Banner ────────────────────────────────────────────── */}
+      {showUnsavedBanner && activeStepIndex > 0 && (
+        <div className="mt-6 mx-auto max-w-4xl animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-amber-500/[0.07] border border-amber-500/20 backdrop-blur-sm">
+            <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center">
+              <Bell className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-amber-300">
+                Don&apos;t forget to save your changes!
+              </p>
+              <p className="text-[11px] text-amber-400/60 mt-0.5">
+                Navigating between steps does <span className="font-bold text-amber-400/80">not</span> save your configuration.
+                Press &ldquo;<span className="font-bold text-amber-300">Sync &amp; Save Changes</span>&rdquo; inside each phase card to persist your settings to the database.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowUnsavedBanner(false)}
+              className="flex-shrink-0 text-amber-400/50 hover:text-amber-300 transition-colors text-[18px] leading-none font-light px-1"
+              title="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Pre-flight Panel ─────────────────────────────────────────────────── */}
       <div className="mt-10 mx-auto max-w-4xl rounded-[24px] border border-white/8 bg-[#110D1E]/40 backdrop-blur-2xl overflow-hidden group hover:border-[#6648EB]/30 transition-all">
