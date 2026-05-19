@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { canUseInterfaceBuilder, normalizeSubscription } from '@/lib/subscription-limits';
 
 export async function POST(request: Request) {
   try {
@@ -35,9 +36,21 @@ export async function POST(request: Request) {
     }
 
     const election = electionRes.data;
-    const config = configRes.data;
+    let config = configRes.data;
     const phases = phasesRes.data || [];
     const positionsCount = positionsRes.count || 0;
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('subscription')
+      .eq('id', election.tenantID)
+      .single();
+
+    if (tenantError) {
+      return NextResponse.json({ error: 'Failed to fetch tenant subscription for validation.' }, { status: 500 });
+    }
+
+    const subscription = normalizeSubscription(tenant?.subscription);
+    const requiresInterfaceConfig = canUseInterfaceBuilder(subscription);
 
     // 2. Pre-flight Validation Logic (Server-side)
     const errors: string[] = [];
@@ -47,11 +60,39 @@ export async function POST(request: Request) {
       errors.push('At least one electoral position must be defined.');
     }
 
-    // Check Site Config
-    if (!config) {
-      errors.push('Public election site configuration is missing.');
-    } else if (!config.public_title) {
-      errors.push('Public site title has not been set in the Interface tab.');
+    // Check Site Config. Basic uses the predefined public website, so it does not
+    // require Interface tab configuration.
+    if (requiresInterfaceConfig) {
+      if (!config || !config.public_title) {
+        try {
+          const defaultTitle = election.title || 'Untitled Election';
+          const defaultWelcome = election.description || '';
+
+          const { data: newConfig, error: upsertError } = await supabase
+            .from('election_site_config')
+            .upsert({
+              election_id: electionId,
+              tenant_id: election.tenantID,
+              public_title: config?.public_title || defaultTitle,
+              welcome_message: config?.welcome_message || defaultWelcome,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'election_id'
+            })
+            .select()
+            .single();
+
+          if (upsertError) {
+            console.error('[publish_election] Failed to auto-initialize site config:', upsertError);
+            errors.push('Public election site configuration is missing or incomplete, and auto-initialization failed.');
+          } else {
+            config = newConfig;
+          }
+        } catch (err) {
+          console.error('[publish_election] Exception during auto-initialization:', err);
+          errors.push('Public election site configuration is missing or incomplete, and auto-initialization failed.');
+        }
+      }
     }
 
     // Check Phases
@@ -61,9 +102,12 @@ export async function POST(request: Request) {
     const screening = phases.find(p => p.phase_type === 'screening');
     const appeal = phases.find(p => p.phase_type === 'appeal');
 
-    if (!filing?.deadline) errors.push('Filing phase deadline is not configured.');
-    if (voting!.transition_mode === 'deadline' && (!voting?.start_date || !voting?.deadline)) errors.push('Voting period (start & end) is not configured.');
-    if (results!.transition_mode === 'deadline' && (!results?.start_date || !results?.deadline)) errors.push('Results period (start & end) is not configured.');
+    if (!filing) errors.push('Filing phase is missing.');
+    if (!voting) errors.push('Voting phase is missing.');
+    if (!results) errors.push('Results phase is missing.');
+    if (filing?.transition_mode === 'deadline' && !filing.deadline) errors.push('Filing phase deadline is not configured.');
+    if (voting?.transition_mode === 'deadline' && (!voting.start_date || !voting.deadline)) errors.push('Voting period (start & end) is not configured.');
+    if (results?.transition_mode === 'deadline' && (!results.start_date || !results.deadline)) errors.push('Results period (start & end) is not configured.');
 
     if (screening?.is_enabled && !screening.role_assigned) {
       errors.push('Screening phase is enabled but has no manager role assigned.');
@@ -96,7 +140,7 @@ export async function POST(request: Request) {
       message: 'Election published successfully!'
     });
 
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Internal Server Error' }, { status: 500 });
   }
 }

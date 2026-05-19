@@ -29,6 +29,9 @@ export async function GET(request: Request) {
     return NextResponse.json({
       phase_id: currentPhase.id,
       phase_type: currentPhase.phase_type,
+      phase_index: currentPhase.phase_index,
+      deadline: currentPhase.deadline || null,
+      started_at: currentPhase.started_at || null,
       status: (currentPhase as any).status
     }, { status: 200 });
 

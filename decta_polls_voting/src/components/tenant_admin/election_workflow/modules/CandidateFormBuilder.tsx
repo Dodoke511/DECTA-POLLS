@@ -29,6 +29,13 @@ const slugify = (t: string) =>
 
 const genKey = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
+/**
+ * Module-level cache for form field data.
+ * Prevents redundant DB fetches when PhaseCard unmounts/remounts during step navigation.
+ * Cache key: `${electionId}:${toolName}`
+ */
+const formDataCache = new Map<string, { fields: any[]; form: any }>();
+
 const makeDefault = (type: FieldType, count: number): FormFieldState => ({
   field_name: `${type}_${count + 1}`,
   label: FIELD_TYPE_META.find(m => m.type === type)?.label ?? 'New Field',
@@ -323,7 +330,7 @@ function FieldPreview({ field, positions = [] }: { field: FormFieldState, positi
         {field.required && <span className="text-red-400 text-[11px] ml-0.5">*</span>}
       </label>
       {vr.helpText && <p className="text-[11px] text-white/32">{vr.helpText}</p>}
-      
+
       {field.field_type === 'position_selector' ? (
         <select disabled className={`${inputCls} appearance-none`}>
           <option>{vr.placeholder || 'Select a position...'}</option>
@@ -377,12 +384,14 @@ export const DynamicFormBuilder = forwardRef(({
   electionId,
   toolName = 'candidate_application',
   title = 'Candidate Application Form',
-  features = { showRuleCheckable: true }
+  features = { showRuleCheckable: true },
+  initialPositions,
 }: {
   electionId: string,
   toolName?: string,
   title?: string,
-  features?: { showRuleCheckable: boolean }
+  features?: { showRuleCheckable: boolean },
+  initialPositions?: { title?: string | null }[],
 }, ref) => {
   const [fields, setFields] = useState<FormFieldState[]>([]);
   const [customLogicMeta, setCustomLogicMeta] = useState<{ hasParty?: boolean, hasPositionField?: boolean }>({});
@@ -397,6 +406,7 @@ export const DynamicFormBuilder = forwardRef(({
     save: async () => {
       try {
         const payload = fields.map((f, i) => ({
+          id: f.id,
           fieldName: f.field_name,
           label: f.label,
           fieldType: f.field_type,
@@ -431,55 +441,38 @@ export const DynamicFormBuilder = forwardRef(({
   }));
 
   useEffect(() => {
+    const cacheKey = `${electionId}:${toolName}`;
+    const cached = formDataCache.get(cacheKey);
+
+    if (cached) {
+      // Restore instantly from cache — no DB round-trip
+      processFormData(cached.fields, cached.form);
+      if (initialPositions) {
+        setPositions(initialPositions.filter(p => p.title?.trim()) as { title: string }[]);
+      }
+      setIsLoading(false);
+      return;
+    }
+
     const loadForm = async () => {
       try {
         const r = await fetch(`/api/get_form?electionId=${electionId}&toolName=${toolName}`);
         const { fields: fetched, form } = await r.json();
 
-        if (form?.custom_logic_meta) {
-          setCustomLogicMeta(form.custom_logic_meta);
-        }
+        // Populate cache for future remounts
+        formDataCache.set(cacheKey, { fields: fetched || [], form });
+        processFormData(fetched, form);
 
-        let mapped = (fetched || []).map((f: any) => ({
-          id: f.id,
-          field_name: f.fieldName,
-          label: f.label,
-          field_type: f.fieldType,
-          required: f.required,
-          rule_checkable: f.rule_checkable ?? false,
-          validation_rules: {
-            ...(f.validationRules || {}),
-            placeholder: f.placeholder || f.validationRules?.placeholder || ''
-          },
-          order_index: f.orderIndex,
-          _key: genKey(),
-          _expanded: false
-        }));
-
-        // Auto-inject Position Selector for Filing phase if missing
+        // Only fetch positions if not provided by parent
         if (toolName === 'candidate_application') {
-          if (!mapped.some((m: any) => m.field_type === 'position_selector')) {
-            mapped.push({
-              field_name: 'electoral_position',
-              label: 'Electoral Position',
-              field_type: 'position_selector',
-              required: true,
-              rule_checkable: false,
-              validation_rules: { placeholder: 'Select a position...' },
-              order_index: mapped.length,
-              _key: genKey(),
-              _expanded: false
-            });
-          }
-        }
-        setFields(mapped);
-
-        // If filing phase, fetch positions
-        if (toolName === 'candidate_application') {
-          const posRes = await fetch(`/api/get_positions?electionId=${electionId}`);
-          if (posRes.ok) {
-            const { positions: posData } = await posRes.json();
-            setPositions(posData || []);
+          if (initialPositions) {
+            setPositions(initialPositions.filter(p => p.title?.trim()) as { title: string }[]);
+          } else {
+            const posRes = await fetch(`/api/get_positions?electionId=${electionId}`);
+            if (posRes.ok) {
+              const { positions: posData } = await posRes.json();
+              setPositions(posData || []);
+            }
           }
         }
       } catch (err) {
@@ -489,7 +482,52 @@ export const DynamicFormBuilder = forwardRef(({
       }
     };
     loadForm();
-  }, [electionId, toolName]);
+  }, [electionId, toolName, initialPositions]);
+
+  /**
+   * Shared helper: maps raw API fields into FormFieldState and injects system fields.
+   * Called both from cache-hit and fresh-fetch paths.
+   */
+  function processFormData(fetched: any[], form: any) {
+    if (form?.custom_logic_meta) {
+      setCustomLogicMeta(form.custom_logic_meta);
+    }
+
+    let mapped = (fetched || []).map((f: any) => ({
+      id: f.id,
+      field_name: f.fieldName,
+      label: f.label,
+      field_type: f.fieldType,
+      required: f.required,
+      rule_checkable: f.rule_checkable ?? false,
+      validation_rules: {
+        ...(f.validationRules || {}),
+        placeholder: f.placeholder || f.validationRules?.placeholder || ''
+      },
+      order_index: f.orderIndex,
+      _key: genKey(),
+      _expanded: false
+    }));
+
+    // Auto-inject Position Selector for Filing phase if missing
+    if (toolName === 'candidate_application') {
+      if (!mapped.some((m: any) => m.field_type === 'position_selector')) {
+        mapped.push({
+          id: undefined,
+          field_name: 'electoral_position',
+          label: 'Electoral Position',
+          field_type: 'position_selector',
+          required: true,
+          rule_checkable: false,
+          validation_rules: { placeholder: 'Select a position...' },
+          order_index: mapped.length,
+          _key: genKey(),
+          _expanded: false
+        });
+      }
+    }
+    setFields(mapped);
+  }
 
   const addField = useCallback((type: FieldType) => {
     setFields(prev => [...prev, makeDefault(type, prev.length)]);

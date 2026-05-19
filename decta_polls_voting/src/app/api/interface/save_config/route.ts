@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { canUseInterfaceBuilder, normalizeSubscription } from '@/lib/subscription-limits';
 
 export async function POST(request: Request) {
   try {
@@ -55,6 +56,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Could not resolve tenantId.' }, { status: 400 });
     }
 
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('subscription')
+      .eq('id', tenantId)
+      .single();
+
+    if (!canUseInterfaceBuilder(normalizeSubscription(tenant?.subscription))) {
+      return NextResponse.json(
+        { error: 'Interface customization is not available for Basic accounts.' },
+        { status: 403 }
+      );
+    }
+
     // Use upsert to handle race conditions (multiple rapid saves)
     // We target 'election_id' for the conflict resolution
     const { data, error } = await supabase
@@ -77,8 +91,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ data });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Save config error:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Internal Server Error' }, { status: 500 });
   }
 }

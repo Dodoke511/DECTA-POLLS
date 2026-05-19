@@ -1,13 +1,12 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import { ElectionPublicProvider } from '@/contexts/ElectionPublicContext';
 import { getElectionUserContext } from '@/lib/public-election/session';
 import { buildRoleAwareNav } from '@/lib/public-election/nav-builder';
-import { PublicElectionHeader } from '@/components/public-election/PublicElectionHeader';
-import { PublicElectionFooter } from '@/components/public-election/PublicElectionFooter';
 import ComingSoon from '@/components/public-election/ComingSoon';
 import ElectionNotFound from '@/components/public-election/ElectionNotFound';
+import { PublicElectionShell } from '@/components/public-election/PublicElectionShell';
+import { BASIC_PUBLIC_SITE_COLORS, normalizeSubscription } from '@/lib/subscription-limits';
 
 export default async function PublicElectionLayout({
   children,
@@ -54,9 +53,16 @@ export default async function PublicElectionLayout({
   const userContext = await getElectionUserContext(supabase, tenant.id, election.id);
 
   // Effective Brand Colors
-  const primaryColor = siteConfig?.override_color || tenant.main_color || '#5D44F8';
-  const secondaryColor = siteConfig?.secondary_override_color || tenant.secondary_color || '#7c60ff';
-  const thirdColor = siteConfig?.third_override_color || tenant.third_color || '#A78BFA';
+  const subscription = normalizeSubscription(tenant.subscription);
+  const primaryColor = subscription === 'BASIC'
+    ? BASIC_PUBLIC_SITE_COLORS.primary
+    : siteConfig?.override_color || tenant.main_color || '#5D44F8';
+  const secondaryColor = subscription === 'BASIC'
+    ? BASIC_PUBLIC_SITE_COLORS.secondary
+    : siteConfig?.secondary_override_color || tenant.secondary_color || '#7c60ff';
+  const thirdColor = subscription === 'BASIC'
+    ? BASIC_PUBLIC_SITE_COLORS.third
+    : siteConfig?.third_override_color || tenant.third_color || '#A78BFA';
   const basePath = `/${tenant_slug}/${election_slug}`;
 
   // 5. Build Nav
@@ -113,22 +119,13 @@ export default async function PublicElectionLayout({
 
   // If ACTIVE or Tenant Admin (for preview), render full site
   return (
-    <ElectionPublicProvider value={contextValue}>
-      <div
-        className="min-h-screen flex flex-col bg-[#FFFFFF] text-slate-900 selection:bg-[#5D44F8]/10"
-        style={{
-          '--tenant-primary': primaryColor,
-          '--tenant-primary-light': `${primaryColor}20`,
-          '--tenant-secondary': secondaryColor,
-          '--tenant-third': thirdColor,
-        } as React.CSSProperties}
-      >
-        <PublicElectionHeader />
-        <main className="flex-1">
-          {children}
-        </main>
-        <PublicElectionFooter />
-      </div>
-    </ElectionPublicProvider>
+    <PublicElectionShell
+      contextValue={contextValue}
+      primaryColor={primaryColor}
+      secondaryColor={secondaryColor}
+      thirdColor={thirdColor}
+    >
+      {children}
+    </PublicElectionShell>
   );
 }
