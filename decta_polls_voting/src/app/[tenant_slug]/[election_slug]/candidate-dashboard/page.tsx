@@ -57,8 +57,6 @@ interface FormResponseValue {
   value: string;
 }
 
-// ─── Tab Config ───────────────────────────────────────────────────────────────
-
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
@@ -105,6 +103,9 @@ export default function CandidateDashboardPage() {
   // Candidate record
   const [candidate, setCandidate] = useState<CandidateRecord | null>(null);
 
+  // Pending appeal tracking
+  const [hasPendingAppeal, setHasPendingAppeal] = useState(false);
+
   // COC Form data
   const [showCOC, setShowCOC] = useState(false);
   const [formFields, setFormFields] = useState<FormField[]>([]);
@@ -122,6 +123,15 @@ export default function CandidateDashboardPage() {
   const isPublicationReachable = isPhaseReachable(phases, 'publication');
   const isResultsReachable = isPhaseReachable(phases, 'results');
   const candidateCanViewResults = siteConfig?.candidate_can_view_results !== false;
+
+  // Appeals tab is temporarily locked when:
+  // - No candidate record yet (DRAFT / not filed)
+  // - Candidate is PENDING_VERIFICATION (awaiting initial review)
+  // - Candidate has a pending appeal already under review
+  const isAppealTabTemporarilyLocked =
+    !candidate ||
+    ['DRAFT', 'PENDING_VERIFICATION'].includes(candidate.status) ||
+    hasPendingAppeal;
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -191,7 +201,21 @@ export default function CandidateDashboardPage() {
           }
         }
 
-        setCandidate({ ...data, position });
+        const candidateRecord = { ...data, position };
+        setCandidate(candidateRecord);
+
+        // Check for a pending appeal so we can lock the tab appropriately
+        const { data: appealData } = await supabase
+          .from('appeals')
+          .select('id, status')
+          .eq('candidateID', data.id)
+          .eq('electionID', election.id)
+          .order('submittedAt', { ascending: false });
+
+        if (Array.isArray(appealData)) {
+          const pending = appealData.find((a: any) => a.status === 'pending');
+          setHasPendingAppeal(Boolean(pending));
+        }
       }
       setLoading(false);
     }
@@ -413,6 +437,22 @@ export default function CandidateDashboardPage() {
     if (!isAppealActive) {
       return <PhaseGate message="The appeal phase is not currently active. Appeals will be available once the committee opens the appeal window." />;
     }
+    // Show a friendly gate instead of the form when the tab is temporarily locked
+    if (isAppealTabTemporarilyLocked) {
+      const message = hasPendingAppeal
+        ? "Your appeal is currently being reviewed by the committee. Please wait for their decision before submitting another."
+        : candidate?.status === 'PENDING_VERIFICATION'
+        ? "Your candidacy application is still under review. The appeals section will be available once a decision has been made."
+        : "You must complete your candidacy application before you can access the appeals section.";
+      return (
+        <div className="flex flex-col items-center justify-center py-24 text-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center">
+            <Clock className="w-7 h-7 text-amber-500" />
+          </div>
+          <p className="text-slate-500 font-medium max-w-xs">{message}</p>
+        </div>
+      );
+    }
     return <AppealPage />;
   }
 
@@ -462,8 +502,6 @@ export default function CandidateDashboardPage() {
   }
 
   function renderVote() {
-    // Candidates cannot vote — but the diagram shows "Vote Now → Ballot page"
-    // We show the ballot page link for awareness but note they can't cast a vote
     if (!isVotingActive) {
       return <PhaseGate message="Voting has not started yet. You'll be able to access the ballot once the voting phase opens." />;
     }
@@ -555,7 +593,7 @@ export default function CandidateDashboardPage() {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             const locked =
-              (tab.id === 'appeals' && !isAppealActive) ||
+              (tab.id === 'appeals' && (!isAppealActive || isAppealTabTemporarilyLocked)) ||
               (tab.id === 'candidates' && !isPublicationReachable) ||
               (tab.id === 'vote' && !isVotingActive) ||
               (tab.id === 'results' && !isResultsReachable);
@@ -563,12 +601,14 @@ export default function CandidateDashboardPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                type="button"
+                disabled={locked}
+                onClick={() => !locked && setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex-1 justify-center ${
                   isActive
                     ? 'bg-[var(--tenant-primary)] text-white shadow-md'
                     : locked
-                    ? 'text-slate-300 hover:text-slate-400'
+                    ? 'text-slate-300 hover:text-slate-400 cursor-not-allowed'
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                 }`}
               >

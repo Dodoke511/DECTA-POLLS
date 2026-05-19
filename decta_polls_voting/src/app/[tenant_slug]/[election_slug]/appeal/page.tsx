@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { isPhaseActive } from '@/lib/public-election/phase-utils';
 import { createClient } from '@supabase/supabase-js';
-import { Loader2, ArrowRight, AlertCircle, Lock } from 'lucide-react';
+import { Loader2, ArrowRight, AlertCircle, Lock, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AppealPage() {
@@ -17,8 +17,11 @@ export default function AppealPage() {
   const [formConfig, setFormConfig] = useState<any>(null);
   const [formFields, setFormFields] = useState<any[]>([]);
   const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
+  const [hasPendingAppeal, setHasPendingAppeal] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [submitting, setSubmitting] = useState(false);
+  // Locked if: pending appeal exists, or status is PENDING_VERIFICATION, DRAFT, or no status yet
+  const isAppealLocked = hasPendingAppeal || candidateStatus === 'PENDING_VERIFICATION' || candidateStatus === 'DRAFT' || !candidateStatus;
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [showForm, setShowForm] = useState(true);
@@ -45,6 +48,21 @@ export default function AppealPage() {
 
         if (candidateData) {
           setCandidateStatus(candidateData.status);
+
+          const { data: appealData, error: appealFetchError } = await supabase
+            .from('appeals')
+            .select('id, status, submittedAt')
+            .eq('candidateID', candidateData.id)
+            .eq('electionID', election.id)
+            .order('submittedAt', { ascending: false });
+
+          if (!appealFetchError && Array.isArray(appealData)) {
+            const pendingAppeal = appealData.find((appeal: any) => appeal.status === 'pending');
+            setHasPendingAppeal(Boolean(pendingAppeal));
+            if (pendingAppeal) {
+              setShowForm(false);
+            }
+          }
         }
 
         const phaseId = phases?.find((p: any) => p.phase_type === 'appeal')?.id;
@@ -95,11 +113,47 @@ export default function AppealPage() {
         throw new Error('Form configuration is missing.');
       }
 
+      if (hasPendingAppeal) {
+        throw new Error('An appeal is already under review. Please wait for the committee decision before submitting another appeal.');
+      }
+      if (!candidateStatus || candidateStatus === 'DRAFT') {
+        throw new Error('You must submit your candidacy application before submitting an appeal.');
+      }
+      if (candidateStatus === 'PENDING_VERIFICATION') {
+        throw new Error('Your application is still under review. Appeals are temporarily locked until a decision is made.');
+      }
       if (appealConfig?.whoCanAppeal === 'rejected_only' && candidateStatus !== 'REJECTED') {
         throw new Error('Only rejected candidates can appeal.');
       }
       if (appealConfig?.whoCanAppeal === 'approved_only' && candidateStatus !== 'APPROVED') {
         throw new Error('Only approved candidates can appeal.');
+      }
+
+      // Get candidate record early to check maxAppeals
+      const { data: candidateRecord } = await supabase
+        .from('candidate')
+        .select('id')
+        .eq('userID', userContext.userId)
+        .eq('electionID', election.id)
+        .maybeSingle();
+
+      if (!candidateRecord?.id) {
+        throw new Error('Candidate record not found.');
+      }
+
+      // Check if candidate has exceeded max appeals
+      const maxAppeals = appealConfig?.maxAppeals || 1;
+      const { data: allAppeals } = await supabase
+        .from('appeals')
+        .select('id')
+        .eq('candidateID', candidateRecord.id)
+        .eq('electionID', election.id);
+
+      const appealCount = allAppeals?.length || 0;
+      if (appealCount >= maxAppeals) {
+        throw new Error(maxAppeals === 1
+          ? 'You have already submitted an appeal for this election. Only one appeal is allowed per candidate.'
+          : `You have reached the maximum number of appeals (${maxAppeals}) for this election.`);
       }
 
       const { data: responseData, error: responseError } = await supabase
@@ -154,17 +208,10 @@ export default function AppealPage() {
         if (valuesError) throw valuesError;
       }
 
-      const { data: candidateRecord } = await supabase
-        .from('candidate')
-        .select('id')
-        .eq('userID', userContext.userId)
-        .eq('electionID', election.id)
-        .maybeSingle();
-
       const { error: appealError } = await supabase
         .from('appeals')
         .insert({
-          candidateID: candidateRecord?.id,
+          candidateID: candidateRecord.id,
           electionID: election.id,
           tenantID: tenant?.id,
           status: 'pending',
@@ -240,6 +287,36 @@ export default function AppealPage() {
     );
   }
 
+  // ── Pending appeal: show read-only waiting state, no form ─────────────────
+  if (hasPendingAppeal) {
+    return (
+      <div className="max-w-4xl mx-auto py-16 px-6">
+        <div className="mb-12 border-b border-slate-100 pb-8">
+          <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Submit an Appeal</h1>
+          <p className="text-slate-500 text-lg">
+            If your application was rejected, you may submit a formal appeal to the election committee for review.
+          </p>
+        </div>
+        <div className="bg-white rounded-[32px] p-8 md:p-12 border border-slate-200 shadow-xl flex flex-col items-center text-center gap-6">
+          <div className="w-20 h-20 rounded-3xl bg-amber-50 border border-amber-100 flex items-center justify-center">
+            <Clock className="w-9 h-9 text-amber-500" />
+          </div>
+          <div>
+            <p className="text-xl font-black text-slate-900 mb-2">Your Appeal is Being Reviewed</p>
+            <p className="text-slate-500 text-sm max-w-sm">
+              Your appeal has been submitted and is currently being reviewed by the election committee. Please wait for their decision — you will be notified of the outcome.
+            </p>
+          </div>
+          <div className="w-full max-w-sm p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+            <p className="text-amber-700 text-sm font-semibold">
+              You cannot submit another appeal while one is already under review.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto py-16 px-6">
       <div className="mb-12 border-b border-slate-100 pb-8">
@@ -250,7 +327,8 @@ export default function AppealPage() {
               If your application was rejected, you may submit a formal appeal to the election committee for review.
             </p>
           </div>
-          {formConfig && formFields.length > 0 && (
+          {/* Only show toggle button when the form is actually usable */}
+          {!isAppealLocked && (
             <button
               type="button"
               onClick={() => setShowForm(prev => !prev)}
@@ -262,20 +340,51 @@ export default function AppealPage() {
         </div>
       </div>
 
-      {showForm && (
-        <div className="bg-white rounded-[32px] p-8 md:p-12 border border-slate-200 shadow-xl">
-          {error && (
-            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 font-medium">
-              {error}
+      <div className="bg-white rounded-[32px] p-8 md:p-12 border border-slate-200 shadow-xl">
+        {/* Locked: application still under initial review */}
+        {candidateStatus === 'PENDING_VERIFICATION' && (
+          <div className="flex flex-col items-center text-center gap-6 py-6">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center">
+              <Clock className="w-7 h-7 text-amber-500" />
             </div>
-          )}
-
-          {successMessage && (
-            <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl text-green-600 font-medium">
-              {successMessage}
+            <div>
+              <p className="text-lg font-black text-slate-900 mb-2">Waiting for Application Review</p>
+              <p className="text-slate-500 text-sm max-w-xs">
+                Your candidacy application is currently under review by the committee. The appeal form will become available once a decision has been made.
+              </p>
             </div>
-          )}
+          </div>
+        )}
 
+        {/* Locked: no application submitted yet */}
+        {isAppealLocked && candidateStatus !== 'PENDING_VERIFICATION' && (
+          <div className="flex flex-col items-center text-center gap-6 py-6">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+              <Lock className="w-7 h-7 text-slate-400" />
+            </div>
+            <div>
+              <p className="text-lg font-black text-slate-900 mb-2">Appeal Unavailable</p>
+              <p className="text-slate-500 text-sm max-w-xs">
+                You need to complete and submit your candidacy application before you can file an appeal.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Error / success banners */}
+        {error && (
+          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 font-medium">
+            {error}
+          </div>
+        )}
+        {successMessage && (
+          <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl text-green-600 font-medium">
+            {successMessage}
+          </div>
+        )}
+
+        {/* Appeal form — only rendered when not locked */}
+        {!isAppealLocked && showForm && (
           <form onSubmit={handleSubmit} className="space-y-8">
             {formFields.map((field) => {
               return (
@@ -388,8 +497,8 @@ export default function AppealPage() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
