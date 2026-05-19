@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { checkUserLimit } from "@/lib/server/user-limit-check";
 
 const TEMPORARY_VOTER_PASSWORD = "12345";
 
@@ -129,6 +130,18 @@ export async function POST(request: Request) {
           details: errors,
         },
         { status: 400 }
+      );
+    }
+
+    // --- CHECK USER LIMITS ---
+    const limitCheck = await checkUserLimit(tenantId);
+    if (!limitCheck.allowed || (limitCheck.limit !== null && limitCheck.currentCount + voters.length > limitCheck.limit)) {
+      const remainingSlots = limitCheck.limit !== null ? Math.max(0, limitCheck.limit - limitCheck.currentCount) : 'unlimited';
+      return NextResponse.json(
+        {
+          error: `Upload rejected. This upload contains ${voters.length} users, but you only have ${remainingSlots} slots remaining before reaching your limit of ${limitCheck.limit}.`,
+        },
+        { status: 403 }
       );
     }
 

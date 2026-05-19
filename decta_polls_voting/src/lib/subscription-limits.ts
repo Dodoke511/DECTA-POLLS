@@ -2,6 +2,12 @@ import type { PhaseType } from './types/phase';
 
 export type SubscriptionTier = 'BASIC' | 'STANDARD' | 'ENTERPRISE';
 
+export const SUBSCRIPTION_USER_LIMITS: Record<SubscriptionTier, number | null> = {
+  BASIC: 200,
+  STANDARD: 500,
+  ENTERPRISE: null, // null represents unlimited
+};
+
 export const BASIC_PHASES: PhaseType[] = ['filing', 'voting', 'results'];
 
 export function normalizeSubscription(value?: string | null): SubscriptionTier {
