@@ -29,14 +29,17 @@ export default function CandidateFilingPage() {
 
       const { data } = await supabase
         .from('candidate')
-        .select('status')
+        .select('status, edits_remaining_after_appeal')
         .eq('userID', userContext.userId)
         .eq('electionID', election.id)
         .maybeSingle();
 
       setCandidateStatus(data?.status);
 
-      if (data?.status === 'DRAFT') {
+      // Allow edit if DRAFT or if candidate has edits remaining after an approved appeal
+      const canEditAfterAppeal = (data?.edits_remaining_after_appeal || 0) > 0;
+
+      if (data?.status === 'DRAFT' || canEditAfterAppeal) {
         router.push(`/${tenant.slug}/${election.slug}/file/candidacy-form`);
       } else if (data?.status === 'APPROVED' || data?.status === 'FLAGGED') {
         router.push(`/${tenant.slug}/${election.slug}/candidate-dashboard`);

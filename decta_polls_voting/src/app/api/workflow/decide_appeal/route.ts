@@ -74,10 +74,14 @@ export async function POST(request: Request) {
           .eq('id', appeal.candidateID);
       } else if (onApproveAction === 'return_to_screening') {
         // Return to pending verification for admin to review again
+        // Grant the candidate PENDING_VERIFICATION and then increment their edit allowance
         await supabase
           .from('candidate')
           .update({ status: 'PENDING_VERIFICATION' })
           .eq('id', appeal.candidateID);
+
+        // Increment edits_remaining_after_appeal via a DB function to avoid race conditions
+        await supabase.rpc('increment_candidate_edits_after_appeal', { candidate_id: appeal.candidateID });
       }
     } else if (decision === 'rejected') {
       // If appeal is rejected, check config for intended action
