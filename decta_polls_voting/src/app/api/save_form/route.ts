@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 
     if (Array.isArray(fields) && fields.length > 0) {
       const fieldRecords = fields.map((f: any, i: number) => ({
-        ...(f.id ? { id: f.id } : {}),
+        id: f.id ?? crypto.randomUUID?.() ?? `${Date.now()}_${Math.random().toString(36).slice(2)}`,
         formId: formId,
         fieldName: f.fieldName,
         label: f.label,

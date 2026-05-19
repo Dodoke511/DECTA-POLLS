@@ -28,6 +28,7 @@ const slugify = (t: string) =>
   t.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'field';
 
 const genKey = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+const genId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
 /**
  * Module-level cache for form field data.
@@ -37,6 +38,7 @@ const genKey = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 const formDataCache = new Map<string, { fields: any[]; form: any }>();
 
 const makeDefault = (type: FieldType, count: number): FormFieldState => ({
+  id: genId(),
   field_name: `${type}_${count + 1}`,
   label: FIELD_TYPE_META.find(m => m.type === type)?.label ?? 'New Field',
   field_type: type,
@@ -406,7 +408,7 @@ export const DynamicFormBuilder = forwardRef(({
     save: async () => {
       try {
         const payload = fields.map((f, i) => ({
-          id: f.id,
+          id: f.id ?? genId(),
           fieldName: f.field_name,
           label: f.label,
           fieldType: f.field_type,
