@@ -52,6 +52,49 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: electionRes.error.message }, { status: 500 });
     }
 
+    let configData = configRes.data;
+
+    // Check if configuration needs initialization (missing config or missing public_title)
+    if (!configData || !configData.public_title) {
+      try {
+        const { data: upsertedData, error: upsertError } = await supabase
+          .from('election_site_config')
+          .upsert({
+            election_id: electionId,
+            tenant_id: electionRes.data.tenantID,
+            public_title: configData?.public_title || electionRes.data.title,
+            welcome_message: configData?.welcome_message || electionRes.data.description || null,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'election_id'
+          })
+          .select()
+          .single();
+
+        if (upsertError) {
+          console.error('[get_config] Failed to auto-initialize site config in DB:', upsertError);
+          configData = {
+            ...(configData || {}),
+            election_id: electionId,
+            tenant_id: electionRes.data.tenantID,
+            public_title: configData?.public_title || electionRes.data.title,
+            welcome_message: configData?.welcome_message || electionRes.data.description || null,
+          };
+        } else {
+          configData = upsertedData;
+        }
+      } catch (err) {
+        console.error('[get_config] Exception during auto-initialization:', err);
+        configData = {
+          ...(configData || {}),
+          election_id: electionId,
+          tenant_id: electionRes.data.tenantID,
+          public_title: configData?.public_title || electionRes.data.title,
+          welcome_message: configData?.welcome_message || electionRes.data.description || null,
+        };
+      }
+    }
+
     // Fetch tenant branding, subscription, and slug
     const { data: tenantData } = await supabase
       .from('tenants')
@@ -62,12 +105,12 @@ export async function GET(request: Request) {
     const subscription = normalizeSubscription(tenantData?.subscription);
     const basicConfig = subscription === 'BASIC'
       ? {
-          ...(configRes.data || {}),
+          ...(configData || {}),
           override_color: BASIC_PUBLIC_SITE_COLORS.primary,
           secondary_override_color: BASIC_PUBLIC_SITE_COLORS.secondary,
           third_override_color: BASIC_PUBLIC_SITE_COLORS.third,
         }
-      : configRes.data;
+      : configData;
 
     return NextResponse.json({
       config: basicConfig,

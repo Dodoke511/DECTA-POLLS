@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     const election = electionRes.data;
-    const config = configRes.data;
+    let config = configRes.data;
     const phases = phasesRes.data || [];
     const positionsCount = positionsRes.count || 0;
     const { data: tenant, error: tenantError } = await supabase
@@ -63,10 +63,35 @@ export async function POST(request: Request) {
     // Check Site Config. Basic uses the predefined public website, so it does not
     // require Interface tab configuration.
     if (requiresInterfaceConfig) {
-      if (!config) {
-        errors.push('Public election site configuration is missing.');
-      } else if (!config.public_title) {
-        errors.push('Public site title has not been set in the Interface tab.');
+      if (!config || !config.public_title) {
+        try {
+          const defaultTitle = election.title || 'Untitled Election';
+          const defaultWelcome = election.description || '';
+
+          const { data: newConfig, error: upsertError } = await supabase
+            .from('election_site_config')
+            .upsert({
+              election_id: electionId,
+              tenant_id: election.tenantID,
+              public_title: config?.public_title || defaultTitle,
+              welcome_message: config?.welcome_message || defaultWelcome,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'election_id'
+            })
+            .select()
+            .single();
+
+          if (upsertError) {
+            console.error('[publish_election] Failed to auto-initialize site config:', upsertError);
+            errors.push('Public election site configuration is missing or incomplete, and auto-initialization failed.');
+          } else {
+            config = newConfig;
+          }
+        } catch (err) {
+          console.error('[publish_election] Exception during auto-initialization:', err);
+          errors.push('Public election site configuration is missing or incomplete, and auto-initialization failed.');
+        }
       }
     }
 
