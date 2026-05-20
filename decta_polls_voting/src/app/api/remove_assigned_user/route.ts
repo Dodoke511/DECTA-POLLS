@@ -61,6 +61,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // 2.5 Also completely remove them from the tenant so they don't take up a limit slot
+    await supabase.from("tenant users").delete().eq("id", user.id);
+    await supabase.auth.admin.deleteUser(user.id);
+
     // 3. Send a notification email to the removed user
     const emailUser = process.env.EMAIL_USER;
     const emailPass = process.env.EMAIL_PASS;

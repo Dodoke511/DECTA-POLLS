@@ -29,11 +29,6 @@ export async function checkUserLimit(tenantId: string): Promise<{
 
     const limit = tenant.user_limit;
 
-    // If limit is null, it means unlimited
-    if (limit === null) {
-      return { allowed: true, currentCount: 0, limit: null }; 
-    }
-
     // 2. Get the current user count for this tenant
     // Using count: 'exact' with head: true is the most efficient way to get a count in Supabase
     const { count, error: countError } = await supabase
@@ -46,6 +41,11 @@ export async function checkUserLimit(tenantId: string): Promise<{
     }
 
     const currentCount = count || 0;
+
+    // If limit is null, it means unlimited
+    if (limit === null) {
+      return { allowed: true, currentCount, limit: null }; 
+    }
 
     return { 
       allowed: currentCount < limit, 
