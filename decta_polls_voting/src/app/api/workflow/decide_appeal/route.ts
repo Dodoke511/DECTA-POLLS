@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // 1. Get appeal info with election
+    // 1. Get appeal info
     const { data: appeal, error: fetchError } = await supabase
       .from('appeals')
       .select('candidateID, electionID')
@@ -25,32 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Appeal not found' }, { status: 404 });
     }
 
-    // 2. Get election phases and appeal config
-    const { data: phases } = await supabase
-      .from('election_phases')
-      .select('id, phase_type')
-      .eq('electionID', appeal.electionID);
-
-    const appealPhaseId = phases?.find((p: any) => p.phase_type === 'appeal')?.id;
-    
-    let appealConfig: any = null;
-    if (appealPhaseId) {
-      const { data: config } = await supabase
-        .from('phase_config')
-        .select('config')
-        .eq('phaseID', appealPhaseId)
-        .maybeSingle();
-      
-      if (config?.config) {
-        try {
-          appealConfig = typeof config.config === 'string' ? JSON.parse(config.config) : config.config;
-        } catch (e) {
-          console.error('Failed to parse appeal config:', e);
-        }
-      }
-    }
-
-    // 3. Update appeal status
+    // 2. Update appeal status
     const status = decision === 'approved' ? 'approved' : 'rejected';
     const { error: updateError } = await supabase
       .from('appeals')
@@ -61,41 +36,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // 4. Handle candidate status based on decision and config
+    // 3. If approved, restore candidate status
     if (decision === 'approved') {
-      // If appeal is approved, check config for intended action
-      const onApproveAction = appealConfig?.onApproveAction || 'return_to_screening';
-      
-      if (onApproveAction === 'change_status') {
-        // Approve the candidate immediately
-        await supabase
-          .from('candidate')
-          .update({ status: 'APPROVED' })
-          .eq('id', appeal.candidateID);
-      } else if (onApproveAction === 'return_to_screening') {
-        // Return to pending verification for admin to review again
-        // Grant the candidate PENDING_VERIFICATION and then increment their edit allowance
-        await supabase
-          .from('candidate')
-          .update({ status: 'PENDING_VERIFICATION' })
-          .eq('id', appeal.candidateID);
-
-        // Increment edits_remaining_after_appeal via a DB function to avoid race conditions
-        await supabase.rpc('increment_candidate_edits_after_appeal', { candidate_id: appeal.candidateID });
-      }
-    } else if (decision === 'rejected') {
-      // If appeal is rejected, check config for intended action
-      const onRejectAction = appealConfig?.onRejectAction || 'keep_rejected';
-      
-      if (onRejectAction === 'lock_candidate') {
-        // Lock the candidate permanently
-        await supabase
-          .from('candidate')
-          .update({ status: 'DISQUALIFIED' })
-          .eq('id', appeal.candidateID);
-      }
-      // Otherwise keep_rejected does nothing - candidate stays REJECTED
+      await supabase
+        .from('candidate')
+        .update({ status: 'APPROVED' }) // Fallback to APPROVED, ideally read from appeal config
+        .eq('id', appeal.candidateID);
     }
+
+    // 4. Log decision (optional, if we have a table)
+    // For now we just return success
 
     return NextResponse.json({ success: true });
 
