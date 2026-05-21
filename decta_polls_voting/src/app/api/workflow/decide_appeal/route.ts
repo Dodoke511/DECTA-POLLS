@@ -9,47 +9,104 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing appealId or decision' }, { status: 400 });
     }
 
+    if (decision !== 'approved' && decision !== 'rejected') {
+      return NextResponse.json({ error: 'Invalid decision value' }, { status: 400 });
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // 1. Get appeal info
     const { data: appeal, error: fetchError } = await supabase
       .from('appeals')
       .select('candidateID, electionID')
       .eq('id', appealId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !appeal) {
-      return NextResponse.json({ error: 'Appeal not found' }, { status: 404 });
+      return NextResponse.json({ error: fetchError?.message || 'Appeal not found' }, { status: 404 });
     }
 
-    // 2. Update appeal status
+    const { data: phases, error: phasesError } = await supabase
+      .from('election_phases')
+      .select('id, phase_type')
+      .eq('electionID', appeal.electionID);
+
+    if (phasesError) {
+      return NextResponse.json({ error: phasesError.message }, { status: 500 });
+    }
+
+    const appealPhaseId = phases?.find((phase: any) => phase.phase_type === 'appeal')?.id;
+    let appealConfig: any = null;
+
+    if (appealPhaseId) {
+      const { data: config, error: configError } = await supabase
+        .from('phase_config')
+        .select('config')
+        .eq('phaseID', appealPhaseId)
+        .maybeSingle();
+
+      if (configError) {
+        return NextResponse.json({ error: configError.message }, { status: 500 });
+      }
+
+      if (config?.config) {
+        try {
+          appealConfig = typeof config.config === 'string' ? JSON.parse(config.config) : config.config;
+        } catch (err) {
+          console.error('Failed to parse appeal config:', err);
+          appealConfig = null;
+        }
+      }
+    }
+
     const status = decision === 'approved' ? 'approved' : 'rejected';
-    const { error: updateError } = await supabase
+    const { error: appealUpdateError } = await supabase
       .from('appeals')
       .update({ status })
       .eq('id', appealId);
 
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    if (appealUpdateError) {
+      return NextResponse.json({ error: appealUpdateError.message }, { status: 500 });
     }
 
-    // 3. If approved, restore candidate status
     if (decision === 'approved') {
-      await supabase
-        .from('candidate')
-        .update({ status: 'APPROVED' }) // Fallback to APPROVED, ideally read from appeal config
-        .eq('id', appeal.candidateID);
-    }
+      const onApproveAction = appealConfig?.onApproveAction || 'return_to_screening';
+      const onApproveStatus = appealConfig?.onApproveStatus || 'APPROVED';
 
-    // 4. Log decision (optional, if we have a table)
-    // For now we just return success
+      if (onApproveAction === 'change_status') {
+        await supabase
+          .from('candidate')
+          .update({ status: onApproveStatus })
+          .eq('id', appeal.candidateID);
+      } else {
+        await supabase
+          .from('candidate')
+          .update({ status: 'PENDING_VERIFICATION' })
+          .eq('id', appeal.candidateID);
+
+        await supabase.rpc('increment_candidate_edits_after_appeal', { candidate_id: appeal.candidateID });
+      }
+    } else {
+      const onRejectAction = appealConfig?.onRejectAction || 'keep_rejected';
+      const onRejectStatus = appealConfig?.onRejectStatus || 'REJECTED';
+
+      if (onRejectAction === 'lock_candidate') {
+        await supabase
+          .from('candidate')
+          .update({ status: 'DISQUALIFIED' })
+          .eq('id', appeal.candidateID);
+      } else {
+        await supabase
+          .from('candidate')
+          .update({ status: onRejectStatus })
+          .eq('id', appeal.candidateID);
+      }
+    }
 
     return NextResponse.json({ success: true });
-
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err?.message || 'Internal Server Error' }, { status: 500 });
   }
 }
