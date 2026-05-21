@@ -41,6 +41,7 @@ export async function GET(request: Request) {
 
     // Mapping Database to API object format
     const appealConfig = config ? {
+      appealTypes: config.appealTypes || [],
       whoCanAppeal: config.whoCanAppeal,
       maxAppeals: config.maxAppeals,
       onApproveAction: config.onApproveAction,

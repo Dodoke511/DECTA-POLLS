@@ -21,9 +21,11 @@ import {
   ChevronRight,
   Lock,
   ExternalLink,
+  ShieldAlert,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppealPage from '../appeal/page';
+import { evaluateCondition } from '@/lib/rules/evaluators';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -95,13 +97,18 @@ export default function CandidateDashboardPage() {
   // Candidate record
   const [candidate, setCandidate] = useState<CandidateRecord | null>(null);
 
-  // Pending appeal tracking
+  // Appeal tracking
   const [hasPendingAppeal, setHasPendingAppeal] = useState(false);
+  const [appealConfig, setAppealConfig] = useState<any>(null);
+  const [appealCount, setAppealCount] = useState(0);
+  const [hasApprovedUpdateAppeal, setHasApprovedUpdateAppeal] = useState(false);
+  const [isScreeningPersisted, setIsScreeningPersisted] = useState(false);
 
   // COC Form data
   const [showCOC, setShowCOC] = useState(false);
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [responseValues, setResponseValues] = useState<FormResponseValue[]>([]);
+  const [failedRules, setFailedRules] = useState<any[]>([]);
   const [cocLoading, setCocLoading] = useState(false);
 
   // Phase flags
@@ -201,8 +208,42 @@ export default function CandidateDashboardPage() {
           .order('submittedAt', { ascending: false });
 
         if (Array.isArray(appealData)) {
+          setAppealCount(appealData.length);
           const pending = appealData.find((a: any) => a.status === 'pending');
           setHasPendingAppeal(Boolean(pending));
+
+          const approvedUpdate = appealData.find((a: any) => a.status === 'approved' && a.appealType === 'request_to_update_information');
+          setHasApprovedUpdateAppeal(Boolean(approvedUpdate));
+        }
+
+        const screeningPhaseId = phases?.find((p: any) => p.phase_type === 'screening')?.id;
+        if (screeningPhaseId) {
+          try {
+            const { data: approvalConfig } = await supabase
+              .from('approvals')
+              .select('persist_until_appeals_end')
+              .eq('phaseID', screeningPhaseId)
+              .maybeSingle();
+
+            if (approvalConfig) {
+              setIsScreeningPersisted(approvalConfig.persist_until_appeals_end || false);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        const appealPhaseId = phases?.find((p: any) => p.phase_type === 'appeal')?.id;
+        if (appealPhaseId) {
+          try {
+            const configRes = await fetch(`/api/get_appeal_config?electionId=${election.id}&phaseId=${appealPhaseId}`);
+            if (configRes.ok) {
+              const configData = await configRes.json();
+              setAppealConfig(configData.config);
+            }
+          } catch (e) {
+            console.error(e);
+          }
         }
       }
       setLoading(false);
@@ -227,9 +268,10 @@ export default function CandidateDashboardPage() {
 
       if (!form) return;
 
-      const [{ data: fields }, { data: resp }] = await Promise.all([
+      const [{ data: fields }, { data: resp }, { data: rulesData }] = await Promise.all([
         supabase.from('form field').select('id, label, fieldType, orderIndex').eq('formId', form.id).order('orderIndex', { ascending: true }),
         supabase.from('form response').select('id').eq('formId', form.id).eq('userID', userContext!.userId).maybeSingle(),
+        supabase.from('phase rule').select('*').eq('electionID', election.id)
       ]);
 
       setFormFields(fields || []);
@@ -239,7 +281,31 @@ export default function CandidateDashboardPage() {
           .from('form response value')
           .select('fieldID, value')
           .eq('responseID', resp.id);
+        
         setResponseValues(values || []);
+
+        // Evaluate screening rules for flagged fields
+        if (rulesData && values) {
+          const failed: any[] = [];
+          rulesData.forEach(rule => {
+            let logic = rule.conditionLogic;
+            if (typeof logic === 'string') {
+              try { logic = JSON.parse(logic); } catch (e) {}
+            }
+
+            if (logic && logic.fieldId) {
+              const valObj = values.find((v: any) => v.fieldID === logic.fieldId);
+              const actualValue = valObj ? valObj.value : null;
+
+              const passed = evaluateCondition(logic.operator, actualValue, logic.value);
+
+              if (!passed) {
+                failed.push({ ...rule, logic });
+              }
+            }
+          });
+          setFailedRules(failed);
+        }
       }
 
       setShowCOC(true);
@@ -356,6 +422,22 @@ export default function CandidateDashboardPage() {
 
           {showCOC && (
             <div className="border-t border-slate-100 px-6 pb-6">
+              {failedRules.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mt-6 mb-2">
+                  <div className="flex items-center gap-3 mb-2">
+                    <ShieldAlert className="w-5 h-5 text-red-500" />
+                    <h3 className="text-red-700 font-bold">Screening Feedback</h3>
+                  </div>
+                  <ul className="space-y-2 mt-3">
+                    {failedRules.map((rule, idx) => (
+                      <li key={idx} className="text-sm text-red-600">
+                        <span className="font-semibold">{rule.label || `Requirement on ${rule.logic?.fieldName || 'field'}`}:</span> {rule.message || rule.error_message || 'Criteria not met.'}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {formFields.length === 0 ? (
                 <p className="text-slate-400 text-sm py-8 text-center">No form data found.</p>
               ) : (
@@ -363,9 +445,14 @@ export default function CandidateDashboardPage() {
                   {formFields.map(field => {
                     const val = responseValues.find(rv => rv.fieldID === field.id);
                     const isFile = field.fieldType === 'file_upload';
+                    const isFailed = failedRules.some(r => r.logic?.fieldId === field.id);
+
                     return (
-                      <div key={field.id} className="grid grid-cols-3 gap-4 py-3 border-b border-slate-50 last:border-0">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider col-span-1 pt-0.5">{field.label}</p>
+                      <div key={field.id} className={`grid grid-cols-3 gap-4 py-3 border-b ${isFailed ? 'border-red-100 bg-red-50/50 -mx-4 px-4 rounded-lg' : 'border-slate-50'} last:border-0`}>
+                        <div className="col-span-1 pt-0.5">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{field.label}</p>
+                          {isFailed && <span className="inline-block mt-1 text-red-500 text-[10px] font-bold px-1.5 py-0.5 bg-red-100 rounded-full">FLAGGED</span>}
+                        </div>
                         <div className="col-span-2">
                           {isFile && val?.value ? (
                             <a
@@ -378,7 +465,7 @@ export default function CandidateDashboardPage() {
                               View Uploaded File
                             </a>
                           ) : (
-                            <p className="text-sm font-semibold text-slate-800">{val?.value || <span className="text-slate-300 italic">Not provided</span>}</p>
+                            <p className={`text-sm font-semibold ${isFailed ? 'text-red-900' : 'text-slate-800'}`}>{val?.value || <span className={`${isFailed ? 'text-red-400' : 'text-slate-300'} italic`}>Not provided</span>}</p>
                           )}
                         </div>
                       </div>
@@ -394,12 +481,64 @@ export default function CandidateDashboardPage() {
         {isFilingActive && (!candidate || candidate.status === 'DRAFT') && (
           <button
             onClick={() => router.push(`/${tenant.slug}/${election.slug}/file/candidacy-form`)}
-            className="w-full flex items-center justify-between px-6 py-5 bg-[var(--tenant-primary)] text-white rounded-2xl font-bold hover:opacity-90 transition-all shadow-md group"
+            className="w-full mt-4 flex items-center justify-between px-6 py-5 bg-[var(--tenant-primary)] text-white rounded-2xl font-bold hover:opacity-90 transition-all shadow-md group"
           >
             <span>Complete Your Application Form</span>
             <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
         )}
+
+        {/* Edit COC Form (if candidate has approved request_to_update_information appeal) */}
+        {hasApprovedUpdateAppeal && (
+          <div className="mt-4">
+            <button
+              onClick={() => isScreeningPersisted ? router.push(`/${tenant.slug}/${election.slug}/file/candidacy-form?editMode=appeal`) : null}
+              disabled={!isScreeningPersisted}
+              title={!isScreeningPersisted ? "The committee is currently not accepting screening updates." : ""}
+              className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl font-bold shadow-md transition-all group ${
+                isScreeningPersisted 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-80'
+              }`}
+            >
+              <div className="flex flex-col text-left">
+                <span>Edit Your COC Information</span>
+                {!isScreeningPersisted && (
+                  <span className="text-xs font-normal mt-0.5">Workflow Continuity is disabled. Screening updates are locked by the committee.</span>
+                )}
+              </div>
+              {isScreeningPersisted && <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+            </button>
+          </div>
+        )}
+
+        {/* Go to Appeal Form (if appeal is active and candidate is eligible) */}
+        {(() => {
+          if (!candidate) return null;
+          if (hasPendingAppeal) return null;
+          
+          const s = candidate.status;
+          if (s === 'PENDING_VERIFICATION' || s === 'DRAFT' || s === 'DISQUALIFIED') return null;
+          
+          const w = appealConfig?.whoCanAppeal;
+          if (w === 'rejected_only' && s !== 'REJECTED') return null;
+          if (w === 'flagged_only' && s !== 'FLAGGED') return null;
+          if (w === 'rejected_and_flagged' && !['REJECTED', 'FLAGGED'].includes(s)) return null;
+          if (w === 'approved_only' && s !== 'APPROVED') return null;
+          
+          const max = appealConfig?.maxAppeals || 1;
+          if (appealCount >= max) return null;
+
+          return (
+            <button
+              onClick={() => setActiveTab('appeals')}
+              className="w-full mt-4 flex items-center justify-between px-6 py-5 bg-amber-500 text-white rounded-2xl font-bold hover:bg-amber-600 transition-all shadow-md group"
+            >
+              <span>Submit an Appeal</span>
+              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+          );
+        })()}
       </div>
     );
   }

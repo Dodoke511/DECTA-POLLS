@@ -57,7 +57,8 @@ export const AppealModule = forwardRef(({
   const [isLoading, setIsLoading] = useState(true);
 
   // Configuration State
-  const [whoCanAppeal, setWhoCanAppeal] = useState<'rejected_only' | 'approved_only' | 'all'>('rejected_only');
+  const [appealTypes, setAppealTypes] = useState<string[]>([]);
+  const [whoCanAppeal, setWhoCanAppeal] = useState<'rejected_only' | 'flagged_only' | 'rejected_and_flagged' | 'approved_only' | 'all'>('rejected_only');
   const [maxAppeals, setMaxAppeals] = useState<number>(1);
   const [onApproveAction, setOnApproveAction] = useState<string>('change_status');
   const [onRejectAction, setOnRejectAction] = useState<string>('keep_rejected');
@@ -78,6 +79,7 @@ export const AppealModule = forwardRef(({
       .then(res => res.json())
       .then(data => {
         if (data.config) {
+          setAppealTypes(data.config.appealTypes || []);
           setWhoCanAppeal(data.config.whoCanAppeal || 'rejected_only');
           setMaxAppeals(data.config.maxAppeals || 1);
           setOnApproveAction(data.config.onApproveAction || 'change_status');
@@ -116,6 +118,7 @@ export const AppealModule = forwardRef(({
             electionId,
             phaseId,
             appealConfig: {
+              appealTypes,
               whoCanAppeal,
               maxAppeals,
               onApproveAction,
@@ -153,6 +156,10 @@ export const AppealModule = forwardRef(({
     setVisibility(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
   };
 
+  const toggleAppealType = (type: string) => {
+    setAppealTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
+  };
+
   return (
     <div className="mt-5 pt-5 border-t border-white/5 space-y-4">
       {/* ── Section 1: Appeal Submission Form ── */}
@@ -173,17 +180,44 @@ export const AppealModule = forwardRef(({
         <div className="space-y-4 mt-3">
           <div>
             <label className="text-[10px] font-semibold text-white/30 uppercase tracking-widest block mb-2">
+              Allowed Appeal Types
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'voluntary_withdrawal', label: 'Voluntary Withdrawal' },
+                { id: 'request_to_update_information', label: 'Request to Update Information' },
+                { id: 'opposing_candidate', label: 'Opposing a Candidate' },
+                { id: 'others', label: 'Others' }
+              ].map(type => (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => toggleAppealType(type.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-medium transition-all border ${appealTypes.includes(type.id) ? 'bg-[#EAB308]/20 border-[#EAB308]/30 text-white' : 'bg-[#0D0A1A] border-white/10 text-white/40'}`}
+                >
+                  <div className={`w-3 h-3 rounded flex-shrink-0 text-[8px] flex items-center justify-center border ${appealTypes.includes(type.id) ? 'bg-[#EAB308] border-[#EAB308] text-[#0D0A1A]' : 'border-white/30'}`}>
+                    {appealTypes.includes(type.id) && '✓'}
+                  </div>
+                  {type.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-white/40 mt-2">Select which types of appeals candidates are allowed to submit. The <strong className="text-white/60">Request to Update Information</strong> type will allow approved candidates to edit their form response.</p>
+          </div>
+
+          <div className="pt-2 border-t border-white/5">
+            <label className="text-[10px] font-semibold text-white/30 uppercase tracking-widest block mb-2 mt-2">
               Who can appeal?
             </label>
             <div className="flex gap-2.5">
-              {(['rejected_only', 'approved_only', 'all'] as const).map(opt => (
+              {(['rejected_only', 'flagged_only', 'rejected_and_flagged', 'approved_only', 'all'] as const).map(opt => (
                 <button
                   key={opt}
                   type="button"
                   onClick={() => setWhoCanAppeal(opt)}
                   className={`flex-1 py-2 rounded-xl border text-[12px] font-medium transition-all ${whoCanAppeal === opt ? 'border-[#EAB308] bg-[#EAB308]/10 text-white' : 'border-white/10 bg-[#0D0A1A] text-white/40 hover:text-white/60'}`}
                 >
-                  {opt === 'rejected_only' ? 'Rejected Candidates' : opt === 'approved_only' ? 'Approved Candidates' : 'All Candidates'}
+                  {opt === 'rejected_only' ? 'Rejected Candidates' : opt === 'flagged_only' ? 'Flagged Candidates' : opt === 'rejected_and_flagged' ? 'Rejected & Flagged Candidates' : opt === 'approved_only' ? 'Approved Candidates' : 'All Candidates'}
                 </button>
               ))}
             </div>

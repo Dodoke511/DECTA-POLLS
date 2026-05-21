@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { isPhaseActive } from '@/lib/public-election/phase-utils';
 import { createClient } from '@supabase/supabase-js';
-import { Loader2, ArrowRight, AlertCircle, Lock, Clock } from 'lucide-react';
+import { Loader2, ArrowRight, AlertCircle, Lock, Clock, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AppealPage() {
@@ -18,13 +18,15 @@ export default function AppealPage() {
   const [formFields, setFormFields] = useState<any[]>([]);
   const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
   const [hasPendingAppeal, setHasPendingAppeal] = useState(false);
+  const [allAppeals, setAllAppeals] = useState<any[]>([]);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [submitting, setSubmitting] = useState(false);
   // Locked if: pending appeal exists, or status is PENDING_VERIFICATION, DRAFT, or no status yet
   const isAppealLocked = hasPendingAppeal || candidateStatus === 'PENDING_VERIFICATION' || candidateStatus === 'DRAFT' || !candidateStatus;
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [showForm, setShowForm] = useState(true);
+  const [selectedAppealType, setSelectedAppealType] = useState<string>('');
+  const [positions, setPositions] = useState<any[]>([]);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,11 +59,9 @@ export default function AppealPage() {
             .order('submittedAt', { ascending: false });
 
           if (!appealFetchError && Array.isArray(appealData)) {
+            setAllAppeals(appealData);
             const pendingAppeal = appealData.find((appeal: any) => appeal.status === 'pending');
             setHasPendingAppeal(Boolean(pendingAppeal));
-            if (pendingAppeal) {
-              setShowForm(false);
-            }
           }
         }
 
@@ -90,6 +90,16 @@ export default function AppealPage() {
             return field;
           });
           setFormFields(parsedFields);
+        }
+
+        const { data: positionsData } = await supabase
+          .from('positions')
+          .select('title')
+          .eq('electionID', election.id)
+          .order('order_index', { ascending: true });
+
+        if (positionsData) {
+          setPositions(positionsData);
         }
       } catch (err) {
         console.error('Error fetching appeal form', err);
@@ -125,8 +135,19 @@ export default function AppealPage() {
       if (appealConfig?.whoCanAppeal === 'rejected_only' && candidateStatus !== 'REJECTED') {
         throw new Error('Only rejected candidates can appeal.');
       }
+      if (appealConfig?.whoCanAppeal === 'flagged_only' && candidateStatus !== 'FLAGGED') {
+        throw new Error('Only flagged candidates can appeal.');
+      }
       if (appealConfig?.whoCanAppeal === 'approved_only' && candidateStatus !== 'APPROVED') {
         throw new Error('Only approved candidates can appeal.');
+      }
+      if (appealConfig?.whoCanAppeal === 'rejected_and_flagged' && !['REJECTED', 'FLAGGED'].includes(candidateStatus)) {
+        throw new Error('Only rejected or flagged candidates can appeal.');
+      }
+      
+      const enabledAppealTypes = appealConfig?.appealTypes || [];
+      if (enabledAppealTypes.length > 0 && !selectedAppealType) {
+        throw new Error('Please select an appeal type before submitting.');
       }
 
       // Get candidate record early to check maxAppeals
@@ -215,11 +236,20 @@ export default function AppealPage() {
           electionID: election.id,
           tenantID: tenant?.id,
           status: 'pending',
+          appealType: selectedAppealType || null,
           formResponseID: responseData.id,
           submittedAt: new Date().toISOString(),
         });
 
       if (appealError) throw appealError;
+
+      // Update candidate status back to PENDING_VERIFICATION
+      const { error: candidateUpdateError } = await supabase
+        .from('candidate')
+        .update({ status: 'PENDING_VERIFICATION' })
+        .eq('id', candidateRecord.id);
+
+      if (candidateUpdateError) throw candidateUpdateError;
 
       setSuccessMessage('Your appeal has been submitted successfully. The committee will review it shortly.');
       setFormData({});
@@ -228,7 +258,8 @@ export default function AppealPage() {
         router.push(`/${tenant?.slug}/${election.slug}/candidate-dashboard`);
       }, 2000);
     } catch (err: any) {
-      console.error('Appeal submission error:', err);
+      // Use console.warn to prevent Next.js dev overlay from interrupting the UI for handled validation errors
+      console.warn('Appeal submission validation:', err.message);
       setError(err.message || 'An error occurred while submitting your appeal.');
     } finally {
       setSubmitting(false);
@@ -318,26 +349,53 @@ export default function AppealPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-16 px-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Submit an Appeal</h1>
-            <p className="text-slate-500 text-lg">
-              If your application was rejected, you may submit a formal appeal to the election committee for review.
-            </p>
+      <div className="mb-8">
+        <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Appeals</h1>
+        <p className="text-slate-500 text-lg">
+          Track your appeal status or submit a new formal appeal to the election committee for review.
+        </p>
+      </div>
+
+      {allAppeals.length > 0 && (
+        <div className="bg-white rounded-[32px] p-8 md:p-10 border border-slate-200 shadow-xl mb-8">
+          <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight">Your Submitted Appeals</h3>
+          <div className="space-y-4">
+            {allAppeals.map(appeal => (
+              <div key={appeal.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-slate-100 bg-slate-50 shadow-sm">
+                <div>
+                  <p className="text-sm font-bold text-slate-800">Appeal Submitted</p>
+                  <p className="text-xs text-slate-500 mt-1">{new Date(appeal.submittedAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
+                    appeal.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                    appeal.status === 'approved' ? 'bg-green-100 text-green-700' :
+                    appeal.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                    'bg-slate-200 text-slate-700'
+                  }`}>
+                    {appeal.status}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-          {/* Only show toggle button when the form is actually usable */}
-          {!isAppealLocked && (
-            <button
-              type="button"
-              onClick={() => setShowForm(prev => !prev)}
-              className="inline-flex items-center justify-center rounded-full bg-[var(--tenant-primary)] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--tenant-primary)]/20 transition hover:bg-[var(--tenant-primary)]/90"
-            >
-              {showForm ? 'Hide Appeal Form' : 'Show Appeal Form'}
-            </button>
-          )}
         </div>
+      )}
 
       <div className="bg-white rounded-[32px] p-8 md:p-12 border border-slate-200 shadow-xl">
+        {/* Indicator who can appeal */}
+        <div className="mb-8 p-5 bg-blue-50 border border-blue-100 rounded-2xl text-blue-700 text-sm font-medium flex items-start gap-3">
+          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <p>
+            {appealConfig?.whoCanAppeal === 'rejected_only' && "Only rejected candidates are eligible to submit an appeal."}
+            {appealConfig?.whoCanAppeal === 'flagged_only' && "Only flagged candidates are eligible to submit an appeal."}
+            {appealConfig?.whoCanAppeal === 'rejected_and_flagged' && "Only rejected or flagged candidates are eligible to submit an appeal."}
+            {appealConfig?.whoCanAppeal === 'approved_only' && "Only approved candidates are eligible to submit an appeal."}
+            {appealConfig?.whoCanAppeal === 'all' && "All candidates are eligible to submit an appeal."}
+            {!appealConfig?.whoCanAppeal && "Appeal eligibility is currently based on tenant configuration."}
+          </p>
+        </div>
+
         {/* Locked: application still under initial review */}
         {candidateStatus === 'PENDING_VERIFICATION' && (
           <div className="flex flex-col items-center text-center gap-6 py-6">
@@ -381,9 +439,53 @@ export default function AppealPage() {
         )}
 
         {/* Appeal form — only rendered when not locked */}
-        {!isAppealLocked && showForm && (
-          <form onSubmit={handleSubmit} className="space-y-8">
+        {!isAppealLocked && (
+          <form onSubmit={handleSubmit} className="space-y-8 mt-6">
+            
+            {appealConfig?.appealTypes && appealConfig.appealTypes.length > 0 && (
+              <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-2xl">
+                <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Select Appeal Type <span className="text-red-500">*</span></h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {appealConfig.appealTypes.map((type: string) => {
+                    const typeLabels: Record<string, string> = {
+                      'voluntary_withdrawal': 'Voluntary Withdrawal',
+                      'request_to_update_information': 'Request to Update Information',
+                      'opposing_candidate': 'Opposing a Candidate',
+                      'others': 'Others'
+                    };
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setSelectedAppealType(type)}
+                        className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${selectedAppealType === type ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border flex-shrink-0 flex items-center justify-center ${selectedAppealType === type ? 'border-blue-500' : 'border-slate-300'}`}>
+                          {selectedAppealType === type && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                        </div>
+                        <span className={`text-sm font-medium ${selectedAppealType === type ? 'text-blue-900' : 'text-slate-700'}`}>
+                          {typeLabels[type] || type}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {formFields.map((field) => {
+              if (field.fieldType === 'section_header') {
+                return (
+                  <div key={field.id} className="pt-2">
+                    <h3 className="text-[15px] font-semibold text-slate-900">{field.label}</h3>
+                    {field.validationRules?.helpText && (
+                      <p className="text-sm text-slate-500 mt-1">{field.validationRules.helpText}</p>
+                    )}
+                    <div className="mt-3 h-px bg-slate-200" />
+                  </div>
+                );
+              }
+
               return (
                 <div key={field.id} className="space-y-2">
                   <label className="block text-sm font-bold text-slate-900">
@@ -427,9 +529,59 @@ export default function AppealPage() {
                     />
                   )}
 
+                  {field.fieldType === 'position_selector' && (
+                    <select
+                      required={field.required}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                      style={{ color: '#0f172a' }}
+                      value={formData[field.id] || ''}
+                      onChange={(e) => handleInputChange(field.id, e.target.value)}
+                    >
+                      <option value="" className="font-normal text-slate-500">{field.validationRules?.placeholder || 'Select a position'}</option>
+                      {positions.map((pos: any, idx: number) => (
+                        <option key={idx} value={pos.title}>{pos.title}</option>
+                      ))}
+                    </select>
+                  )}
+
                   {field.fieldType === 'email' && (
                     <input
                       type="email"
+                      required={field.required}
+                      placeholder={field.validationRules?.placeholder || ''}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                      style={{ color: '#0f172a' }}
+                      value={formData[field.id] || ''}
+                      onChange={(e) => handleInputChange(field.id, e.target.value)}
+                    />
+                  )}
+
+                  {field.fieldType === 'phone' && (
+                    <input
+                      type="tel"
+                      required={field.required}
+                      placeholder={field.validationRules?.placeholder || ''}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                      style={{ color: '#0f172a' }}
+                      value={formData[field.id] || ''}
+                      onChange={(e) => handleInputChange(field.id, e.target.value)}
+                    />
+                  )}
+
+                  {field.fieldType === 'date' && (
+                    <input
+                      type="date"
+                      required={field.required}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all [color-scheme:light]"
+                      style={{ color: '#0f172a' }}
+                      value={formData[field.id] || ''}
+                      onChange={(e) => handleInputChange(field.id, e.target.value)}
+                    />
+                  )}
+
+                  {field.fieldType === 'url' && (
+                    <input
+                      type="url"
                       required={field.required}
                       placeholder={field.validationRules?.placeholder || ''}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
@@ -498,5 +650,5 @@ export default function AppealPage() {
       </div>
     </div>
   );
-  }
+}
 

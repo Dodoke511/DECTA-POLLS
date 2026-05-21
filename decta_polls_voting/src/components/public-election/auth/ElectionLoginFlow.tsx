@@ -83,11 +83,6 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
   );
 
   const redirectAfterLogin = () => {
-    if (role === 'Candidate') {
-      window.location.href = `/${tenant.slug}/${election.slug}/file`;
-      return;
-    }
-
     window.location.href = `/${tenant.slug}/${election.slug}/dashboard`;
   };
 
@@ -213,7 +208,7 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
             You cannot proceed to vote until you change the temporary password 12345.
           </div>
         )}
-        
+
         {!requiresPasswordChange ? (
           <>
             <input
