@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
+import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from '@/components/public-election/PublicElectionBackground';
 import { AlertCircle, BadgeCheck, CalendarDays, CheckCircle2, Fingerprint, Home, UserRound } from 'lucide-react';
 
 function GlassPanel({
@@ -46,12 +47,14 @@ export default function VoterDashboardPage() {
   const { userContext, election, siteConfig } = useElectionPublic();
   const title = siteConfig?.public_title || election.title;
   const electionLabel = siteConfig?.tagline || 'Election Portal';
+  const backgroundImage = getPublicElectionBackgroundImage(siteConfig, election);
 
   if (!userContext?.isVoter) {
     return (
-      <div className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#eef4ff_42%,#fff7f7_100%)] px-6 py-12 text-center">
+      <div className="relative min-h-[calc(100vh-80px)] overflow-hidden px-6 py-12 text-center">
+        <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
         <div className="pointer-events-none absolute left-[-8rem] top-20 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
-        <div className="mx-auto flex min-h-[calc(100vh-176px)] max-w-md items-center justify-center">
+        <div className="relative mx-auto flex min-h-[calc(100vh-176px)] max-w-md items-center justify-center">
           <GlassPanel className="p-10">
             <AlertCircle className="mx-auto mb-4 h-11 w-11 text-[var(--tenant-primary)]" />
             <h2 className="text-2xl font-black text-slate-900">Access Denied</h2>
@@ -63,7 +66,8 @@ export default function VoterDashboardPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#eef4ff_42%,#fff7f7_100%)] px-4 py-10 sm:px-6">
+    <div className="relative min-h-[calc(100vh-80px)] overflow-hidden px-4 py-10 sm:px-6">
+      <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
       <div className="pointer-events-none absolute left-[-8rem] top-20 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 right-[-7rem] h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/35 blur-3xl" />

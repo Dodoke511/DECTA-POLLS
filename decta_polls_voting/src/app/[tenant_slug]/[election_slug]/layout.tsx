@@ -111,7 +111,7 @@ export default async function PublicElectionLayout({
     return (
       <ComingSoon
         title={siteConfig?.public_title || election.title}
-        banner={siteConfig?.banner_url}
+        banner={siteConfig?.banner_url || election.banner}
         primaryColor={primaryColor}
       />
     );

@@ -7,8 +7,8 @@ export function PublicElectionFooter() {
   const { tenant } = useElectionPublic();
 
   return (
-    <footer className="border-t border-slate-100 py-8 mt-12 bg-slate-50">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+    <footer className="border-t border-slate-100 bg-white py-4">
+      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3">
         <p className="text-slate-400 text-sm">
           &copy; {new Date().getFullYear()} {tenant.name}. All rights reserved.
         </p>

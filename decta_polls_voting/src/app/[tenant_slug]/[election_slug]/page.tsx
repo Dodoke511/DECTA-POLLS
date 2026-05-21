@@ -3,20 +3,23 @@
 import React from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { ElectionAuthModule } from '@/components/public-election/auth/ElectionAuthModule';
+import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from '@/components/public-election/PublicElectionBackground';
 import { Sparkles } from 'lucide-react';
 
 export default function ElectionLandingPage() {
   const { election, siteConfig, userContext } = useElectionPublic();
   const title = siteConfig?.public_title || election.title;
+  const backgroundImage = getPublicElectionBackgroundImage(siteConfig, election);
 
   if (userContext) {
     return (
-      <div className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#eef4ff_42%,#fff7f7_100%)] px-4 py-10 sm:px-6 lg:py-14">
+      <div className="relative min-h-[calc(100vh-136px)] overflow-hidden px-4 py-8 sm:px-6 lg:py-10">
+        <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
         <div className="pointer-events-none absolute left-[-8rem] top-20 z-0 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 right-[-7rem] z-0 h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
         <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/35 blur-3xl" />
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-188px)] max-w-6xl items-center">
+        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-216px)] max-w-6xl items-center">
           <section className="relative w-full overflow-hidden rounded-[34px] border border-white/65 bg-white/40 p-8 shadow-[0_28px_90px_rgba(15,23,42,0.14)] backdrop-blur-2xl sm:p-10 lg:p-12">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
             <div className="pointer-events-none absolute -right-24 -top-24 h-60 w-60 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
@@ -40,19 +43,13 @@ export default function ElectionLandingPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#eef4ff_42%,#fff7f7_100%)] px-4 py-10 sm:px-6 lg:py-14">
-      {siteConfig?.banner_url && (
-        <div 
-          className="absolute inset-0 z-0 bg-cover bg-center opacity-15"
-          style={{ backgroundImage: `url(${siteConfig.banner_url})` }}
-        />
-      )}
-      <div className="absolute inset-0 z-0 bg-[linear-gradient(135deg,rgba(248,250,252,0.90)_0%,rgba(238,244,255,0.86)_45%,rgba(255,247,247,0.88)_100%)]" />
+    <div className="relative min-h-[calc(100vh-136px)] overflow-hidden px-4 py-8 sm:px-6 lg:py-10">
+      <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
       <div className="pointer-events-none absolute left-[-8rem] top-20 z-0 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 right-[-7rem] z-0 h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/35 blur-3xl" />
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-188px)] w-full max-w-7xl grid-cols-1 items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] xl:gap-12">
+      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-216px)] w-full max-w-7xl grid-cols-1 items-center gap-7 lg:grid-cols-[1.05fr_0.95fr] xl:gap-10">
         <div className="relative overflow-hidden rounded-[34px] border border-white/65 bg-white/35 p-8 shadow-[0_28px_80px_rgba(15,23,42,0.12)] backdrop-blur-2xl sm:p-10 lg:p-12">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
           <div className="pointer-events-none absolute -left-24 -top-24 h-56 w-56 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />

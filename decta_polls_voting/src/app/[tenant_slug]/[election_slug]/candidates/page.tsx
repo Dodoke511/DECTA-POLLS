@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { AlertCircle, ChevronDown, ChevronUp, Download, FileText, Loader2, Maximize2, UserRound, UsersRound, X } from 'lucide-react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
+import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from '@/components/public-election/PublicElectionBackground';
 
 type LayoutStyle = 'grid' | 'list' | 'detailed';
 
@@ -265,6 +266,7 @@ export default function CandidatesListingPage() {
   const isDetailed = layout === 'detailed';
   const candidates = data?.candidates || [];
   const shouldShowDetailsByDefault = isDetailed || layout === 'list';
+  const backgroundImage = getPublicElectionBackgroundImage(siteConfig, election);
 
   const toggleCandidateDetails = (candidateId: string) => {
     setExpandedCandidateIds(prev => {
@@ -279,7 +281,8 @@ export default function CandidatesListingPage() {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#eef4ff_42%,#fff7f7_100%)]">
+    <div className="relative min-h-[calc(100vh-80px)] overflow-hidden">
+      <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
       <div className="pointer-events-none absolute left-[-8rem] top-20 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 right-[-7rem] h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
 
