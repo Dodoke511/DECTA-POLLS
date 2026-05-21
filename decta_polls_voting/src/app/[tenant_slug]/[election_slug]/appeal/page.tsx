@@ -6,6 +6,26 @@ import { isPhaseActive } from '@/lib/public-election/phase-utils';
 import { createClient } from '@supabase/supabase-js';
 import { Loader2, ArrowRight, AlertCircle, Lock, Clock, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from '@/components/public-election/PublicElectionBackground';
+
+// ─── Glass Panel Component ───────────────────────────────────────────────────
+function GlassPanel({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`relative overflow-hidden rounded-[30px] border border-white/65 bg-white/45 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl ${className}`}>
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.09]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
+      <div className="pointer-events-none absolute -right-20 -top-24 h-48 w-48 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-20 bottom-[-5rem] h-48 w-48 rounded-full bg-[var(--tenant-secondary)]/20 blur-3xl" />
+      {children}
+    </section>
+  );
+}
 
 export default function AppealPage() {
   const { userContext, phases, tenant, election } = useElectionPublic();
@@ -144,7 +164,7 @@ export default function AppealPage() {
       if (appealConfig?.whoCanAppeal === 'rejected_and_flagged' && !['REJECTED', 'FLAGGED'].includes(candidateStatus)) {
         throw new Error('Only rejected or flagged candidates can appeal.');
       }
-      
+
       const enabledAppealTypes = appealConfig?.appealTypes || [];
       if (enabledAppealTypes.length > 0 && !selectedAppealType) {
         throw new Error('Please select an appeal type before submitting.');
@@ -415,12 +435,11 @@ export default function AppealPage() {
                   <p className="text-xs text-slate-500 mt-1">{new Date(appeal.submittedAt).toLocaleString()}</p>
                 </div>
                 <div>
-                  <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
-                    appeal.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                    appeal.status === 'approved' ? 'bg-green-100 text-green-700' :
-                    appeal.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                    'bg-slate-200 text-slate-700'
-                  }`}>
+                  <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${appeal.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                      appeal.status === 'approved' ? 'bg-green-100 text-green-700' :
+                        appeal.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          'bg-slate-200 text-slate-700'
+                    }`}>
                     {appeal.status}
                   </span>
                 </div>
@@ -489,7 +508,7 @@ export default function AppealPage() {
         {/* Appeal form — only rendered when not locked */}
         {!isAppealLocked && (
           <form onSubmit={handleSubmit} className="space-y-8 mt-6">
-            
+
             {appealConfig?.appealTypes && appealConfig.appealTypes.length > 0 && (
               <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-2xl">
                 <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Select Appeal Type <span className="text-red-500">*</span></h3>
