@@ -52,11 +52,6 @@ export const PERMISSION_CATEGORIES = [
       { id: "election.appeal.config.edit", label: "Allow Edit Appeal Configuration" },
       { id: "election.appeal.config.insert", label: "Allow Insert Appeal Configuration" },
       { id: "election.appeal.config.review", label: "Allow Review Appeal Configuration" },
-      { id: "election.appeal.eligibility", label: "Allow Update Appeal Eligibility Rules" },
-      { id: "election.appeal.decision", label: "Allow Update Appeal Decision Mode" },
-      { id: "election.appeal.outcome", label: "Allow Update Appeal Outcome Actions" },
-      { id: "election.appeal.visibility", label: "Allow Update Appeal Visibility Rules" },
-      { id: "election.appeal.withdrawal", label: "Allow Update Candidate Withdrawal Status" },
     ]
   },
   {

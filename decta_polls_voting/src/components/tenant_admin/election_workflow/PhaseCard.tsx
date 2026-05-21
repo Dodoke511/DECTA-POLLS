@@ -62,7 +62,7 @@ const ACCENT: Record<PhaseType, string> = {
 const PHASE_PERMISSION_MAP: Record<PhaseType, string[]> = {
   filing: ['election.filing.access', 'election.filing.insert', 'election.filing.delete', 'election.filing.update', 'election.filing.select', 'candidate.review', 'candidate.view'],
   screening: ['election.screening.access', 'election.screening.insert', 'election.screening.review', 'election.screening.delete', 'election.screening.update', 'election.screening.approval', 'screen_candidates', 'candidate.review', 'candidate.approve', 'candidate.reject'],
-  appeal: ['election.appeal.access', 'election.appeal.config.update', 'election.appeal.config.edit', 'election.appeal.config.insert', 'election.appeal.config.review', 'election.appeal.eligibility', 'election.appeal.decision', 'election.appeal.outcome', 'election.appeal.visibility', 'election.appeal.withdrawal', 'appeal.review', 'appeal.approve', 'appeal.reject'],
+  appeal: ['election.appeal.access', 'election.appeal.config.update', 'election.appeal.config.edit', 'election.appeal.config.insert', 'election.appeal.config.review', 'appeal.review', 'appeal.approve', 'appeal.reject'],
   publication: ['election.publication.access', 'election.publication.insert', 'election.publication.delete', 'election.publication.update', 'result.publish', 'election.activate'],
   voting: ['election.voting.access', 'election.voting.config.update', 'election.voting.ballot.update', 'election.activate', 'voter.assign_token'],
   results: ['election.results.access', 'election.results.config.update', 'result.compute', 'result.view'],

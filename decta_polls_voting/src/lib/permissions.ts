@@ -12,7 +12,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
     "election.create", "election.update", "election.view", "election.activate", "election.archive", "election.delete",
     "election.filing.access", "election.filing.insert", "election.filing.delete", "election.filing.update", "election.filing.select",
     "election.screening.access", "election.screening.insert", "election.screening.review", "election.screening.delete", "election.screening.update", "election.screening.approval",
-    "election.appeal.access", "election.appeal.config.update", "election.appeal.config.edit", "election.appeal.config.insert", "election.appeal.config.review", "election.appeal.eligibility", "election.appeal.decision", "election.appeal.outcome", "election.appeal.visibility", "election.appeal.withdrawal",
+    "election.appeal.access", "election.appeal.config.update", "election.appeal.config.edit", "election.appeal.config.insert", "election.appeal.config.review",
     "election.publication.access", "election.publication.insert", "election.publication.delete", "election.publication.update",
     "election.voting.access", "election.voting.config.update", "election.voting.ballot.update",
     "election.results.access", "election.results.config.update"
