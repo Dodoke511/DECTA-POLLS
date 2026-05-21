@@ -23,6 +23,7 @@ interface PublicElection {
   slug: string;
   title: string;
   status?: string | null;
+  banner?: string | null;
   [key: string]: unknown;
 }
 

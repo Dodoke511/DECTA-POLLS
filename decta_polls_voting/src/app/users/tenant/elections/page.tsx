@@ -285,13 +285,15 @@ export default function TenantElectionsPage() {
 
                         {/* Quick Actions (Go to Site / Copy) for Active/Published */}
                         {(activeElections[0].status === 'ACTIVE' || activeElections[0].status === 'PUBLISHED') && (
-                          <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className={`absolute top-4 right-4 flex flex-col items-end gap-2 transition-opacity ${
+                            activeElections[0].status === 'ACTIVE' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          }`}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 window.open(`/${tenantSlug}/${activeElections[0].slug}`, '_blank');
                               }}
-                              className="p-2 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all"
+                              className="grid h-10 w-10 place-items-center rounded-xl border border-white/25 bg-white/15 text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/25 hover:shadow-[0_12px_30px_rgba(93,68,248,0.28)]"
                               title="Go to public site"
                             >
                               <ExternalLink className="w-4 h-4" />
@@ -301,7 +303,7 @@ export default function TenantElectionsPage() {
                                 e.stopPropagation();
                                 copyToClipboard(activeElections[0].slug, activeElections[0].id);
                               }}
-                              className="p-2 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all relative"
+                              className="relative grid h-10 w-10 place-items-center rounded-xl border border-white/20 bg-black/30 text-white/90 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/20 hover:text-white"
                               title="Copy public link"
                             >
                               {copiedId === activeElections[0].id ? <Check className="w-4 h-4 text-emerald-400" /> : <LinkIcon className="w-4 h-4" />}
@@ -412,13 +414,15 @@ export default function TenantElectionsPage() {
 
                         {/* Quick Actions (Go to Site / Copy) for Active/Published */}
                         {(election.status === 'ACTIVE' || election.status === 'PUBLISHED') && (
-                          <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className={`absolute top-4 right-4 flex flex-col items-end gap-2 transition-opacity ${
+                            election.status === 'ACTIVE' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          }`}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 window.open(`/${tenantSlug}/${election.slug}`, '_blank');
                               }}
-                              className="p-1.5 rounded-md bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all"
+                              className="grid h-9 w-9 place-items-center rounded-lg border border-white/25 bg-white/15 text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/25 hover:shadow-[0_12px_30px_rgba(93,68,248,0.28)]"
                               title="Go to public site"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
@@ -428,7 +432,7 @@ export default function TenantElectionsPage() {
                                 e.stopPropagation();
                                 copyToClipboard(election.slug, election.id);
                               }}
-                              className="p-1.5 rounded-md bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all relative"
+                              className="relative grid h-9 w-9 place-items-center rounded-lg border border-white/20 bg-black/30 text-white/90 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/20 hover:text-white"
                               title="Copy public link"
                             >
                               {copiedId === election.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <LinkIcon className="w-3.5 h-3.5" />}
