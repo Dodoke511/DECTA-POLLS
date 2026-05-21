@@ -27,16 +27,8 @@ import AppealPage from '../appeal/page';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TabId = 'candidacy' | 'appeals' | 'candidates' | 'vote' | 'results';
-const VALID_TABS: TabId[] = ['candidacy', 'appeals', 'candidates', 'vote', 'results'];
-
-const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'candidacy', label: 'Candidacy', icon: FileText },
-  { id: 'appeals', label: 'Appeals', icon: Scale },
-  { id: 'candidates', label: 'Candidates', icon: Users },
-  { id: 'vote', label: 'Vote Now', icon: Vote },
-  { id: 'results', label: 'Results', icon: BarChart3 },
-];
+type TabId = 'candidacy' | 'appeals';
+const VALID_TABS: TabId[] = ['candidacy', 'appeals'];
 
 interface CandidateRecord {
   id: string;
@@ -111,10 +103,6 @@ export default function CandidateDashboardPage() {
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [responseValues, setResponseValues] = useState<FormResponseValue[]>([]);
   const [cocLoading, setCocLoading] = useState(false);
-
-  // Other candidates
-  const [otherCandidates, setOtherCandidates] = useState<any[]>([]);
-  const [candidatesLoading, setCandidatesLoading] = useState(false);
 
   // Phase flags
   const isFilingActive = isPhaseActive(phases, 'filing');
@@ -260,24 +248,7 @@ export default function CandidateDashboardPage() {
     }
   };
 
-  // ── Load other candidates ──────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (activeTab !== 'candidates' || !isPublicationReachable) return;
-    if (otherCandidates.length > 0) return; // already loaded
-
-    setCandidatesLoading(true);
-    async function loadCandidates() {
-      const { data } = await supabase
-        .from('candidate')
-        .select('id, status, userID, tenant users(first_name, surname)')
-        .eq('electionID', election.id)
-        .eq('status', 'APPROVED');
-      setOtherCandidates(data || []);
-      setCandidatesLoading(false);
-    }
-    loadCandidates();
-  }, [activeTab, isPublicationReachable]);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Guards
@@ -456,116 +427,11 @@ export default function CandidateDashboardPage() {
     return <AppealPage />;
   }
 
-  function renderCandidates() {
-    if (!isPublicationReachable) {
-      return <PhaseGate message="Candidate profiles will be visible once the publication phase begins." />;
-    }
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-1">Browse Candidates</p>
-          <h2 className="text-xl font-black text-slate-900">Meet the Candidates</h2>
-        </div>
-        {candidatesLoading ? (
-          <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-[var(--tenant-primary)]" /></div>
-        ) : otherCandidates.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-            <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-400 text-sm">No approved candidates yet.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {otherCandidates.map((c: any) => {
-              const user = c['tenant users'];
-              const name = user ? `${user.first_name || ''} ${user.surname || ''}`.trim() : 'Candidate';
-              const isMe = c.userID === userContext!.userId;
-              return (
-                <div
-                  key={c.id}
-                  className={`bg-white rounded-2xl border p-6 shadow-sm flex flex-col items-center text-center gap-3 transition-all hover:shadow-md ${isMe ? 'border-[var(--tenant-primary)] ring-1 ring-[var(--tenant-primary)]' : 'border-slate-200'}`}
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl font-black text-slate-400">
-                    {name.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">{name}</p>
-                    {isMe && <span className="text-xs font-black text-[var(--tenant-primary)] uppercase tracking-wider">You</span>}
-                  </div>
-                  <StatusBadge status={c.status} />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  }
 
-  function renderVote() {
-    if (!isVotingActive) {
-      return <PhaseGate message="Voting has not started yet. You'll be able to access the ballot once the voting phase opens." />;
-    }
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-2">Voting Phase</p>
-          <h2 className="text-2xl font-black text-slate-900 mb-1">Official Ballot</h2>
-          <p className="text-slate-500 text-sm">The voting phase is currently active.</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm flex flex-col items-center text-center gap-6">
-          <div className="w-20 h-20 rounded-3xl bg-[var(--tenant-primary-light,#ede9ff)] flex items-center justify-center">
-            <Vote className="w-9 h-9 text-[var(--tenant-primary)]" />
-          </div>
-          <div>
-            <p className="text-xl font-black text-slate-900 mb-2">Voting is Now Open</p>
-            <p className="text-slate-500 text-sm max-w-xs">As a candidate, you may view the official ballot. Contact the election committee with any concerns.</p>
-          </div>
-          <button
-            onClick={() => router.push(`/${tenant.slug}/${election.slug}/vote`)}
-            className="flex items-center gap-2 px-6 py-3 bg-[var(--tenant-primary)] text-white font-bold rounded-xl hover:opacity-90 transition-all shadow-md"
-          >
-            <Vote className="w-5 h-5" />
-            View Ballot Page
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  function renderResults() {
-    if (!isResultsReachable) {
-      return <PhaseGate message="Election results will be published once the results phase is active." />;
-    }
-    if (!candidateCanViewResults) {
-      return <PhaseGate message="Access to election results has been restricted by the administrator." />;
-    }
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-2">Results</p>
-          <h2 className="text-2xl font-black text-slate-900 mb-1">Election Results</h2>
-          <p className="text-slate-500 text-sm">Official election results are now available.</p>
-        </div>
-        <button
-          onClick={() => router.push(`/${tenant.slug}/${election.slug}/results`)}
-          className="w-full flex items-center justify-between px-6 py-5 bg-white border border-slate-200 rounded-2xl font-bold text-slate-900 hover:border-[var(--tenant-primary)] hover:shadow-md transition-all group shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <BarChart3 className="w-5 h-5 text-[var(--tenant-primary)]" />
-            <span>View Full Results Page</span>
-          </div>
-          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
-        </button>
-      </div>
-    );
-  }
 
   const tabContent: Record<TabId, () => React.ReactNode> = {
     candidacy: renderCandidacy,
     appeals: renderAppeals,
-    candidates: renderCandidates,
-    vote: renderVote,
-    results: renderResults,
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -587,38 +453,7 @@ export default function CandidateDashboardPage() {
           </p>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-1 p-1 bg-white border border-slate-200 rounded-2xl shadow-sm mb-8 overflow-x-auto no-scrollbar">
-          {TABS.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            const locked =
-              (tab.id === 'appeals' && (!isAppealActive || isAppealTabTemporarilyLocked)) ||
-              (tab.id === 'candidates' && !isPublicationReachable) ||
-              (tab.id === 'vote' && !isVotingActive) ||
-              (tab.id === 'results' && !isResultsReachable);
 
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                disabled={locked}
-                onClick={() => !locked && setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex-1 justify-center ${
-                  isActive
-                    ? 'bg-[var(--tenant-primary)] text-white shadow-md'
-                    : locked
-                    ? 'text-slate-300 hover:text-slate-400 cursor-not-allowed'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline">{tab.label}</span>
-                {locked && !isActive && <Lock className="w-3 h-3 shrink-0 opacity-60" />}
-              </button>
-            );
-          })}
-        </div>
 
         {/* Tab Content */}
         <div className="animate-in fade-in duration-200">
