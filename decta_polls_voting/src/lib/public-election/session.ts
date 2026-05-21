@@ -56,10 +56,14 @@ export async function getElectionUserContext(
     .select('id, first_name, surname, user_type')
     .eq('id', user.id)
     .eq('tenantID', tenantId)
-    .single();
+    .maybeSingle();
 
   if (error || !tenantUser) {
-    console.error(`[Session Debug] Tenant User query failed or not found:`, error?.message);
+    if (error) {
+      console.error(`[Session Debug] Tenant User query failed:`, error.message);
+    } else {
+      console.log(`[Session Debug] Tenant User not found for user: ${user.id} and tenant: ${tenantId}`);
+    }
     return null; // User doesn't belong to this tenant or doesn't exist
   }
 

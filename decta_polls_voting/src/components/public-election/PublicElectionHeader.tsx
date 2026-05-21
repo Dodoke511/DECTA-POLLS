@@ -177,6 +177,7 @@ export function PublicElectionHeader() {
           )}
         </div>
       </div>
+      <div className="h-[2px] w-full bg-gradient-to-r from-[var(--tenant-primary)] via-[var(--tenant-third)] to-[var(--tenant-secondary)]" />
     </header>
   );
 }

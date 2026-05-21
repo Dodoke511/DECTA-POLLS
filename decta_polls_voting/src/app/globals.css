@@ -4054,6 +4054,31 @@ input[type="text"]::placeholder {
   color: rgba(255, 255, 255, 0.2);
 }
 
+input.public-election-auth-input,
+input.public-election-auth-input[type="text"],
+input.public-election-auth-input[type="password"],
+input.public-election-auth-input:hover,
+input.public-election-auth-input:focus,
+input.public-election-auth-input:active {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+
+input.public-election-auth-input::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+input.public-election-auth-input:-webkit-autofill,
+input.public-election-auth-input:-webkit-autofill:hover,
+input.public-election-auth-input:-webkit-autofill:focus,
+input.public-election-auth-input:-webkit-autofill:active {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  box-shadow: 0 0 0 1000px #f8fafc inset !important;
+  caret-color: #0f172a !important;
+}
+
 /* Override button hover color for inputs */
 .super-admin-button:hover input[type="text"],
 .super-admin-button input[type="text"]:hover,

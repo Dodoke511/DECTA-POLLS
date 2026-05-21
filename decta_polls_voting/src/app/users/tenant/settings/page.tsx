@@ -26,6 +26,7 @@ export default function TenantSettingsPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [brandingColorPrimary, setBrandingColorPrimary] = useState("FFFFFF");
   const [brandingColorSecondary, setBrandingColorSecondary] = useState("FFFFFF");
+  const [brandingColorThird, setBrandingColorThird] = useState("FFFFFF");
   const [activeTriggers, setActiveTriggers] = useState<string[]>([
     "Election Start",
     "Election End",
@@ -130,6 +131,7 @@ export default function TenantSettingsPage() {
           if (config.logo_url) setLogoPreview(config.logo_url);
           if (config.main_color) setBrandingColorPrimary(config.main_color);
           if (config.secondary_color) setBrandingColorSecondary(config.secondary_color);
+          if (config.third_color) setBrandingColorThird(config.third_color);
           if (config.active_triggers) setActiveTriggers(config.active_triggers);
           if (config.allow_substitution !== undefined) setAllowSubstitution(config.allow_substitution);
           if (config.allow_withdrawal !== undefined) setAllowWithdrawal(config.allow_withdrawal);
@@ -184,6 +186,7 @@ export default function TenantSettingsPage() {
         organizationName,
         brandingColorPrimary,
         brandingColorSecondary,
+        brandingColorThird,
         activeTriggers,
         allowSubstitution,
         allowWithdrawal,
@@ -335,6 +338,7 @@ export default function TenantSettingsPage() {
                       setLogoFile={setLogoFile}
                       brandingColorPrimary={brandingColorPrimary} setBrandingColorPrimary={setBrandingColorPrimary}
                       brandingColorSecondary={brandingColorSecondary} setBrandingColorSecondary={setBrandingColorSecondary}
+                      brandingColorThird={brandingColorThird} setBrandingColorThird={setBrandingColorThird}
                       activeTriggers={activeTriggers} setActiveTriggers={setActiveTriggers}
                     />
                     <div className="mt-8 flex justify-end border-t border-white/[0.10] pt-6">

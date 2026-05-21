@@ -9,6 +9,7 @@ export interface AccountSettingProps {
     logoPreview: string | null;
     brandingColorPrimary: string;
     brandingColorSecondary: string;
+    brandingColorThird: string;
     activeTriggers: string[];
     setTenantSlug: React.Dispatch<React.SetStateAction<string>>;
     setOrganizationName: React.Dispatch<React.SetStateAction<string>>;
@@ -16,6 +17,7 @@ export interface AccountSettingProps {
     setLogoFile: React.Dispatch<React.SetStateAction<File | null>>;
     setBrandingColorPrimary: React.Dispatch<React.SetStateAction<string>>;
     setBrandingColorSecondary: React.Dispatch<React.SetStateAction<string>>;
+    setBrandingColorThird: React.Dispatch<React.SetStateAction<string>>;
     setActiveTriggers: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
@@ -25,6 +27,7 @@ export function AccountSetting({
     logoPreview,
     brandingColorPrimary,
     brandingColorSecondary,
+    brandingColorThird,
     activeTriggers,
     setTenantSlug,
     setOrganizationName,
@@ -32,6 +35,7 @@ export function AccountSetting({
     setLogoFile,
     setBrandingColorPrimary,
     setBrandingColorSecondary,
+    setBrandingColorThird,
     setActiveTriggers
 }: AccountSettingProps) {
     const toggleTrigger = (trigger: string) => {
@@ -130,44 +134,56 @@ export function AccountSetting({
                         </div>
                     </div>
 
-                    {/* Branding Color & Voter Registration Mode */}
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
-                        {/* Branding Color */}
-                        <div className="flex flex-col gap-3">
-                            <label className="text-[11px] font-bold uppercase tracking-wider text-[#D0C8FF]">
-                                Branding Color
-                            </label>
-                            <div className="flex gap-3">
-                                <div className="group relative flex h-[42px] flex-1 cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
-                                    <input
-                                        type="color"
-                                        value={brandingColorPrimary.startsWith('#') ? brandingColorPrimary : `#${brandingColorPrimary}`}
-                                        onChange={(e) => setBrandingColorPrimary(e.target.value)}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
-                                    <div
-                                        className="h-[18px] w-[18px] rounded-[4px] border border-white/20 shadow-sm"
-                                        style={{ backgroundColor: brandingColorPrimary.startsWith('#') ? brandingColorPrimary : `#${brandingColorPrimary}` }}
-                                    />
-                                    <span className="text-sm font-medium text-white/60 group-hover:text-white/80 uppercase">
-                                        {brandingColorPrimary}
-                                    </span>
-                                </div>
-                                <div className="group relative flex h-[42px] flex-1 cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
-                                    <input
-                                        type="color"
-                                        value={brandingColorSecondary.startsWith('#') ? brandingColorSecondary : `#${brandingColorSecondary}`}
-                                        onChange={(e) => setBrandingColorSecondary(e.target.value)}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
-                                    <div
-                                        className="h-[18px] w-[18px] rounded-[4px] border border-white/20 shadow-sm"
-                                        style={{ backgroundColor: brandingColorSecondary.startsWith('#') ? brandingColorSecondary : `#${brandingColorSecondary}` }}
-                                    />
-                                    <span className="text-sm font-medium text-white/60 group-hover:text-white/80 uppercase">
-                                        {brandingColorSecondary}
-                                    </span>
-                                </div>
+                    {/* Branding Color */}
+                    <div className="flex flex-col gap-3">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-[#D0C8FF]">
+                            Branding Color
+                        </label>
+                        <div className="flex flex-wrap gap-3">
+                            <div className="group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
+                                <input
+                                    type="color"
+                                    value={brandingColorPrimary.startsWith('#') ? brandingColorPrimary : `#${brandingColorPrimary}`}
+                                    onChange={(e) => setBrandingColorPrimary(e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div
+                                    className="h-[18px] w-[18px] rounded-[4px] border border-white/20 shadow-sm"
+                                    style={{ backgroundColor: brandingColorPrimary.startsWith('#') ? brandingColorPrimary : `#${brandingColorPrimary}` }}
+                                />
+                                <span className="text-sm font-medium text-white/60 group-hover:text-white/80 uppercase">
+                                    {brandingColorPrimary}
+                                </span>
+                            </div>
+                            <div className="group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
+                                <input
+                                    type="color"
+                                    value={brandingColorSecondary.startsWith('#') ? brandingColorSecondary : `#${brandingColorSecondary}`}
+                                    onChange={(e) => setBrandingColorSecondary(e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div
+                                    className="h-[18px] w-[18px] rounded-[4px] border border-white/20 shadow-sm"
+                                    style={{ backgroundColor: brandingColorSecondary.startsWith('#') ? brandingColorSecondary : `#${brandingColorSecondary}` }}
+                                />
+                                <span className="text-sm font-medium text-white/60 group-hover:text-white/80 uppercase">
+                                    {brandingColorSecondary}
+                                </span>
+                            </div>
+                            <div className="group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
+                                <input
+                                    type="color"
+                                    value={brandingColorThird.startsWith('#') ? brandingColorThird : `#${brandingColorThird}`}
+                                    onChange={(e) => setBrandingColorThird(e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div
+                                    className="h-[18px] w-[18px] rounded-[4px] border border-white/20 shadow-sm"
+                                    style={{ backgroundColor: brandingColorThird.startsWith('#') ? brandingColorThird : `#${brandingColorThird}` }}
+                                />
+                                <span className="text-sm font-medium text-white/60 group-hover:text-white/80 uppercase">
+                                    {brandingColorThird}
+                                </span>
                             </div>
                         </div>
                     </div>

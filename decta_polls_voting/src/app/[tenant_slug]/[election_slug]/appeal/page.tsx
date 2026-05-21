@@ -273,15 +273,63 @@ export default function AppealPage() {
     }));
   };
 
-  if (!userContext?.isCandidate) {
-    return (
-      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center py-12 px-6 text-center">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm max-w-md">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
-          <p className="text-slate-500">This page is for candidates only.</p>
-        </div>
+  let content: React.ReactNode = null;
+
+  if (loading) {
+    content = (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--tenant-primary)]" />
+        <p className="text-slate-400 font-semibold animate-pulse">Loading Appeal Form...</p>
       </div>
+    );
+  } else if (!userContext?.isCandidate) {
+    content = (
+      <div className="flex justify-center">
+        <GlassPanel className="p-8 md:p-12 text-center max-w-md w-full">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-black text-slate-900 mb-2">Access Denied</h2>
+          <p className="text-slate-500 font-semibold">This page is for candidates only.</p>
+        </GlassPanel>
+      </div>
+    );
+  } else if (!isAppealActive) {
+    content = (
+      <div className="flex justify-center">
+        <GlassPanel className="p-8 md:p-12 text-center max-w-md w-full">
+          <Lock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-black text-slate-900 mb-2">Appeals Not Active</h2>
+          <p className="text-slate-500 font-semibold">The appeal phase is not currently active. Appeals will be available once the committee opens the appeal window.</p>
+        </GlassPanel>
+      </div>
+    );
+  } else if (!formConfig || formFields.length === 0) {
+    content = (
+      <div className="flex justify-center">
+        <GlassPanel className="p-8 md:p-12 text-center max-w-md w-full">
+          <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-black text-slate-900 mb-2">Form Not Configured</h2>
+          <p className="text-slate-500 font-semibold">The election organizers have not yet configured the appeal form for this election.</p>
+        </GlassPanel>
+      </div>
+    );
+  } else if (hasPendingAppeal) {
+    content = (
+      <GlassPanel className="p-8 md:p-12 flex flex-col items-center text-center gap-6">
+        <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+          <Clock className="w-9 h-9 text-amber-500" />
+        </div>
+        <div>
+          <p className="text-xl font-black text-slate-900 mb-2">Your Appeal is Being Reviewed</p>
+          <p className="text-slate-500 text-sm font-semibold max-w-sm">
+            Your appeal has been submitted and is currently being reviewed by the election committee. Please wait for their decision — you will be notified of the outcome.
+          </p>
+        </div>
+        <div className="w-full max-w-sm p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+          <p className="text-amber-700 text-sm font-bold">
+            You cannot submit another appeal while one is already under review.
+          </p>
+        </div>
+      </GlassPanel>
     );
   }
   if (!isAppealActive) {
