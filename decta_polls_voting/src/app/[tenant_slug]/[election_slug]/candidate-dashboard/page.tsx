@@ -9,6 +9,7 @@ import {
 import { createClient } from '@supabase/supabase-js';
 import {
   Loader2,
+  FileText,
   Eye,
   Scale,
   Users,
@@ -22,11 +23,12 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import AppealPage from '../appeal/page';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TabId = 'candidacy' | 'appeals' | 'candidates' | 'vote' | 'results';
-const VALID_TABS: TabId[] = ['candidacy', 'appeals', 'candidates', 'vote', 'results'];
+type TabId = 'candidacy' | 'appeals';
+const VALID_TABS: TabId[] = ['candidacy', 'appeals'];
 
 interface CandidateRecord {
   id: string;
@@ -46,8 +48,6 @@ interface FormResponseValue {
   fieldID: string;
   value: string;
 }
-
-// ─── Tab Config ───────────────────────────────────────────────────────────────
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
@@ -95,15 +95,14 @@ export default function CandidateDashboardPage() {
   // Candidate record
   const [candidate, setCandidate] = useState<CandidateRecord | null>(null);
 
+  // Pending appeal tracking
+  const [hasPendingAppeal, setHasPendingAppeal] = useState(false);
+
   // COC Form data
   const [showCOC, setShowCOC] = useState(false);
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [responseValues, setResponseValues] = useState<FormResponseValue[]>([]);
   const [cocLoading, setCocLoading] = useState(false);
-
-  // Other candidates
-  const [otherCandidates, setOtherCandidates] = useState<any[]>([]);
-  const [candidatesLoading, setCandidatesLoading] = useState(false);
 
   // Phase flags
   const isFilingActive = isPhaseActive(phases, 'filing');
@@ -112,6 +111,15 @@ export default function CandidateDashboardPage() {
   const isPublicationReachable = isPhaseReachable(phases, 'publication');
   const isResultsReachable = isPhaseReachable(phases, 'results');
   const candidateCanViewResults = siteConfig?.candidate_can_view_results !== false;
+
+  // Appeals tab is temporarily locked when:
+  // - No candidate record yet (DRAFT / not filed)
+  // - Candidate is PENDING_VERIFICATION (awaiting initial review)
+  // - Candidate has a pending appeal already under review
+  const isAppealTabTemporarilyLocked =
+    !candidate ||
+    ['DRAFT', 'PENDING_VERIFICATION'].includes(candidate.status) ||
+    hasPendingAppeal;
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -181,7 +189,21 @@ export default function CandidateDashboardPage() {
           }
         }
 
-        setCandidate({ ...data, position });
+        const candidateRecord = { ...data, position };
+        setCandidate(candidateRecord);
+
+        // Check for a pending appeal so we can lock the tab appropriately
+        const { data: appealData } = await supabase
+          .from('appeals')
+          .select('id, status')
+          .eq('candidateID', data.id)
+          .eq('electionID', election.id)
+          .order('submittedAt', { ascending: false });
+
+        if (Array.isArray(appealData)) {
+          const pending = appealData.find((a: any) => a.status === 'pending');
+          setHasPendingAppeal(Boolean(pending));
+        }
       }
       setLoading(false);
     }
@@ -226,24 +248,7 @@ export default function CandidateDashboardPage() {
     }
   };
 
-  // ── Load other candidates ──────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (activeTab !== 'candidates' || !isPublicationReachable) return;
-    if (otherCandidates.length > 0) return; // already loaded
-
-    setCandidatesLoading(true);
-    async function loadCandidates() {
-      const { data } = await supabase
-        .from('candidate')
-        .select('id, status, userID, tenant users(first_name, surname)')
-        .eq('electionID', election.id)
-        .eq('status', 'APPROVED');
-      setOtherCandidates(data || []);
-      setCandidatesLoading(false);
-    }
-    loadCandidates();
-  }, [activeTab, isPublicationReachable]);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Guards
@@ -403,133 +408,30 @@ export default function CandidateDashboardPage() {
     if (!isAppealActive) {
       return <PhaseGate message="The appeal phase is not currently active. Appeals will be available once the committee opens the appeal window." />;
     }
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-2">Submit an Appeal</p>
-          <h2 className="text-2xl font-black text-slate-900 mb-1">Appeal Your Application</h2>
-          <p className="text-slate-500 text-sm">If your candidacy was rejected or disqualified, you may submit a formal appeal to the election committee.</p>
+    // Show a friendly gate instead of the form when the tab is temporarily locked
+    if (isAppealTabTemporarilyLocked) {
+      const message = hasPendingAppeal
+        ? "Your appeal is currently being reviewed by the committee. Please wait for their decision before submitting another."
+        : candidate?.status === 'PENDING_VERIFICATION'
+        ? "Your candidacy application is still under review. The appeals section will be available once a decision has been made."
+        : "You must complete your candidacy application before you can access the appeals section.";
+      return (
+        <div className="flex flex-col items-center justify-center py-24 text-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center">
+            <Clock className="w-7 h-7 text-amber-500" />
+          </div>
+          <p className="text-slate-500 font-medium max-w-xs">{message}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm flex flex-col items-center text-center gap-4">
-          <Scale className="w-10 h-10 text-slate-300" />
-          <p className="text-slate-400 text-sm max-w-xs">The appeal submission form will be available here. Contact the election office for assistance.</p>
-        </div>
-      </div>
-    );
+      );
+    }
+    return <AppealPage />;
   }
 
-  function renderCandidates() {
-    if (!isPublicationReachable) {
-      return <PhaseGate message="Candidate profiles will be visible once the publication phase begins." />;
-    }
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-1">Browse Candidates</p>
-          <h2 className="text-xl font-black text-slate-900">Meet the Candidates</h2>
-        </div>
-        {candidatesLoading ? (
-          <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-[var(--tenant-primary)]" /></div>
-        ) : otherCandidates.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-            <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-400 text-sm">No approved candidates yet.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {otherCandidates.map((c: any) => {
-              const user = c['tenant users'];
-              const name = user ? `${user.first_name || ''} ${user.surname || ''}`.trim() : 'Candidate';
-              const isMe = c.userID === userContext!.userId;
-              return (
-                <div
-                  key={c.id}
-                  className={`bg-white rounded-2xl border p-6 shadow-sm flex flex-col items-center text-center gap-3 transition-all hover:shadow-md ${isMe ? 'border-[var(--tenant-primary)] ring-1 ring-[var(--tenant-primary)]' : 'border-slate-200'}`}
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl font-black text-slate-400">
-                    {name.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">{name}</p>
-                    {isMe && <span className="text-xs font-black text-[var(--tenant-primary)] uppercase tracking-wider">You</span>}
-                  </div>
-                  <StatusBadge status={c.status} />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  }
 
-  function renderVote() {
-    // Candidates cannot vote — but the diagram shows "Vote Now → Ballot page"
-    // We show the ballot page link for awareness but note they can't cast a vote
-    if (!isVotingActive) {
-      return <PhaseGate message="Voting has not started yet. You'll be able to access the ballot once the voting phase opens." />;
-    }
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-2">Voting Phase</p>
-          <h2 className="text-2xl font-black text-slate-900 mb-1">Official Ballot</h2>
-          <p className="text-slate-500 text-sm">The voting phase is currently active.</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-sm flex flex-col items-center text-center gap-6">
-          <div className="w-20 h-20 rounded-3xl bg-[var(--tenant-primary-light,#ede9ff)] flex items-center justify-center">
-            <Vote className="w-9 h-9 text-[var(--tenant-primary)]" />
-          </div>
-          <div>
-            <p className="text-xl font-black text-slate-900 mb-2">Voting is Now Open</p>
-            <p className="text-slate-500 text-sm max-w-xs">As a candidate, you may view the official ballot. Contact the election committee with any concerns.</p>
-          </div>
-          <button
-            onClick={() => router.push(`/${tenant.slug}/${election.slug}/vote`)}
-            className="flex items-center gap-2 px-6 py-3 bg-[var(--tenant-primary)] text-white font-bold rounded-xl hover:opacity-90 transition-all shadow-md"
-          >
-            <Vote className="w-5 h-5" />
-            View Ballot Page
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  function renderResults() {
-    if (!isResultsReachable) {
-      return <PhaseGate message="Election results will be published once the results phase is active." />;
-    }
-    if (!candidateCanViewResults) {
-      return <PhaseGate message="Access to election results has been restricted by the administrator." />;
-    }
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-2">Results</p>
-          <h2 className="text-2xl font-black text-slate-900 mb-1">Election Results</h2>
-          <p className="text-slate-500 text-sm">Official election results are now available.</p>
-        </div>
-        <button
-          onClick={() => router.push(`/${tenant.slug}/${election.slug}/results`)}
-          className="w-full flex items-center justify-between px-6 py-5 bg-white border border-slate-200 rounded-2xl font-bold text-slate-900 hover:border-[var(--tenant-primary)] hover:shadow-md transition-all group shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <BarChart3 className="w-5 h-5 text-[var(--tenant-primary)]" />
-            <span>View Full Results Page</span>
-          </div>
-          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
-        </button>
-      </div>
-    );
-  }
 
   const tabContent: Record<TabId, () => React.ReactNode> = {
     candidacy: renderCandidacy,
     appeals: renderAppeals,
-    candidates: renderCandidates,
-    vote: renderVote,
-    results: renderResults,
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -550,6 +452,8 @@ export default function CandidateDashboardPage() {
             {siteConfig?.public_title || election.title}
           </p>
         </div>
+
+
 
         {/* Tab Content */}
         <div className="animate-in fade-in duration-200">

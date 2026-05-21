@@ -61,8 +61,9 @@ CREATE TABLE IF NOT EXISTS "appeals" (
   
   "submittedAt" TIMESTAMPTZ DEFAULT now(),
   
-  -- Optional constraint to enforce max submissions per candidate later if needed via triggers
-  UNIQUE("candidateID", "electionID") 
+  -- Allows multiple appeals per candidate, but enforces uniqueness on PENDING appeals only
+  -- This way: one pending, but multiple resolved appeals allowed
+  UNIQUE ("candidateID", "electionID", "status") WHERE "status" = 'pending'
 );
 
 ALTER TABLE "appeals" ENABLE ROW LEVEL SECURITY;

@@ -48,12 +48,16 @@ export default function TenantDashboardPage() {
     const params = new URLSearchParams(window.location.search);
     const random = params.get('random');
     const status = params.get('status') || sessionStorage.getItem('tenantStatus');
-    const storedToken = sessionStorage.getItem('tenantToken');
     const storedSupabaseToken = sessionStorage.getItem('supabaseToken');
 
-    if (!random || random !== storedToken) {
-      router.push('/auth/login_form');
-      return;
+    // If we have a token in params, restore sessionStorage for continued access
+    if (random) {
+      sessionStorage.setItem('tenantToken', random);
+    }
+
+    // If we still don't have a Supabase token, try to get it from params or storage
+    if (!storedSupabaseToken && params.get('token')) {
+      sessionStorage.setItem('supabaseToken', params.get('token')!);
     }
 
     setTenantStatus(status);

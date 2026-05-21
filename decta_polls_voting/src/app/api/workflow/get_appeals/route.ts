@@ -23,6 +23,7 @@ export async function GET(request: Request) {
         id,
         status,
         submittedAt,
+        formResponseID,
         candidateID,
         candidate:candidateID (
           id,
@@ -42,16 +43,72 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Map to the format expected by the frontend
-    const mappedAppeals = (appeals || []).map((a: any) => ({
-      id: a.id,
-      candidateId: a.candidateID,
-      candidateName: `${a.candidate?.user?.first_name} ${a.candidate?.user?.surname}`,
-      candidateEmail: a.candidate?.user?.email,
-      status: a.status,
-      createdAt: a.submittedAt,
-      reason: "Please check form response values for detailed reason." // Placeholder until we integrate form engine
-    }));
+    // Fetch form response values for each appeal so we can show real appeal details.
+    const formResponseIds = (appeals || [])
+      .map((a: any) => a.formResponseID)
+      .filter((id: any) => id);
+
+    let responseValues: any[] = [];
+    if (formResponseIds.length > 0) {
+      const { data, error: valuesError } = await supabase
+        .from('form response value')
+        .select('responseID, fieldID, value')
+        .in('responseID', formResponseIds);
+
+      if (valuesError) {
+        console.error('Fetch Appeal Response Values Error:', valuesError);
+        return NextResponse.json({ error: valuesError.message }, { status: 500 });
+      }
+
+      responseValues = data || [];
+    }
+
+    const fieldIds = Array.from(new Set(responseValues.map((v: any) => v.fieldID)));
+    let fields: any[] = [];
+    if (fieldIds.length > 0) {
+      const { data: fieldsData, error: fieldsError } = await supabase
+        .from('form field')
+        .select('id, label')
+        .in('id', fieldIds);
+
+      if (fieldsError) {
+        console.error('Fetch Appeal Form Fields Error:', fieldsError);
+        return NextResponse.json({ error: fieldsError.message }, { status: 500 });
+      }
+
+      fields = fieldsData || [];
+    }
+
+    const fieldLabelById = new Map((fields || []).map((field: any) => [field.id, field.label || 'Field']));
+    const valuesByResponseId = new Map<string, Array<{ fieldID: string; value: string }>>();
+
+    (responseValues || []).forEach((value: any) => {
+      const list = valuesByResponseId.get(value.responseID) || [];
+      list.push({ fieldID: value.fieldID, value: value.value });
+      valuesByResponseId.set(value.responseID, list);
+    });
+
+    const mappedAppeals = (appeals || []).map((a: any) => {
+      const details = (valuesByResponseId.get(a.formResponseID) || []).map((value) => ({
+        label: fieldLabelById.get(value.fieldID) || 'Field',
+        value: value.value,
+      }));
+
+      const reason = details.length > 0
+        ? details.map((item) => `${item.label}: ${item.value}`).join(' • ')
+        : "Please check form response values for detailed reason.";
+
+      return {
+        id: a.id,
+        candidateId: a.candidateID,
+        candidateName: `${a.candidate?.user?.first_name} ${a.candidate?.user?.surname}`,
+        candidateEmail: a.candidate?.user?.email,
+        status: a.status,
+        createdAt: a.submittedAt,
+        reason,
+        details,
+      };
+    });
 
     return NextResponse.json({ appeals: mappedAppeals });
 

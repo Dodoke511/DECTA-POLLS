@@ -3,12 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Search, Filter, Clock, CheckCircle2, XCircle, UserCheck, UserX, MessageSquare, FileText } from 'lucide-react';
 
+interface AppealDetail {
+  label: string;
+  value: string;
+}
+
 interface Appeal {
   id: string;
   candidateId: string;
   candidateName: string;
   candidateEmail: string;
   reason: string;
+  details?: AppealDetail[];
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }
@@ -23,6 +29,7 @@ export function AppealsModule({ electionId }: AppealsModuleProps) {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [selectedAppeal, setSelectedAppeal] = useState<Appeal | null>(null);
 
   useEffect(() => {
     const fetchAppeals = async () => {
@@ -153,9 +160,29 @@ export function AppealsModule({ electionId }: AppealsModuleProps) {
                     <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <MessageSquare className="w-3 h-3 text-white/30" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Appeal Reason</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Appeal Details</span>
                       </div>
-                      <p className="text-sm text-white/70 leading-relaxed">{appeal.reason || 'No reason provided.'}</p>
+                      {appeal.details?.length ? (
+                        <div className="space-y-3">
+                          {appeal.details.map((detail) => (
+                            <div key={`${detail.label}-${detail.value}`} className="grid gap-2 sm:grid-cols-[9rem_1fr]">
+                              <p className="text-[11px] font-bold uppercase tracking-widest text-white/40">{detail.label}</p>
+                              <p className="text-sm text-white/70 break-words">{detail.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-white/70 leading-relaxed">{appeal.reason || 'No reason provided.'}</p>
+                      )}
+                      {appeal.details?.length ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAppeal(appeal)}
+                          className="mt-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-sky-300 hover:text-white"
+                        >
+                          View full appeal
+                        </button>
+                      ) : null}
                     </div>
 
                     <p className="text-[10px] text-white/20 mt-2">
@@ -202,6 +229,55 @@ export function AppealsModule({ electionId }: AppealsModuleProps) {
                   ? `No ${filter} appeals match your criteria.`
                   : 'No candidate appeals have been submitted yet.'}
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedAppeal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4">
+          <div className="max-w-3xl w-full rounded-3xl border border-white/10 bg-slate-950 p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-white">Appeal details for {selectedAppeal.candidateName}</h3>
+                <p className="text-sm text-white/40">{selectedAppeal.candidateEmail}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAppeal(null)}
+                className="rounded-full border border-white/10 px-3 py-2 text-sm font-semibold text-white/70 hover:bg-white/5"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl bg-white/[0.05] p-4 border border-white/10">
+                  <p className="text-[11px] uppercase tracking-widest text-white/40">Status</p>
+                  <p className="mt-2 text-sm text-white">{selectedAppeal.status}</p>
+                </div>
+                <div className="rounded-2xl bg-white/[0.05] p-4 border border-white/10">
+                  <p className="text-[11px] uppercase tracking-widest text-white/40">Filed</p>
+                  <p className="mt-2 text-sm text-white">{new Date(selectedAppeal.createdAt).toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-white/[0.05] p-5 border border-white/10">
+                <h4 className="text-sm font-semibold text-white/80 mb-3 uppercase tracking-widest">Submitted responses</h4>
+                {selectedAppeal.details?.length ? (
+                  <div className="space-y-3">
+                    {selectedAppeal.details.map((detail) => (
+                      <div key={`${detail.label}-${detail.value}`} className="grid gap-2 sm:grid-cols-[10rem_1fr]">
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-white/40">{detail.label}</p>
+                        <p className="text-sm text-white/70 break-words">{detail.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-white/60">No appeal form responses were available to display.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

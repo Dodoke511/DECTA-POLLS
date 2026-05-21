@@ -186,6 +186,15 @@ export default function CandidacyFormPage() {
 
       if (statusUpdateError) throw statusUpdateError;
 
+      // If this submission was allowed because of an approved appeal,
+      // decrement the edits_remaining_after_appeal counter via RPC.
+      try {
+        await supabase.rpc('decrement_candidate_edits_after_appeal', { user_id: userContext!.userId, election_id: election.id });
+      } catch (e) {
+        // Non-fatal — submission succeeded; log for investigation
+        console.warn('Failed to decrement edits_remaining_after_appeal', e);
+      }
+
       router.push(`/${tenant.slug}/${election.slug}/candidate-dashboard`);
     } catch (err: any) {
       console.error('Submission error:', err);

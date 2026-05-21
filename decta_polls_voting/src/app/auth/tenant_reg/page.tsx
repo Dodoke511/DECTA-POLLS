@@ -54,9 +54,10 @@ export default function Home() {
 
             if (!response.ok) throw new Error(resData.error || 'Failed to send OTP');
 
+            const timeLeftSeconds = Math.max(Math.round((resData.expires - Date.now()) / 1000), 0);
             setOtpHash(resData.hash);
             setOtpExpires(resData.expires);
-            setTimeLeft(60);
+            setTimeLeft(timeLeftSeconds);
             setStep(4); // Move to OTP verification step
         } catch (error: any) {
             console.error("API Call Error:", error);

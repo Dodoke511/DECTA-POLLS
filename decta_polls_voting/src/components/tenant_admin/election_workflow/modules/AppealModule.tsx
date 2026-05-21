@@ -193,22 +193,36 @@ export const AppealModule = forwardRef(({
             <label className="text-[10px] font-semibold text-white/30 uppercase tracking-widest block mb-2">
               Max Appeals Per Candidate
             </label>
-            <div className="flex bg-[#0D0A1A] border border-white/10 rounded-xl overflow-hidden w-fit">
-              <button
-                type="button"
-                onClick={() => setMaxAppeals(1)}
-                className={`px-4 py-2 text-[12px] font-medium transition-all ${maxAppeals === 1 ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
-              >
-                One Only
-              </button>
-              <button
-                type="button"
-                onClick={() => setMaxAppeals(3)} // 3 = proxy for "multiple allowed"
-                className={`px-4 py-2 text-[12px] font-medium transition-all border-l border-white/10 ${maxAppeals > 1 ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
-              >
-                Multiple Allowed
-              </button>
+            <div className="flex items-center gap-3">
+              <div className="flex bg-[#0D0A1A] border border-white/10 rounded-xl overflow-hidden w-fit">
+                <button
+                  type="button"
+                  onClick={() => setMaxAppeals(1)}
+                  className={`px-4 py-2 text-[12px] font-medium transition-all ${maxAppeals === 1 ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+                >
+                  One Only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMaxAppeals(3)}
+                  className={`px-4 py-2 text-[12px] font-medium transition-all border-l border-white/10 ${maxAppeals > 1 ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+                >
+                  Multiple Allowed
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-white/40">Custom:</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={maxAppeals}
+                  onChange={e => setMaxAppeals(Math.max(1, Number(e.target.value) || 1))}
+                  className="w-20 bg-[#0D0A1A] border border-white/10 rounded-xl px-3 py-2 text-white/80 text-sm text-center"
+                />
+              </div>
             </div>
+            <p className="text-xs text-white/40 mt-2">Set the maximum number of appeals a single candidate may submit for this election.</p>
           </div>
         </div>
       </Section>

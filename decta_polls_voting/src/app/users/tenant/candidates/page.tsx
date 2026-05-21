@@ -212,6 +212,12 @@ export default function TenantCandidatesPage() {
   
   const canModifyStatus = (!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly && !isAppealPhase;
 
+  // Allow tenant admins to act on candidates returned to PENDING_VERIFICATION
+  // by the appeal workflow even during the appeal phase. This keeps the
+  // global protections (lock during voting/results) but lets admins
+  // re-process candidates who were returned to screening after an appeal.
+  const canActOnPendingDuringAppeal = isAppealPhase;
+
   const phaseLabel = currentPhaseType
     ? currentPhaseType.charAt(0).toUpperCase() + currentPhaseType.slice(1)
     : null;
@@ -418,7 +424,7 @@ export default function TenantCandidatesPage() {
                         <div className="flex justify-end gap-2 items-center">
                           
                           {/* Action Buttons (Accept/Reject) */}
-                          {(c.status === 'PENDING_VERIFICATION' || c.status === 'ACKNOWLEDGED' || c.status === 'FLAGGED') && canModifyStatus && (
+                          {(c.status === 'PENDING_VERIFICATION' || c.status === 'ACKNOWLEDGED' || c.status === 'FLAGGED') && (canModifyStatus || (c.status === 'PENDING_VERIFICATION' && canActOnPendingDuringAppeal)) && (
                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleStatusUpdate(c.id, 'APPROVED')}
