@@ -209,8 +209,8 @@ export default function TenantCandidatesPage() {
   const isAppealPhase = currentPhaseType === 'appeal';
   const isReadOnly = currentPhaseType === 'voting' || currentPhaseType === 'results';
   const isTransitionPending = phaseStatus === 'for_transition';
-  
-  const canModifyStatus = (!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly && !isAppealPhase;
+
+  const canModifyStatus = (!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly && isAppealPhase;
 
   // Allow tenant admins to act on candidates returned to PENDING_VERIFICATION
   // by the appeal workflow even during the appeal phase. This keeps the
@@ -422,9 +422,9 @@ export default function TenantCandidatesPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2 items-center">
-                          
+
                           {/* Action Buttons (Accept/Reject) */}
-                          {(c.status === 'PENDING_VERIFICATION' || c.status === 'ACKNOWLEDGED' || c.status === 'FLAGGED') && (canModifyStatus || (c.status === 'PENDING_VERIFICATION' && canActOnPendingDuringAppeal)) && (
+                          {(c.status === 'PENDING_VERIFICATION' || c.status === 'ACKNOWLEDGED' || c.status === 'FLAGGED') && (canModifyStatus || ((c.status === 'PENDING_VERIFICATION' || c.status === 'FLAGGED') && canActOnPendingDuringAppeal)) && (
                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleStatusUpdate(c.id, 'APPROVED')}
@@ -439,6 +439,20 @@ export default function TenantCandidatesPage() {
                                 disabled={actionLoading === c.id}
                                 className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl border border-red-500/20 transition-all active:scale-95 disabled:opacity-50"
                                 title="Reject Application"
+                              >
+                                <UserX className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Disqualify Button for Approved Candidates */}
+                          {c.status === 'APPROVED' && canModifyStatus && !undoStack.find(u => u.candidateId === c.id) && (
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleStatusUpdate(c.id, 'DISQUALIFIED')}
+                                disabled={actionLoading === c.id}
+                                className="p-2 bg-red-900/40 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/20 transition-all active:scale-95 disabled:opacity-50"
+                                title="Disqualify Candidate"
                               >
                                 <UserX className="w-4 h-4" />
                               </button>

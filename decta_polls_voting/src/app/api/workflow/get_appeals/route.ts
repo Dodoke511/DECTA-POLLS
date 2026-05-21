@@ -88,6 +88,47 @@ export async function GET(request: Request) {
       valuesByResponseId.set(value.responseID, list);
     });
 
+    // --- New Logic: Fetch decision counts and threshold ---
+    
+    // Get the appeal phase ID
+    const { data: phases } = await supabase
+      .from('election phase')
+      .select('id, phase_type')
+      .eq('electionID', electionId);
+    
+    const appealPhaseId = phases?.find((p: any) => p.phase_type === 'appeal')?.id;
+    
+    // Get the minimum_approvals threshold
+    let minApprovals = 1;
+    if (appealPhaseId) {
+      const { data: approvalRecord } = await supabase
+        .from('approvals')
+        .select('minimum_approvals')
+        .eq('phaseID', appealPhaseId)
+        .maybeSingle();
+      if (approvalRecord?.minimum_approvals) {
+        minApprovals = approvalRecord.minimum_approvals;
+      }
+    }
+
+    // Get all appeal decisions for these appeals
+    const appealIds = (appeals || []).map((a: any) => a.id);
+    let decisionsData: any[] = [];
+    if (appealIds.length > 0) {
+      const { data: decisions } = await supabase
+        .from('appeal decisions')
+        .select('appealID, decision')
+        .in('appealID', appealIds);
+      decisionsData = decisions || [];
+    }
+
+    const decisionsByAppealId = new Map<string, any[]>();
+    decisionsData.forEach((d: any) => {
+      const list = decisionsByAppealId.get(d.appealID) || [];
+      list.push(d);
+      decisionsByAppealId.set(d.appealID, list);
+    });
+
     const mappedAppeals = (appeals || []).map((a: any) => {
       const details = (valuesByResponseId.get(a.formResponseID) || []).map((value) => ({
         label: fieldLabelById.get(value.fieldID) || 'Field',
@@ -98,6 +139,10 @@ export async function GET(request: Request) {
         ? details.map((item) => `${item.label}: ${item.value}`).join(' • ')
         : "Please check form response values for detailed reason.";
 
+      const decisions = decisionsByAppealId.get(a.id) || [];
+      const approvedCount = decisions.filter(d => d.decision === 'approved').length;
+      const rejectedCount = decisions.filter(d => d.decision === 'rejected').length;
+
       return {
         id: a.id,
         candidateId: a.candidateID,
@@ -107,6 +152,9 @@ export async function GET(request: Request) {
         createdAt: a.submittedAt,
         reason,
         details,
+        approvedCount,
+        rejectedCount,
+        threshold: minApprovals,
       };
     });
 

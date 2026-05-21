@@ -33,6 +33,7 @@ export async function POST(request: Request) {
         phaseID: phaseId,
         electionID: electionId,
         tenantID: tenantId,
+        appealTypes: appealConfig.appealTypes || [],
         whoCanAppeal: appealConfig.whoCanAppeal,
         maxAppeals: appealConfig.maxAppeals,
         onApproveAction: appealConfig.onApproveAction,
