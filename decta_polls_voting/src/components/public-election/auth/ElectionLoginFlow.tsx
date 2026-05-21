@@ -26,6 +26,7 @@ function PasswordField({
   minLength,
 }: PasswordFieldProps) {
   const Icon = visible ? EyeOff : Eye;
+  const inputClassName = "public-election-auth-input w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-12 !text-slate-900 hover:!text-slate-900 focus:!text-slate-900 active:!text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all";
 
   return (
     <div className="relative">
@@ -34,7 +35,7 @@ function PasswordField({
         type={visible ? 'text' : 'password'}
         placeholder={placeholder}
         minLength={minLength}
-        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 pr-12 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+        className={inputClassName}
         value={value}
         onChange={e => onChange(e.target.value)}
       />
@@ -84,7 +85,7 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
 
   const redirectAfterLogin = () => {
     if (role === 'Candidate') {
-      window.location.href = `/${tenant.slug}/${election.slug}/file`;
+      window.location.href = `/${tenant.slug}/${election.slug}`;
       return;
     }
 
@@ -220,7 +221,7 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
               required
               type="email"
               placeholder="Email Address"
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+              className="public-election-auth-input w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
               value={email}
               onChange={e => setEmail(e.target.value)}
             />

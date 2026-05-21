@@ -24,11 +24,39 @@ import {
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppealPage from '../appeal/page';
+import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from '@/components/public-election/PublicElectionBackground';
+
+// ─── Glass Panel Component ───────────────────────────────────────────────────
+function GlassPanel({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`relative overflow-hidden rounded-[30px] border border-white/65 bg-white/45 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl ${className}`}>
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,transparent_34%,transparent_58%,var(--tenant-secondary)_100%)] opacity-[0.09]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
+      <div className="pointer-events-none absolute -right-20 -top-24 h-48 w-48 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-20 bottom-[-5rem] h-48 w-48 rounded-full bg-[var(--tenant-secondary)]/20 blur-3xl" />
+      {children}
+    </section>
+  );
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TabId = 'candidacy' | 'appeals';
-const VALID_TABS: TabId[] = ['candidacy', 'appeals'];
+type TabId = 'candidacy' | 'appeals' | 'candidates' | 'vote' | 'results';
+const VALID_TABS: TabId[] = ['candidacy', 'appeals', 'candidates', 'vote', 'results'];
+
+const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
+  { id: 'candidacy', label: 'Candidacy', icon: FileText },
+  { id: 'appeals', label: 'Appeals', icon: Scale },
+  { id: 'candidates', label: 'Candidates', icon: Users },
+  { id: 'vote', label: 'Vote Now', icon: Vote },
+  { id: 'results', label: 'Results', icon: BarChart3 },
+];
 
 interface CandidateRecord {
   id: string;
@@ -71,12 +99,12 @@ function StatusBadge({ status }: { status: string }) {
 
 function PhaseGate({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center gap-4">
-      <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+    <GlassPanel className="flex flex-col items-center justify-center py-24 text-center gap-4">
+      <div className="w-16 h-16 rounded-2xl bg-white/50 border border-white/60 flex items-center justify-center">
         <Lock className="w-7 h-7 text-slate-400" />
       </div>
-      <p className="text-slate-500 font-medium max-w-xs">{message}</p>
-    </div>
+      <p className="text-slate-600 font-bold max-w-xs">{message}</p>
+    </GlassPanel>
   );
 }
 
@@ -103,6 +131,10 @@ export default function CandidateDashboardPage() {
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [responseValues, setResponseValues] = useState<FormResponseValue[]>([]);
   const [cocLoading, setCocLoading] = useState(false);
+
+  // Other candidates
+  const [otherCandidates, setOtherCandidates] = useState<any[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
 
   // Phase flags
   const isFilingActive = isPhaseActive(phases, 'filing');
@@ -248,7 +280,24 @@ export default function CandidateDashboardPage() {
     }
   };
 
+  // ── Load other candidates ──────────────────────────────────────────────────
 
+  useEffect(() => {
+    if (activeTab !== 'candidates' || !isPublicationReachable) return;
+    if (otherCandidates.length > 0) return; // already loaded
+
+    setCandidatesLoading(true);
+    async function loadCandidates() {
+      const { data } = await supabase
+        .from('candidate')
+        .select('id, status, userID, tenant users(first_name, surname)')
+        .eq('electionID', election.id)
+        .eq('status', 'APPROVED');
+      setOtherCandidates(data || []);
+      setCandidatesLoading(false);
+    }
+    loadCandidates();
+  }, [activeTab, isPublicationReachable]);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Guards
@@ -283,7 +332,7 @@ export default function CandidateDashboardPage() {
     return (
       <div className="space-y-6">
         {/* Status Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+        <GlassPanel className="p-8">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
             <div className="space-y-1">
               <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">Your Candidacy</p>
@@ -304,39 +353,39 @@ export default function CandidateDashboardPage() {
 
           {/* Status Message */}
           {candidate?.status === 'PENDING_VERIFICATION' && (
-            <div className="mt-6 flex items-start gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl">
-              <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="mt-6 flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl backdrop-blur-md">
+              <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-amber-700">Under Review</p>
-                <p className="text-sm text-amber-600 mt-0.5">Your application is being reviewed by the election committee. You will be notified of the outcome.</p>
+                <p className="text-sm font-bold text-amber-800 font-black">Under Review</p>
+                <p className="text-sm text-amber-700 font-medium mt-0.5">Your application is being reviewed by the election committee. You will be notified of the outcome.</p>
               </div>
             </div>
           )}
           {candidate?.status === 'APPROVED' && (
-            <div className="mt-6 flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+            <div className="mt-6 flex items-start gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl backdrop-blur-md">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-emerald-700">Candidacy Approved</p>
-                <p className="text-sm text-emerald-600 mt-0.5">Your candidacy has been officially confirmed by the election committee.</p>
+                <p className="text-sm font-bold text-emerald-800 font-black">Candidacy Approved</p>
+                <p className="text-sm text-emerald-700 font-medium mt-0.5">Your candidacy has been officially confirmed by the election committee.</p>
               </div>
             </div>
           )}
           {candidate?.status === 'REJECTED' && (
-            <div className="mt-6 flex items-start gap-3 p-4 bg-red-50 border border-red-100 rounded-xl">
-              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="mt-6 flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl backdrop-blur-md">
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-red-700">Application Rejected</p>
-                <p className="text-sm text-red-600 mt-0.5">Your candidacy has been rejected. You may submit an appeal if the appeal phase is open.</p>
+                <p className="text-sm font-bold text-red-800 font-black">Application Rejected</p>
+                <p className="text-sm text-red-700 font-medium mt-0.5">Your candidacy has been rejected. You may submit an appeal if the appeal phase is open.</p>
               </div>
             </div>
           )}
-        </div>
+        </GlassPanel>
 
         {/* View COC Form */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <GlassPanel className="overflow-hidden">
           <div className="p-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[var(--tenant-primary-light,#ede9ff)] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-[var(--tenant-primary)]/10 flex items-center justify-center border border-[var(--tenant-primary)]/20">
                 <Eye className="w-5 h-5 text-[var(--tenant-primary)]" />
               </div>
               <div>
@@ -355,7 +404,7 @@ export default function CandidateDashboardPage() {
           </div>
 
           {showCOC && (
-            <div className="border-t border-slate-100 px-6 pb-6">
+            <div className="border-t border-white/20 px-6 pb-6 bg-white/10">
               {formFields.length === 0 ? (
                 <p className="text-slate-400 text-sm py-8 text-center">No form data found.</p>
               ) : (
@@ -364,7 +413,7 @@ export default function CandidateDashboardPage() {
                     const val = responseValues.find(rv => rv.fieldID === field.id);
                     const isFile = field.fieldType === 'file_upload';
                     return (
-                      <div key={field.id} className="grid grid-cols-3 gap-4 py-3 border-b border-slate-50 last:border-0">
+                      <div key={field.id} className="grid grid-cols-3 gap-4 py-3 border-b border-white/10 last:border-0">
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wider col-span-1 pt-0.5">{field.label}</p>
                         <div className="col-span-2">
                           {isFile && val?.value ? (
@@ -388,7 +437,7 @@ export default function CandidateDashboardPage() {
               )}
             </div>
           )}
-        </div>
+        </GlassPanel>
 
         {/* Go to Candidacy Form (if filing still open and not yet submitted) */}
         {isFilingActive && (!candidate || candidate.status === 'DRAFT') && (
@@ -416,45 +465,143 @@ export default function CandidateDashboardPage() {
         ? "Your candidacy application is still under review. The appeals section will be available once a decision has been made."
         : "You must complete your candidacy application before you can access the appeals section.";
       return (
-        <div className="flex flex-col items-center justify-center py-24 text-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center">
+        <GlassPanel className="flex flex-col items-center justify-center py-24 text-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
             <Clock className="w-7 h-7 text-amber-500" />
           </div>
-          <p className="text-slate-500 font-medium max-w-xs">{message}</p>
-        </div>
+          <p className="text-slate-600 font-bold max-w-xs">{message}</p>
+        </GlassPanel>
       );
     }
-    return <AppealPage />;
+    return <AppealPage isEmbedded={true} />;
   }
 
+  function renderCandidates() {
+    if (!isPublicationReachable) {
+      return <PhaseGate message="Candidate profiles will be visible once the publication phase begins." />;
+    }
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-1">Browse Candidates</p>
+          <h2 className="text-xl font-black text-slate-900">Meet the Candidates</h2>
+        </div>
+        {candidatesLoading ? (
+          <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-[var(--tenant-primary)]" /></div>
+        ) : otherCandidates.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
+            <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-400 text-sm">No approved candidates yet.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {otherCandidates.map((c: any) => {
+              const user = c['tenant users'];
+              const name = user ? `${user.first_name || ''} ${user.surname || ''}`.trim() : 'Candidate';
+              const isMe = c.userID === userContext!.userId;
+              return (
+                <div
+                  key={c.id}
+                  className={`bg-white rounded-2xl border p-6 shadow-sm flex flex-col items-center text-center gap-3 transition-all hover:shadow-md ${isMe ? 'border-[var(--tenant-primary)] ring-1 ring-[var(--tenant-primary)]' : 'border-slate-200'}`}
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl font-black text-slate-400">
+                    {name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">{name}</p>
+                    {isMe && <span className="text-xs font-black text-[var(--tenant-primary)] uppercase tracking-wider">You</span>}
+                  </div>
+                  <StatusBadge status={c.status} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
+  function renderVote() {
+    if (!isVotingActive) {
+      return <PhaseGate message="Voting has not started yet. You'll be able to access the ballot once the voting phase opens." />;
+    }
+    return (
+      <div className="space-y-6">
+        <GlassPanel className="p-8">
+          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-2">Voting Phase</p>
+          <h2 className="text-2xl font-black text-slate-900 mb-1">Official Ballot</h2>
+          <p className="text-slate-500 text-sm">The voting phase is currently active.</p>
+        </GlassPanel>
+        <GlassPanel className="p-12 flex flex-col items-center text-center gap-6">
+          <div className="w-20 h-20 rounded-3xl bg-[var(--tenant-primary)]/10 flex items-center justify-center border border-[var(--tenant-primary)]/20">
+            <Vote className="w-9 h-9 text-[var(--tenant-primary)]" />
+          </div>
+          <div>
+            <p className="text-xl font-black text-slate-900 mb-2">Voting is Now Open</p>
+            <p className="text-slate-500 text-sm max-w-xs">As a candidate, you may view the official ballot. Contact the election committee with any concerns.</p>
+          </div>
+          <button
+            onClick={() => router.push(`/${tenant.slug}/${election.slug}/vote`)}
+            className="flex items-center gap-2 px-6 py-3 bg-[var(--tenant-primary)] text-white font-bold rounded-xl hover:opacity-90 transition-all shadow-md"
+          >
+            <Vote className="w-5 h-5" />
+            View Ballot Page
+          </button>
+        </GlassPanel>
+      </div>
+    );
+  }
+
+  function renderResults() {
+    if (!isResultsReachable) {
+      return <PhaseGate message="Election results will be published once the results phase is active." />;
+    }
+    if (!candidateCanViewResults) {
+      return <PhaseGate message="Access to election results has been restricted by the administrator." />;
+    }
+    return (
+      <div className="space-y-6">
+        <GlassPanel className="p-8">
+          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-2">Results</p>
+          <h2 className="text-2xl font-black text-slate-900 mb-1">Election Results</h2>
+          <p className="text-slate-500 text-sm">Official election results are now available.</p>
+        </GlassPanel>
+        <button
+          onClick={() => router.push(`/${tenant.slug}/${election.slug}/results`)}
+          className="w-full flex items-center justify-between px-6 py-5 bg-white/50 border border-white/60 rounded-2xl font-bold text-slate-900 hover:border-[var(--tenant-primary)] hover:shadow-md transition-all group shadow-sm backdrop-blur-md"
+        >
+          <div className="flex items-center gap-3">
+            <BarChart3 className="w-5 h-5 text-[var(--tenant-primary)]" />
+            <span>View Full Results Page</span>
+          </div>
+          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
+        </button>
+      </div>
+    );
+  }
 
   const tabContent: Record<TabId, () => React.ReactNode> = {
     candidacy: renderCandidacy,
     appeals: renderAppeals,
+    candidates: renderCandidates,
+    vote: renderVote,
+    results: renderResults,
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Layout
   // ─────────────────────────────────────────────────────────────────────────────
 
+  const backgroundImage = getPublicElectionBackgroundImage(siteConfig, election);
+
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-slate-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+    <div className="relative min-h-[calc(100vh-80px)] overflow-hidden px-4 py-10 sm:px-6">
+      <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
+      <div className="pointer-events-none absolute left-[-8rem] top-20 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl animate-pulse" />
+      <div className="pointer-events-none absolute bottom-0 right-[-7rem] h-96 w-96 rounded-full bg-[var(--tenant-secondary)]/20 blur-3xl" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/35 blur-3xl" />
 
-        {/* Page Header */}
-        <div className="mb-8">
-          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] mb-1">Candidate Portal</p>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            Welcome, {userContext.name}
-          </h1>
-          <p className="text-slate-500 mt-1 font-medium">
-            {siteConfig?.public_title || election.title}
-          </p>
-        </div>
-
-
-
+      <div className="relative mx-auto max-w-5xl">
         {/* Tab Content */}
         <div className="animate-in fade-in duration-200">
           {tabContent[activeTab]()}

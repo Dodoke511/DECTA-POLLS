@@ -85,42 +85,47 @@ function CandidateSections({ sections, documents }: { sections: CandidateSection
   if (sections.length === 0 && documents.length === 0) return null;
 
   return (
-    <div className="mt-6 space-y-5 border-t border-white/55 pt-5">
+    <div className="mt-5 space-y-4 border-t border-white/65 pt-5">
       {sections.map(section => (
-        <section key={section.id} className="space-y-3">
-          <h3 className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">{section.label}</h3>
+        <section
+          key={section.id}
+          className="overflow-hidden rounded-2xl border border-white/65 bg-white/40 shadow-sm backdrop-blur-xl"
+        >
+          <div className="space-y-4 p-5">
+            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">{section.label}</h3>
 
-          {section.displayStyle === 'tags' ? (
-            <div className="flex flex-wrap gap-2">
-              {section.fields.map(field => (
-                <span key={`${section.id}-${field.label}`} className="rounded-full border border-white/60 bg-white/50 px-3 py-1 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-md">
-                  {field.value}
-                </span>
-              ))}
-            </div>
-          ) : section.displayStyle === 'prose' ? (
-            <div className="space-y-3">
-              {section.fields.map(field => (
-                <p key={`${section.id}-${field.label}`} className="text-sm leading-relaxed text-slate-600">
-                  {field.value}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <dl className="space-y-2">
-              {section.fields.map(field => (
-                <div key={`${section.id}-${field.label}`} className="grid gap-1 sm:grid-cols-[9rem_1fr]">
-                  <dt className="text-xs font-black uppercase tracking-wider text-slate-400">{field.label}</dt>
-                  <dd className="text-sm font-semibold text-slate-800">{field.value}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
+            {section.displayStyle === 'tags' ? (
+              <div className="flex flex-wrap gap-2">
+                {section.fields.map(field => (
+                  <span key={`${section.id}-${field.label}`} className="rounded-full border border-white/70 bg-white/60 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-md">
+                    {field.value}
+                  </span>
+                ))}
+              </div>
+            ) : section.displayStyle === 'prose' ? (
+              <div className="space-y-3">
+                {section.fields.map(field => (
+                  <p key={`${section.id}-${field.label}`} className="text-sm leading-relaxed text-slate-700">
+                    {field.value}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <dl className="space-y-3">
+                {section.fields.map(field => (
+                  <div key={`${section.id}-${field.label}`} className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,auto)] items-center gap-4">
+                    <dt className="min-w-0 text-[11px] font-black uppercase tracking-wider text-slate-400">{field.label}</dt>
+                    <dd className="justify-self-end whitespace-normal text-right text-sm font-black text-slate-800">{field.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
         </section>
       ))}
 
       {documents.length > 0 && (
-        <section className="space-y-3">
+        <section className="space-y-3 rounded-2xl border border-white/65 bg-white/40 p-5 shadow-sm backdrop-blur-xl">
           <h3 className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">Documents</h3>
           <div className="flex flex-wrap gap-2">
             {documents.map(document => (
@@ -129,7 +134,7 @@ function CandidateSections({ sections, documents }: { sections: CandidateSection
                 href={document.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-white/65 bg-white/55 px-3 py-2 text-xs font-black text-slate-700 shadow-sm backdrop-blur-md transition hover:border-[var(--tenant-primary)] hover:text-[var(--tenant-primary)]"
+                className="inline-flex items-center gap-2 rounded-full border border-white/65 bg-white/55 px-3 py-2 text-xs font-black text-slate-700 shadow-sm backdrop-blur-md transition hover:border-[var(--tenant-secondary)] hover:text-[var(--tenant-primary)]"
               >
                 <Download className="h-3.5 w-3.5" />
                 {document.label}
@@ -162,45 +167,49 @@ function CandidateCard({
     : null;
 
   return (
-    <article className="relative overflow-hidden rounded-[28px] border border-white/65 bg-white/50 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl transition hover:-translate-y-1 hover:border-white hover:bg-white/65 hover:shadow-[0_32px_90px_rgba(15,23,42,0.18)]">
+    <article className="relative self-start overflow-hidden rounded-[28px] border border-white/65 bg-white/50 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl transition hover:-translate-y-1 hover:border-white hover:bg-white/65 hover:shadow-[0_32px_90px_rgba(15,23,42,0.18)]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
-      <div className="pointer-events-none absolute -right-16 -top-20 h-40 w-40 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
-      <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
-        <CandidateAvatar candidate={candidate} onPhotoClick={onPhotoClick} />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">
-            {candidate.position || 'Candidate'}
-          </p>
-          <h2 className="mt-1 text-2xl font-black text-slate-900">{candidate.name}</h2>
-          {candidate.header.tagline && (
-            <p className="mt-2 text-sm font-semibold text-slate-600">{candidate.header.tagline}</p>
-          )}
-          {filedDate && (
-            <p className="mt-2 text-xs font-bold uppercase tracking-wider text-slate-400">Filed {filedDate}</p>
-          )}
-          <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-            {[candidate.header.department, candidate.header.course].filter(Boolean).map(item => (
-              <span key={item} className="rounded-full border border-white/60 bg-white/45 px-3 py-1 text-xs font-bold text-slate-600 shadow-sm backdrop-blur-md">
-                {item}
-              </span>
-            ))}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,transparent_28%,transparent_62%,var(--tenant-secondary)_100%)] opacity-[0.08]" />
+      <div className="relative">
+        <div>
+          <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
+            <CandidateAvatar candidate={candidate} onPhotoClick={onPhotoClick} />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">
+                {candidate.position || 'Candidate'}
+              </p>
+              <h2 className="mt-1 text-2xl font-black text-slate-900">{candidate.name}</h2>
+              {candidate.header.tagline && (
+                <p className="mt-2 text-sm font-semibold text-slate-600">{candidate.header.tagline}</p>
+              )}
+              {filedDate && (
+                <p className="mt-2 text-xs font-bold uppercase tracking-wider text-slate-400">Filed {filedDate}</p>
+              )}
+              <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+                {[candidate.header.department, candidate.header.course].filter(Boolean).map(item => (
+                  <span key={item} className="rounded-full border border-white/60 bg-white/45 px-3 py-1 text-xs font-bold text-slate-600 shadow-sm backdrop-blur-md">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
+
+          {!isDetailed && hasDetails && (
+            <button
+              type="button"
+              onClick={onToggleDetails}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/45 px-4 py-3 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition hover:border-[var(--tenant-secondary)] hover:bg-white/75 hover:text-[var(--tenant-primary)]"
+              aria-expanded={isExpanded}
+            >
+              {isExpanded ? 'Hide Details' : 'View Details'}
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+          )}
         </div>
+
+        {showDetails && <CandidateSections sections={candidate.sections} documents={candidate.documents} />}
       </div>
-
-      {!isDetailed && hasDetails && (
-        <button
-          type="button"
-          onClick={onToggleDetails}
-          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/40 px-4 py-3 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition hover:border-[var(--tenant-primary)] hover:bg-white/70 hover:text-[var(--tenant-primary)]"
-          aria-expanded={isExpanded}
-        >
-          {isExpanded ? 'Hide Details' : 'View Details'}
-          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
-      )}
-
-      {showDetails && <CandidateSections sections={candidate.sections} documents={candidate.documents} />}
     </article>
   );
 }
@@ -210,7 +219,7 @@ export default function CandidatesListingPage() {
   const [data, setData] = useState<CandidatesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [expandedCandidateIds, setExpandedCandidateIds] = useState<Set<string>>(new Set());
+  const [expandedCandidateId, setExpandedCandidateId] = useState<string | null>(null);
   const [photoPreviewCandidate, setPhotoPreviewCandidate] = useState<PublishedCandidate | null>(null);
 
   useEffect(() => {
@@ -269,30 +278,24 @@ export default function CandidatesListingPage() {
   const backgroundImage = getPublicElectionBackgroundImage(siteConfig, election);
 
   const toggleCandidateDetails = (candidateId: string) => {
-    setExpandedCandidateIds(prev => {
-      const next = new Set(prev);
-      if (next.has(candidateId)) {
-        next.delete(candidateId);
-      } else {
-        next.add(candidateId);
-      }
-      return next;
-    });
+    setExpandedCandidateId(prev => prev === candidateId ? null : candidateId);
   };
 
   return (
     <div className="relative min-h-[calc(100vh-80px)] overflow-hidden">
       <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
-      <div className="pointer-events-none absolute left-[-8rem] top-20 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 right-[-7rem] h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,var(--tenant-primary)_0%,transparent_32%,transparent_68%,var(--tenant-secondary)_100%)] opacity-[0.10]" />
 
       <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <div className="mb-8 rounded-[30px] border border-white/65 bg-white/35 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
+        <div className="mb-8 overflow-hidden rounded-[30px] border border-white/65 bg-white/35 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
+          <div className="h-1.5 bg-gradient-to-r from-[var(--tenant-primary)] to-[var(--tenant-secondary)]" />
+          <div className="p-6">
           <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">Candidates</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900">Meet the Candidates</h1>
           <p className="mt-2 max-w-2xl text-sm font-semibold text-slate-500">
             Browse the approved candidates for {siteConfig?.public_title || election.title}.
           </p>
+          </div>
         </div>
 
         {loading && (
@@ -331,13 +334,13 @@ export default function CandidatesListingPage() {
         )}
 
         {!loading && !error && candidates.length > 0 && (
-          <div className={shouldShowDetailsByDefault ? 'space-y-4' : 'grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3'}>
+          <div className={shouldShowDetailsByDefault ? 'space-y-4' : 'grid grid-cols-1 items-start gap-5 md:grid-cols-2 xl:grid-cols-3'}>
             {candidates.map(candidate => (
               <CandidateCard
                 key={candidate.id}
                 candidate={candidate}
                 isDetailed={shouldShowDetailsByDefault}
-                isExpanded={expandedCandidateIds.has(candidate.id)}
+                isExpanded={expandedCandidateId === candidate.id}
                 onToggleDetails={() => toggleCandidateDetails(candidate.id)}
                 onPhotoClick={setPhotoPreviewCandidate}
               />
