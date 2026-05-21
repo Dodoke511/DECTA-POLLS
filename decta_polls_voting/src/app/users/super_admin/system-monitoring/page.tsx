@@ -16,14 +16,35 @@ interface AuditLog {
   status: ActionStatus;
 }
 
+interface TenantAuditLog {
+  id: number;
+  timestamp: string;
+  tenant: string;
+  actor: string;
+  action: string;
+}
+
 // ─── Mock Data ────────────────────────────────────────────────────────────────
-const auditLogs: AuditLog[] = [
+const systemMonitoringLogs: AuditLog[] = [
   { id: 1, timestamp: "2026-03-20 14:32:15", tenant: "CEBU INSTITUTE TECHNOLOGY", action: "Subscription Change", status: "Success" },
   { id: 2, timestamp: "2026-03-20 14:32:15", tenant: "UNIVERSITY OF CEBU",        action: "Password Reset",       status: "Success" },
   { id: 3, timestamp: "2026-03-20 14:32:15", tenant: "CEBU DOCTORS UNIVERSITY",   action: "Subscription Change", status: "Warning" },
   { id: 4, timestamp: "2026-03-20 14:32:15", tenant: "VELEZ COLLEGE",             action: "Subscription Change", status: "Warning" },
   { id: 5, timestamp: "2026-03-20 14:32:15", tenant: "MONSTER CORP.",             action: "Subscription Change", status: "Error"   },
   { id: 6, timestamp: "2026-03-20 14:32:15", tenant: "INCORPORATED INC.",         action: "Subscription Change", status: "Error"   },
+];
+
+const tenantAuditLogs: TenantAuditLog[] = [
+  { id: 101, timestamp: "2026-05-21 09:14:02", tenant: "CEBU INSTITUTE TECHNOLOGY", actor: "Maria Santos · Tenant Admin",      action: "Created election: SSG General Elections 2026" },
+  { id: 102, timestamp: "2026-05-21 08:47:33", tenant: "UNIVERSITY OF CEBU",        actor: "elections@uc.edu.ph",              action: "Finished election: Board of Directors Vote 2025" },
+  { id: 103, timestamp: "2026-05-20 16:22:08", tenant: "MONSTER CORP.",             actor: "James Rivera · Billing Admin",     action: "Updated subscription plan to Enterprise" },
+  { id: 104, timestamp: "2026-05-20 11:05:41", tenant: "VELEZ COLLEGE",             actor: "Ana Dela Cruz · Election Officer", action: "Launched election: Student Council Midterm Poll" },
+  { id: 105, timestamp: "2026-05-19 18:30:55", tenant: "CEBU DOCTORS UNIVERSITY",   actor: "admin@cdu.edu.ph",                 action: "Published election results: Faculty Senate 2026" },
+  { id: 106, timestamp: "2026-05-19 14:12:19", tenant: "INCORPORATED INC.",         actor: "hr-admin@incorporated.inc",        action: "Created election: HR Committee Representative" },
+  { id: 107, timestamp: "2026-05-18 10:08:44", tenant: "UNIVERSITY OF CEBU",        actor: "Carlos Mendoza · Tenant Admin",    action: "Updated branding and organization profile" },
+  { id: 108, timestamp: "2026-05-17 15:41:27", tenant: "CEBU INSTITUTE TECHNOLOGY", actor: "Maria Santos · Tenant Admin",      action: "Finished election: Department Chair Selection" },
+  { id: 109, timestamp: "2026-05-16 09:55:03", tenant: "MONSTER CORP.",             actor: "James Rivera · Tenant Admin",      action: "Added tenant admin user: operations@monstercorp.com" },
+  { id: 110, timestamp: "2026-05-15 13:20:16", tenant: "VELEZ COLLEGE",             actor: "Ana Dela Cruz · Election Officer", action: "Election launch failed: missing phase configuration" },
 ];
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
@@ -90,6 +111,91 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
+// ─── Audit Table ──────────────────────────────────────────────────────────────
+function AuditLogsTable({ logs, showActionStatus = true }: { logs: AuditLog[]; showActionStatus?: boolean }) {
+  return (
+    <div className="super-admin-table w-full rounded-[22px] border border-white/[0.10] overflow-hidden mb-8">
+      <div className="w-full">
+        <table className="w-full border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
+              <th className="px-6 py-4">TIMESTAMP</th>
+              <th className="px-6 py-4">TENANT</th>
+              <th className="px-6 py-4">ACTION</th>
+              {showActionStatus && <th className="px-6 py-4">ACTION STATUS</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {logs.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-24 py-16 text-center text-white/40">
+                  No results found.
+                </td>
+              </tr>
+            ) : (
+              logs.map((log) => (
+                <tr
+                  key={log.id}
+                  className="border-b border-white/[0.07] last:border-0 hover:bg-white/[0.02] transition-colors"
+                >
+                  <td className="px-6 py-4 font-mono text-white/80">{log.timestamp}</td>
+                  <td className="px-6 py-4 font-medium text-white/90">{log.tenant}</td>
+                  <td className="px-6 py-4 text-white/60">{log.action}</td>
+                  {showActionStatus && (
+                    <td className="px-6 py-4">
+                      <StatusBadge status={log.status} />
+                    </td>
+                  )}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TenantAuditLogsTable({ logs }: { logs: TenantAuditLog[] }) {
+  return (
+    <div className="super-admin-table w-full rounded-[22px] border border-white/[0.10] overflow-hidden mb-8">
+      <div className="w-full">
+        <table className="w-full border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
+              <th className="px-6 py-4">TIMESTAMP</th>
+              <th className="px-6 py-4">TENANT</th>
+              <th className="px-6 py-4">PERFORMED BY</th>
+              <th className="px-6 py-4">ACTION</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-24 py-16 text-center text-white/40">
+                  No results found.
+                </td>
+              </tr>
+            ) : (
+              logs.map((log) => (
+                <tr
+                  key={log.id}
+                  className="border-b border-white/[0.07] last:border-0 hover:bg-white/[0.02] transition-colors"
+                >
+                  <td className="px-6 py-4 font-mono text-white/80">{log.timestamp}</td>
+                  <td className="px-6 py-4 font-medium text-white/90">{log.tenant}</td>
+                  <td className="px-6 py-4 text-white/75">{log.actor}</td>
+                  <td className="px-6 py-4 text-white/60">{log.action}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Search Audit ─────────────────────────────────────────────────────────────
 function SearchAudit({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
@@ -117,7 +223,7 @@ import { useRouter } from "next/navigation";
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SystemMonitoringPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"monitoring" | "config">("monitoring");
+  const [activeTab, setActiveTab] = useState<"monitoring" | "config" | "audit">("monitoring");
   const [search, setSearch] = useState("");
 
   React.useEffect(() => {
@@ -133,11 +239,28 @@ export default function SystemMonitoringPage() {
 
   const pageTitle = activeTab === "config" ? "Settings" : "Settings";
 
-  const filtered = auditLogs.filter((l) =>
-    l.tenant.toLowerCase().includes(search.toLowerCase()) ||
-    l.action.toLowerCase().includes(search.toLowerCase()) ||
-    l.status.toLowerCase().includes(search.toLowerCase())
-  );
+  const filterMonitoringLogs = (logs: AuditLog[]) => {
+    const q = search.toLowerCase();
+    return logs.filter(
+      (l) =>
+        l.tenant.toLowerCase().includes(q) ||
+        l.action.toLowerCase().includes(q) ||
+        l.status.toLowerCase().includes(q)
+    );
+  };
+
+  const filterTenantAuditLogs = (logs: TenantAuditLog[]) => {
+    const q = search.toLowerCase();
+    return logs.filter(
+      (l) =>
+        l.tenant.toLowerCase().includes(q) ||
+        l.actor.toLowerCase().includes(q) ||
+        l.action.toLowerCase().includes(q)
+    );
+  };
+
+  const filteredMonitoring = filterMonitoringLogs(systemMonitoringLogs);
+  const filteredTenantAudit = filterTenantAuditLogs(tenantAuditLogs);
 
   return (
     <div className="flex flex-col h-screen text-[#f1f0f3]" style={{
@@ -168,52 +291,19 @@ export default function SystemMonitoringPage() {
               <div className="flex gap-2.5">
                 <TabButton label="System Monitoring"   active={activeTab === "monitoring"} onClick={() => setActiveTab("monitoring")} />
                 <TabButton label="Global Configuration" active={activeTab === "config"}    onClick={() => setActiveTab("config")} />
+                <TabButton label="Audit Logs"           active={activeTab === "audit"}     onClick={() => setActiveTab("audit")} />
               </div>
-              {activeTab === "monitoring" && <SearchAudit value={search} onChange={setSearch} />}
+              {(activeTab === "monitoring" || activeTab === "audit") && (
+                <SearchAudit value={search} onChange={setSearch} />
+              )}
             </div>
 
             {/* Main Content */}
             {activeTab === "monitoring" ? (
-              <div className="super-admin-table w-full rounded-[22px] border border-white/[0.10] overflow-hidden mb-8">
-              {/* Table Wrapper */}
-              <div className="w-full">
-                <table className="w-full border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                      <th className="px-6 py-4">TIMESTAMP</th>
-                      <th className="px-6 py-4">TENANT</th>
-                      <th className="px-6 py-4">ACTION</th>
-                      <th className="px-6 py-4">ACTION STATUS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-
-                    {filtered.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-24 py-16 text-center text-white/40">
-                          No results found.
-                        </td>
-                      </tr>
-                    ) : (
-                      filtered.map((log, index) => (
-                        <tr
-                          key={log.id}
-                          className="border-b border-white/[0.07] last:border-0 hover:bg-white/[0.02] transition-colors"
-                        >
-                          <td className="px-6 py-4 font-mono text-white/80">{log.timestamp}</td>
-                          <td className="px-6 py-4 font-medium text-white/90">{log.tenant}</td>
-                          <td className="px-6 py-4 text-white/60">{log.action}</td>
-                          <td className="px-6 py-4">
-                            <StatusBadge status={log.status} />
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
+              <AuditLogsTable logs={filteredMonitoring} />
+            ) : activeTab === "audit" ? (
+              <TenantAuditLogsTable logs={filteredTenantAudit} />
+            ) : (
             <div className="flex-1">
               <GlobalConfiguration />
             </div>
