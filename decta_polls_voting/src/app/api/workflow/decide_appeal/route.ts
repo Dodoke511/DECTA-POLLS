@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     const { data: phases, error: phasesError } = await supabase
-      .from('election_phases')
+      .from('election phase')
       .select('id, phase_type')
       .eq('electionID', appeal.electionID);
 
@@ -42,8 +42,8 @@ export async function POST(request: Request) {
 
     if (appealPhaseId) {
       const { data: config, error: configError } = await supabase
-        .from('phase_config')
-        .select('config')
+        .from('appeal config')
+        .select('onApproveAction, onApproveStatus, onRejectAction, onRejectStatus')
         .eq('phaseID', appealPhaseId)
         .maybeSingle();
 
@@ -51,13 +51,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: configError.message }, { status: 500 });
       }
 
-      if (config?.config) {
-        try {
-          appealConfig = typeof config.config === 'string' ? JSON.parse(config.config) : config.config;
-        } catch (err) {
-          console.error('Failed to parse appeal config:', err);
-          appealConfig = null;
-        }
+      if (config) {
+        appealConfig = config;
       }
     }
 

@@ -318,10 +318,6 @@ export default function AppealPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-16 px-6">
-      <div className="mb-12 border-b border-slate-100 pb-8">
-          <h2 className="text-2xl font-bold text-white mb-2">Appeals Closed</h2>
-          <p className="text-white/60">The appeal phase is not currently active.</p>
-      </div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Submit an Appeal</h1>
