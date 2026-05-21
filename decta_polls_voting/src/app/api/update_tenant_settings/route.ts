@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       organizationName,
       brandingColorPrimary,
       brandingColorSecondary,
+      brandingColorThird,
       activeTriggers,
       allowSubstitution,
       allowWithdrawal,
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
     if (organizationName !== undefined) updates.organization = organizationName;
     if (brandingColorPrimary !== undefined) updates.main_color = brandingColorPrimary;
     if (brandingColorSecondary !== undefined) updates.secondary_color = brandingColorSecondary;
+    if (brandingColorThird !== undefined) updates.third_color = brandingColorThird;
     if (logoUrl !== undefined) updates.logo_url = logoUrl;
     if (subscriptionPlan !== undefined) updates.subscription = subscriptionPlan;
     if (isSubscriptionRenewed) {

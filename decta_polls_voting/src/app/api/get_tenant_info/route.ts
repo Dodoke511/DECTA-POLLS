@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from("tenants")
-      .select("id, organization, email, type, logo_url, main_color, secondary_color, subscription, slug, created_at, subscription_expires_at")
+      .select("id, organization, email, type, logo_url, main_color, secondary_color, third_color, subscription, slug, created_at, subscription_expires_at")
       .eq("id", userData.tenantID)
       .single();
 

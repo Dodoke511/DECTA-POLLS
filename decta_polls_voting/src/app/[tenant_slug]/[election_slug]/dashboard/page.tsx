@@ -24,8 +24,10 @@ function GlassPanel({
 }) {
   return (
     <section className={`relative overflow-hidden rounded-[30px] border border-white/65 bg-white/45 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl ${className}`}>
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.09]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
       <div className="pointer-events-none absolute -right-20 -top-24 h-48 w-48 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-20 bottom-[-5rem] h-48 w-48 rounded-full bg-[var(--tenant-secondary)]/20 blur-3xl" />
       {children}
     </section>
   );
@@ -43,17 +45,16 @@ function StatCard({
   accent?: boolean;
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-[26px] border p-6 shadow-[0_18px_45px_rgba(15,23,42,0.10)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.16)] ${accent ? 'border-[var(--tenant-primary)]/25 bg-[var(--tenant-primary)]/10 text-slate-900' : 'border-white/65 bg-white/45 text-slate-800'
-      }`}>
+    <div className={`relative overflow-hidden rounded-[26px] border p-6 shadow-[0_18px_45px_rgba(15,23,42,0.10)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.16)] ${accent ? 'border-[var(--tenant-primary)]/25 bg-[var(--tenant-primary)]/10 text-slate-900' : 'border-white/65 bg-white/45 text-slate-800'}`}>
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.08]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
       <div className="flex items-center gap-4">
-        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl border shadow-sm backdrop-blur-xl ${accent ? 'border-[var(--tenant-primary)]/25 bg-white/55 text-[var(--tenant-primary)]' : 'border-white/65 bg-white/55 text-slate-600'
-          }`}>
+        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl border shadow-sm backdrop-blur-xl ${accent ? 'border-[var(--tenant-secondary)]/35 bg-gradient-to-br from-[var(--tenant-primary)]/15 via-[var(--tenant-third)]/20 to-[var(--tenant-secondary)]/25 text-[var(--tenant-primary)]' : 'border-[var(--tenant-secondary)]/25 bg-white/55 text-slate-600'}`}>
           <Icon className="h-5 w-5" />
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-          <p className="mt-1 text-lg font-black text-slate-900 leading-none">{value}</p>
+          <p className="mt-1 truncate text-lg font-black leading-none text-slate-900" title={value}>{value}</p>
         </div>
       </div>
     </div>
@@ -168,7 +169,7 @@ export default function VoterDashboardPage() {
     <div className="relative min-h-[calc(100vh-80px)] overflow-hidden px-4 pt-2 pb-10 sm:px-6">
       <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
       <div className="pointer-events-none absolute left-[-8rem] top-20 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl animate-pulse" />
-      <div className="pointer-events-none absolute bottom-0 right-[-7rem] h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 right-[-7rem] h-96 w-96 rounded-full bg-[var(--tenant-third)]/15 blur-3xl" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/35 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl space-y-8">
@@ -204,6 +205,7 @@ export default function VoterDashboardPage() {
             <div className="flex flex-col sm:flex-row gap-6 w-full self-stretch">
               {/* Live Election Status Card */}
               <div className="flex-1 relative overflow-hidden rounded-[26px] border border-white/65 bg-white/70 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)] flex flex-col justify-between min-h-[145px]">
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.07]" />
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Election Status</p>
@@ -211,7 +213,7 @@ export default function VoterDashboardPage() {
                     ACTIVE
                   </span>
                 </div>
-                <div className="mt-4">
+                <div className="mt-4 relative">
                   <h3 className="text-xl font-black text-slate-950 leading-snug truncate" title={title}>{title}</h3>
                   <p className="mt-3 text-xs font-semibold text-slate-500 flex items-center gap-1.5">
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
@@ -222,6 +224,7 @@ export default function VoterDashboardPage() {
 
               {/* Current Phase Card */}
               <div className="flex-1 relative overflow-hidden rounded-[26px] border border-white/65 bg-white/70 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)] flex flex-col justify-between min-h-[145px]">
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.07]" />
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Phase</p>
@@ -229,7 +232,7 @@ export default function VoterDashboardPage() {
                     LIVE
                   </span>
                 </div>
-                <div className="mt-4">
+                <div className="mt-4 relative">
                   <h3 className="text-xl font-black text-slate-950 flex items-baseline">
                     {activePhaseLabel}
                     {phaseIndexLabel && (
@@ -240,7 +243,7 @@ export default function VoterDashboardPage() {
                   <div className="mt-4">
                     <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100/80 border border-slate-200/40">
                       <div
-                        className="h-full rounded-full bg-[var(--tenant-primary)] shadow-[0_0_12px_rgba(93,68,248,0.3)] transition-all duration-500"
+                        className="h-full rounded-full bg-gradient-to-r from-[var(--tenant-primary)] via-[var(--tenant-third)] to-[var(--tenant-secondary)] shadow-[0_0_12px_rgba(93,68,248,0.3)] transition-all duration-500"
                         style={{ width: `${progressPercent}%` }}
                       />
                     </div>
@@ -251,11 +254,12 @@ export default function VoterDashboardPage() {
 
             {/* Vote Tallies Card */}
             <div className="relative overflow-hidden rounded-[26px] border border-white/65 bg-white/70 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)] w-full">
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.06]" />
               <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vote Tallies</p>
 
               {isVotingPhaseActive ? (
-                <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                <div className="mt-5 grid gap-4 sm:grid-cols-3 relative">
                   {displayedCandidates.map((cand, index) => (
                     <div key={index} className="rounded-2xl border border-slate-100 bg-white/80 p-4 shadow-sm transition duration-300 hover:shadow-md hover:border-[var(--tenant-primary)]/20">
                       <div className="flex items-center justify-between text-xs font-black">
@@ -264,7 +268,7 @@ export default function VoterDashboardPage() {
                       </div>
                       <div className="mt-2.5 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-[var(--tenant-primary)] to-cyan-400 shadow-[0_0_8px_rgba(93,68,248,0.25)] transition-all duration-500"
+                          className="h-full rounded-full bg-gradient-to-r from-[var(--tenant-primary)] via-[var(--tenant-third)] to-[var(--tenant-secondary)] shadow-[0_0_8px_rgba(93,68,248,0.25)] transition-all duration-500"
                           style={{ width: `${cand.percentage}%` }}
                         />
                       </div>
@@ -294,9 +298,9 @@ export default function VoterDashboardPage() {
 
         {/* Voter Session Active Panel */}
         <GlassPanel className="p-8 sm:p-10">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 relative">
             <div className="lg:col-span-2">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/65 bg-white/55 text-[var(--tenant-primary)] shadow-sm backdrop-blur-xl">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/65 bg-gradient-to-br from-[var(--tenant-primary)]/15 via-[var(--tenant-third)]/20 to-[var(--tenant-secondary)]/25 text-[var(--tenant-primary)] shadow-sm backdrop-blur-xl">
                 <BadgeCheck className="h-5 w-5" />
               </div>
               <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">Be the Change</p>

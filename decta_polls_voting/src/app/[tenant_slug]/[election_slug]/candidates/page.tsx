@@ -169,7 +169,7 @@ function CandidateCard({
   return (
     <article className="relative self-start overflow-hidden rounded-[28px] border border-white/65 bg-white/50 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl transition hover:-translate-y-1 hover:border-white hover:bg-white/65 hover:shadow-[0_32px_90px_rgba(15,23,42,0.18)]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,transparent_28%,transparent_62%,var(--tenant-secondary)_100%)] opacity-[0.08]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.08]" />
       <div className="relative">
         <div>
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
@@ -284,11 +284,11 @@ export default function CandidatesListingPage() {
   return (
     <div className="relative min-h-[calc(100vh-80px)] overflow-hidden">
       <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,var(--tenant-primary)_0%,transparent_32%,transparent_68%,var(--tenant-secondary)_100%)] opacity-[0.10]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.10]" />
 
       <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="mb-8 overflow-hidden rounded-[30px] border border-white/65 bg-white/35 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
-          <div className="h-1.5 bg-gradient-to-r from-[var(--tenant-primary)] to-[var(--tenant-secondary)]" />
+          <div className="h-1.5 bg-gradient-to-r from-[var(--tenant-primary)] via-[var(--tenant-third)] to-[var(--tenant-secondary)]" />
           <div className="p-6">
           <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">Candidates</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900">Meet the Candidates</h1>

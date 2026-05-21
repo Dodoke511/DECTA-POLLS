@@ -25,7 +25,7 @@ function GlassPanel({
 }) {
   return (
     <section className={`relative overflow-hidden rounded-[30px] border border-white/65 bg-white/45 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl ${className}`}>
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,transparent_34%,transparent_58%,var(--tenant-secondary)_100%)] opacity-[0.09]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.09]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
       <div className="pointer-events-none absolute -right-20 -top-24 h-48 w-48 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
       <div className="pointer-events-none absolute -left-20 bottom-[-5rem] h-48 w-48 rounded-full bg-[var(--tenant-secondary)]/20 blur-3xl" />
@@ -47,10 +47,10 @@ function StatCard({
 }) {
   return (
     <div className={`relative overflow-hidden rounded-[26px] border p-6 shadow-[0_18px_45px_rgba(15,23,42,0.10)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.16)] ${accent ? 'border-[var(--tenant-primary)]/25 bg-[var(--tenant-primary)]/10 text-slate-900' : 'border-white/65 bg-white/45 text-slate-800'}`}>
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,transparent_40%,var(--tenant-secondary)_100%)] opacity-[0.08]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.08]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
       <div className="flex items-center gap-4">
-        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl border shadow-sm backdrop-blur-xl ${accent ? 'border-[var(--tenant-secondary)]/35 bg-gradient-to-br from-[var(--tenant-primary)]/15 to-[var(--tenant-secondary)]/25 text-[var(--tenant-primary)]' : 'border-[var(--tenant-secondary)]/25 bg-white/55 text-slate-600'}`}>
+        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl border shadow-sm backdrop-blur-xl ${accent ? 'border-[var(--tenant-secondary)]/35 bg-gradient-to-br from-[var(--tenant-primary)]/15 via-[var(--tenant-third)]/20 to-[var(--tenant-secondary)]/25 text-[var(--tenant-primary)]' : 'border-[var(--tenant-secondary)]/25 bg-white/55 text-slate-600'}`}>
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
@@ -183,7 +183,7 @@ export default function ElectionLandingPage() {
 
               <div className="flex w-full flex-col gap-6 sm:flex-row">
                 <div className="relative flex min-h-[145px] flex-1 flex-col justify-between overflow-hidden rounded-[26px] border border-white/65 bg-white/70 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)]">
-                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,transparent_42%,var(--tenant-secondary)_100%)] opacity-[0.07]" />
+                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.07]" />
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Election Status</p>
@@ -201,7 +201,7 @@ export default function ElectionLandingPage() {
                 </div>
 
                 <div className="relative flex min-h-[145px] flex-1 flex-col justify-between overflow-hidden rounded-[26px] border border-white/65 bg-white/70 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)]">
-                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,transparent_42%,var(--tenant-secondary)_100%)] opacity-[0.07]" />
+                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.07]" />
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Phase</p>
@@ -219,7 +219,7 @@ export default function ElectionLandingPage() {
                     <div className="mt-4">
                       <div className="h-2.5 w-full overflow-hidden rounded-full border border-slate-200/40 bg-slate-100/80">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-[var(--tenant-primary)] to-[var(--tenant-secondary)] shadow-[0_0_12px_rgba(93,68,248,0.3)] transition-all duration-500"
+                          className="h-full rounded-full bg-gradient-to-r from-[var(--tenant-primary)] via-[var(--tenant-third)] to-[var(--tenant-secondary)] shadow-[0_0_12px_rgba(93,68,248,0.3)] transition-all duration-500"
                           style={{ width: `${progressPercent}%` }}
                         />
                       </div>
@@ -229,7 +229,7 @@ export default function ElectionLandingPage() {
               </div>
 
               <div className="relative w-full overflow-hidden rounded-[26px] border border-white/65 bg-white/70 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)]">
-                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,transparent_45%,var(--tenant-secondary)_100%)] opacity-[0.06]" />
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.06]" />
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vote Tallies</p>
 
@@ -243,7 +243,7 @@ export default function ElectionLandingPage() {
                         </div>
                         <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-100">
                           <div
-                            className="h-full rounded-full bg-gradient-to-r from-[var(--tenant-primary)] to-[var(--tenant-secondary)] shadow-[0_0_8px_rgba(93,68,248,0.25)] transition-all duration-500"
+                            className="h-full rounded-full bg-gradient-to-r from-[var(--tenant-primary)] via-[var(--tenant-third)] to-[var(--tenant-secondary)] shadow-[0_0_8px_rgba(93,68,248,0.25)] transition-all duration-500"
                             style={{ width: `${cand.percentage}%` }}
                           />
                         </div>
@@ -273,7 +273,7 @@ export default function ElectionLandingPage() {
           <GlassPanel className="p-8 sm:p-10">
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
               <div className="lg:col-span-2">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--tenant-secondary)]/35 bg-gradient-to-br from-[var(--tenant-primary)]/15 to-[var(--tenant-secondary)]/25 text-[var(--tenant-primary)] shadow-sm backdrop-blur-xl">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--tenant-secondary)]/35 bg-gradient-to-br from-[var(--tenant-primary)]/15 via-[var(--tenant-third)]/20 to-[var(--tenant-secondary)]/25 text-[var(--tenant-primary)] shadow-sm backdrop-blur-xl">
                   <BadgeCheck className="h-5 w-5" />
                 </div>
                 <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">Be the Change</p>
@@ -309,7 +309,7 @@ export default function ElectionLandingPage() {
     <div className="relative min-h-[calc(100vh-136px)] overflow-hidden px-4 py-8 sm:px-6 lg:py-10">
       <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
       <div className="pointer-events-none absolute left-[-8rem] top-20 z-0 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 right-[-7rem] z-0 h-96 w-96 rounded-full bg-sky-300/20 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 right-[-7rem] z-0 h-96 w-96 rounded-full bg-[var(--tenant-third)]/15 blur-3xl" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/35 blur-3xl" />
 
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-216px)] w-full max-w-7xl grid-cols-1 items-center gap-7 lg:grid-cols-[1.05fr_0.95fr] xl:gap-10">
