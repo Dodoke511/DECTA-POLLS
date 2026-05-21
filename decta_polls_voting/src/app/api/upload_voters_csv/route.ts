@@ -86,6 +86,7 @@ export async function POST(request: Request) {
     // Parse CSV rows
     const voters: ParsedVoter[] = [];
     const errors: Record<string, unknown>[] = [];
+    const seenEmailsInCsv = new Set<string>();
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(separator).map((v) => v.trim());
@@ -107,9 +108,16 @@ export async function POST(request: Request) {
         continue;
       }
 
+      const emailLower = row.email.toLowerCase();
+      if (seenEmailsInCsv.has(emailLower)) {
+        // Skip duplicate email within the same CSV file silently ("just let it be")
+        continue;
+      }
+      seenEmailsInCsv.add(emailLower);
+
       voters.push({
         tenantID: tenantId,
-        email: row.email.toLowerCase(),
+        email: emailLower,
         first_name: row.first_name,
         middle_name: row.middle_name || null,
         surname: row.surname,
@@ -120,7 +128,7 @@ export async function POST(request: Request) {
       });
     }
 
-    console.log('Valid voters found:', voters.length);
+    console.log('Valid unique voters found in CSV:', voters.length);
     console.log('Errors found:', errors.length);
 
     if (voters.length === 0) {
@@ -133,13 +141,48 @@ export async function POST(request: Request) {
       );
     }
 
+    // --- BULK DATABASE DUPLICATION CHECK ---
+    const csvEmails = voters.map((v) => v.email);
+    const existingEmails = new Set<string>();
+
+    if (csvEmails.length > 0) {
+      const { data: existingUsers, error: fetchError } = await supabase
+        .from("tenant users")
+        .select("email")
+        .eq("tenantID", tenantId)
+        .in("email", csvEmails);
+
+      if (fetchError) {
+        console.error("[upload_voters_csv] Error fetching existing users:", fetchError);
+      } else if (existingUsers) {
+        existingUsers.forEach((u) => {
+          if (u.email) {
+            existingEmails.add(u.email.toLowerCase());
+          }
+        });
+      }
+    }
+
+    // Only insert voters that do not exist in the tenant's database
+    const votersToInsert = voters.filter((voter) => !existingEmails.has(voter.email));
+
+    // If all voters are already registered, return success 200 OK cleanly ("just let it be")
+    if (votersToInsert.length === 0) {
+      return NextResponse.json({
+        message: "All uploaded voters are already registered.",
+        count: 0,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    }
+
     // --- CHECK USER LIMITS ---
+    // Only check limits based on the actual new voters to be inserted
     const limitCheck = await checkUserLimit(tenantId);
-    if (!limitCheck.allowed || (limitCheck.limit !== null && limitCheck.currentCount + voters.length > limitCheck.limit)) {
+    if (!limitCheck.allowed || (limitCheck.limit !== null && limitCheck.currentCount + votersToInsert.length > limitCheck.limit)) {
       const remainingSlots = limitCheck.limit !== null ? Math.max(0, limitCheck.limit - limitCheck.currentCount) : 'unlimited';
       return NextResponse.json(
         {
-          error: `Upload rejected. This upload contains ${voters.length} users, but you only have ${remainingSlots} slots remaining before reaching your limit of ${limitCheck.limit}.`,
+          error: `Upload rejected. This upload would add ${votersToInsert.length} new users, but you only have ${remainingSlots} slots remaining before reaching your limit of ${limitCheck.limit}.`,
         },
         { status: 403 }
       );
@@ -147,22 +190,7 @@ export async function POST(request: Request) {
 
     const insertedVoters: unknown[] = [];
 
-    for (const voter of voters) {
-      const { data: existingTenantUser } = await supabase
-        .from("tenant users")
-        .select("id")
-        .eq("tenantID", tenantId)
-        .eq("email", voter.email)
-        .maybeSingle();
-
-      if (existingTenantUser) {
-        errors.push({
-          email: voter.email,
-          error: "Email already exists for this tenant",
-        });
-        continue;
-      }
-
+    for (const voter of votersToInsert) {
       const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
         email: voter.email,
         password: TEMPORARY_VOTER_PASSWORD,

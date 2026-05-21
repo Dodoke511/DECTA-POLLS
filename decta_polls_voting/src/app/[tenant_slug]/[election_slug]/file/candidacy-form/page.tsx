@@ -4,11 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { createClient } from '@supabase/supabase-js';
 import { Loader2, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function CandidacyFormPage() {
   const { userContext, tenant, election } = useElectionPublic();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editMode = searchParams.get('editMode');
 
   const [loading, setLoading] = useState(true);
   const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
@@ -99,6 +101,31 @@ export default function CandidacyFormPage() {
           setPositions(positionsData);
         }
 
+        // 6. Pre-fill form if editMode=appeal
+        if (editMode === 'appeal' && formsData) {
+          const { data: resp } = await supabase
+            .from('form response')
+            .select('id')
+            .eq('formId', formsData.id)
+            .eq('userID', userContext.userId)
+            .maybeSingle();
+
+          if (resp) {
+            const { data: vals } = await supabase
+              .from('form response value')
+              .select('fieldID, value')
+              .eq('responseID', resp.id);
+
+            if (vals) {
+              const initialData: Record<string, any> = {};
+              vals.forEach(v => {
+                initialData[v.fieldID] = v.value;
+              });
+              setFormData(initialData);
+            }
+          }
+        }
+
       } catch (err) {
         console.error("Error fetching form configuration", err);
       } finally {
@@ -119,18 +146,33 @@ export default function CandidacyFormPage() {
         throw new Error('Form configuration is missing.');
       }
 
-      // 1. Insert into "form response"
-      const { data: responseData, error: responseError } = await supabase
-        .from('form response')
-        .insert({
-          formId: formConfig.id,
-          userID: userContext!.userId,
-          submittedAt: new Date().toISOString(),
-        })
-        .select('id')
-        .single();
+      // 1. Get or create "form response"
+      let responseId = null;
+      
+      if (editMode === 'appeal') {
+        const { data: existingResp } = await supabase
+          .from('form response')
+          .select('id')
+          .eq('formId', formConfig.id)
+          .eq('userID', userContext!.userId)
+          .maybeSingle();
+        if (existingResp) responseId = existingResp.id;
+      }
 
-      if (responseError) throw responseError;
+      if (!responseId) {
+        const { data: responseData, error: responseError } = await supabase
+          .from('form response')
+          .insert({
+            formId: formConfig.id,
+            userID: userContext!.userId,
+            submittedAt: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (responseError) throw responseError;
+        responseId = responseData.id;
+      }
 
       // 2. Prepare array of values for "form response value", handling file uploads
       const responseValues = await Promise.all(
@@ -161,18 +203,18 @@ export default function CandidacyFormPage() {
           }
 
           return {
-            responseID: responseData.id,
+            responseID: responseId,
             fieldID: fieldId,
             value: finalValue
           };
         })
       );
 
-      // 3. Insert into "form response value"
+      // 3. Upsert into "form response value"
       if (responseValues.length > 0) {
         const { error: valuesError } = await supabase
           .from('form response value')
-          .insert(responseValues);
+          .upsert(responseValues, { onConflict: 'responseID, fieldID' });
 
         if (valuesError) throw valuesError;
       }

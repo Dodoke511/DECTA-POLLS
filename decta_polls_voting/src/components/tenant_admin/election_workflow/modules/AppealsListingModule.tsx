@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Loader2, Search, Filter, Clock, CheckCircle2, XCircle, UserCheck, UserX, MessageSquare, FileText } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Loader2, Search, Clock, CheckCircle2, XCircle, UserCheck, UserX, MessageSquare, FileText, AlertTriangle, X } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
 
 interface AppealDetail {
   label: string;
@@ -17,6 +18,9 @@ interface Appeal {
   details?: AppealDetail[];
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+  approvedCount?: number;
+  rejectedCount?: number;
+  threshold?: number;
 }
 
 interface AppealsModuleProps {
@@ -30,6 +34,9 @@ export function AppealsModule({ electionId }: AppealsModuleProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selectedAppeal, setSelectedAppeal] = useState<Appeal | null>(null);
+  const [decisionModal, setDecisionModal] = useState<{ appealId: string, decision: 'approved' | 'rejected' } | null>(null);
+  const [decisionReason, setDecisionReason] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAppeals = async () => {
@@ -49,23 +56,52 @@ export function AppealsModule({ electionId }: AppealsModuleProps) {
     fetchAppeals();
   }, [electionId]);
 
-  const handleAppealDecision = async (appealId: string, decision: 'approved' | 'rejected') => {
+  const submitAppealDecision = async () => {
+    if (!decisionModal) return;
+    const { appealId, decision } = decisionModal;
+
     setActionLoading(appealId);
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+
       const res = await fetch('/api/workflow/decide_appeal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appealId, decision }),
+        body: JSON.stringify({ 
+          appealId, 
+          decision, 
+          reason: decisionReason,
+          decidedBy: user?.id || sessionStorage.getItem('tenantUserId') || null 
+        }),
       });
       if (res.ok) {
+        // We'll update locally to match if it resolved, but if it stays pending (multi-approver),
+        // the backend returns finalStatus = 'pending' so the UI correctly stays pending.
+        const resData = await res.json();
         setAppeals(prev => prev.map(a =>
-          a.id === appealId ? { ...a, status: decision } : a
+          a.id === appealId ? { ...a, status: resData.finalStatus || a.status } : a
         ));
+      } else {
+        // Read raw text first so we never lose the error body even if JSON parsing fails
+        const rawText = await res.text();
+        let errData: any = {};
+        try { errData = JSON.parse(rawText); } catch (_) { /* not JSON */ }
+        const errorMsg = errData.error || rawText || `Server error ${res.status}`;
+        console.error(`[AppealsModule] API Error ${res.status} ${res.statusText}:`, errorMsg);
+        setActionError(errorMsg);
+        // Auto-dismiss after 8s
+        setTimeout(() => setActionError(null), 8000);
       }
     } catch (err) {
       console.error('Failed to update appeal:', err);
     } finally {
       setActionLoading(null);
+      setDecisionModal(null);
+      setDecisionReason('');
     }
   };
 
@@ -118,6 +154,24 @@ export function AppealsModule({ electionId }: AppealsModuleProps) {
         </div>
       </div>
 
+      {/* Error Banner */}
+      {actionError && (
+        <div className="flex items-start gap-3 mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
+          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-300">Decision failed</p>
+            <p className="text-xs text-red-400/80 mt-0.5 break-words">{actionError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="text-red-400/60 hover:text-red-300 transition-colors flex-shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Appeals List */}
       {filteredAppeals.length > 0 ? (
         <div className="space-y-4">
@@ -136,9 +190,22 @@ export function AppealsModule({ electionId }: AppealsModuleProps) {
                     <div className="flex items-center gap-3 mb-1">
                       <p className="text-white font-bold">{appeal.candidateName}</p>
                       {appeal.status === 'pending' && (
-                        <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-500/20">
-                          <Clock className="w-2.5 h-2.5" />
-                          Pending
+                        <div className="flex items-center gap-2">
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-500/20">
+                            <Clock className="w-2.5 h-2.5" />
+                            Pending
+                          </div>
+                          {appeal.threshold !== undefined && appeal.threshold > 1 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-emerald-400/70 font-bold uppercase tracking-wider">
+                                {appeal.approvedCount || 0}/{appeal.threshold} Approved
+                              </span>
+                              <span className="text-white/20">•</span>
+                              <span className="text-[10px] text-red-400/70 font-bold uppercase tracking-wider">
+                                {appeal.rejectedCount || 0}/{appeal.threshold} Rejected
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                       {appeal.status === 'approved' && (
@@ -195,7 +262,7 @@ export function AppealsModule({ electionId }: AppealsModuleProps) {
                 {appeal.status === 'pending' && (
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                     <button
-                      onClick={() => handleAppealDecision(appeal.id, 'approved')}
+                      onClick={() => { setDecisionModal({ appealId: appeal.id, decision: 'approved' }); setDecisionReason(''); }}
                       disabled={actionLoading === appeal.id}
                       className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-xl border border-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 text-xs font-bold"
                     >
@@ -203,7 +270,7 @@ export function AppealsModule({ electionId }: AppealsModuleProps) {
                       Approve
                     </button>
                     <button
-                      onClick={() => handleAppealDecision(appeal.id, 'rejected')}
+                      onClick={() => { setDecisionModal({ appealId: appeal.id, decision: 'rejected' }); setDecisionReason(''); }}
                       disabled={actionLoading === appeal.id}
                       className="flex items-center gap-1.5 px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl border border-red-500/20 transition-all active:scale-95 disabled:opacity-50 text-xs font-bold"
                     >
@@ -278,6 +345,47 @@ export function AppealsModule({ electionId }: AppealsModuleProps) {
                   <p className="text-sm text-white/60">No appeal form responses were available to display.</p>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decision Modal */}
+      {decisionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4">
+          <div className="max-w-md w-full rounded-3xl border border-white/10 bg-slate-950 p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-2">
+              {decisionModal.decision === 'approved' ? 'Approve Appeal' : 'Reject Appeal'}
+            </h3>
+            <p className="text-sm text-white/40 mb-6">
+              Please provide a reason or note for this decision. This will be recorded in the appeal log.
+            </p>
+            <textarea
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#6648EB] resize-none h-32 mb-6"
+              placeholder="Enter your reason here..."
+              value={decisionReason}
+              onChange={(e) => setDecisionReason(e.target.value)}
+            />
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDecisionModal(null)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-white/50 hover:bg-white/5 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitAppealDecision}
+                disabled={actionLoading === decisionModal.appealId || !decisionReason.trim()}
+                className={`px-4 py-2 rounded-xl text-sm font-bold text-white transition-all ${
+                  decisionModal.decision === 'approved' 
+                    ? 'bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50' 
+                    : 'bg-red-500 hover:bg-red-600 disabled:bg-red-500/50'
+                }`}
+              >
+                {actionLoading === decisionModal.appealId ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm'}
+              </button>
             </div>
           </div>
         </div>

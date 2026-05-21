@@ -67,7 +67,7 @@ export async function POST(
     }
 
     const userType = tenantUser.user_type?.toLowerCase();
-    const allowedTypes = ['voter', 'candidate'];
+    const allowedTypes = ['voter', 'candidate', 'admin', 'sub-admin'];
     if (!allowedTypes.includes(userType)) {
       await supabase.auth.signOut();
       return NextResponse.json({ error: 'Unauthorized user type for this portal' }, { status: 403 });

@@ -41,7 +41,33 @@ export default function TenantVotersPage() {
   } | null>(null);
   const [voters, setVoters] = useState<Voter[]>([]);
   const [tenantId, setTenantId] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const formatRoleName = (role?: string) => {
+    if (!role) return "Voter";
+    const lower = role.toLowerCase();
+    if (lower === "voter") return "Voter";
+    if (lower === "candidate") return "Candidate";
+    if (lower === "sub-admin") return "Sub-Admin";
+    if (lower === "admin") return "Admin";
+    return role;
+  };
+
+  const getRoleBadgeClass = (role?: string) => {
+    const normalized = role?.toLowerCase() || "voter";
+    switch (normalized) {
+      case "admin":
+        return "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+      case "sub-admin":
+        return "bg-amber-500/20 text-amber-300 border border-amber-500/30";
+      case "candidate":
+        return "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30";
+      case "voter":
+      default:
+        return "bg-blue-500/20 text-blue-300 border border-blue-500/30";
+    }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -200,19 +226,37 @@ export default function TenantVotersPage() {
     return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
   }
 
-  // Calculate stats from actual voters data
-  const stats = {
-    total: voters.length
+  // Calculate stats based on active filter tab
+  const getFilteredCount = (role: string) => {
+    if (role === "all") return voters.length;
+    return voters.filter(v => (v.user_type?.toLowerCase() || 'voter') === role).length;
   };
 
-  // Filter voters based on search query
+  const stats = {
+    total: getFilteredCount(activeTab),
+    label: activeTab === "all" 
+      ? "Total Users" 
+      : `Total ${formatRoleName(activeTab)}s`
+  };
+
+  // Filter voters based on activeTab and search query
   const filteredVoters = voters.filter(voter => {
+    const voterRole = voter.user_type?.toLowerCase() || 'voter';
+    
+    // 1. Role filter
+    if (activeTab !== "all" && voterRole !== activeTab) {
+      return false;
+    }
+
+    // 2. Search query filter
     const searchLower = searchQuery.toLowerCase();
     const fullName = `${voter.first_name || ''} ${voter.middle_name || ''} ${voter.surname || ''}`.toLowerCase();
+    const roleFormatted = formatRoleName(voter.user_type).toLowerCase();
     return (
       fullName.includes(searchLower) ||
       voter.email?.toLowerCase().includes(searchLower) ||
-      voter.contact?.toLowerCase().includes(searchLower)
+      voter.contact?.toLowerCase().includes(searchLower) ||
+      roleFormatted.includes(searchLower)
     );
   });
 
@@ -450,7 +494,7 @@ export default function TenantVotersPage() {
             {/* Total Voters Card */}
             <div className="super-admin-card stat-card p-6 rounded-[20px] flex flex-col items-center justify-center">
               <div className="text-5xl font-bold mb-2" style={{ color: "#D0C8FF" }}>{stats.total.toLocaleString()}</div>
-              <div className="text-white/60 text-sm">Total Voters</div>
+              <div className="text-white/60 text-sm">{stats.label}</div>
             </div>
 
             {/* Search and Add Voter Section */}
@@ -484,6 +528,27 @@ export default function TenantVotersPage() {
             </div>
           </div>
 
+          {/* Role Filter Tabs */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            {["all", "admin", "sub-admin", "candidate", "voter"].map((role) => {
+              const count = getFilteredCount(role);
+              const isActive = activeTab === role;
+              return (
+                <button
+                  key={role}
+                  onClick={() => setActiveTab(role)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 border ${
+                    isActive
+                      ? "bg-[#5D44F8] text-white border-[#5D44F8]/50 shadow-[0_0_20px_rgba(93,68,248,0.25)]"
+                      : "bg-white/5 text-white/50 border-white/5 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  {role === "all" ? "All Users" : formatRoleName(role)} ({count})
+                </button>
+              );
+            })}
+          </div>
+
           {/* Voters Table */}
           <div className="rounded-[20px] overflow-hidden" style={{
             background: "rgba(255, 255, 255, 0.05)",
@@ -501,6 +566,7 @@ export default function TenantVotersPage() {
                       <th className="text-left p-4 text-white/60 font-semibold">Voter Name</th>
                       <th className="text-left p-4 text-white/60 font-semibold">Email</th>
                       <th className="text-left p-4 text-white/60 font-semibold">Contact</th>
+                      <th className="text-left p-4 text-white/60 font-semibold">Role</th>
                       <th className="text-left p-4 text-white/60 font-semibold">Registration Date</th>
                       <th className="text-left p-4 text-white/60 font-semibold">Department</th>
                     </tr>
@@ -513,6 +579,11 @@ export default function TenantVotersPage() {
                         </td>
                         <td className="p-4 text-white/80">{voter.email || 'N/A'}</td>
                         <td className="p-4 text-white/80">{voter.contact || 'N/A'}</td>
+                        <td className="p-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getRoleBadgeClass(voter.user_type)}`}>
+                            {formatRoleName(voter.user_type)}
+                          </span>
+                        </td>
                         <td className="p-4 text-white/80">
                           {voter.created_at ? new Date(voter.created_at).toLocaleDateString() : 'N/A'}
                         </td>

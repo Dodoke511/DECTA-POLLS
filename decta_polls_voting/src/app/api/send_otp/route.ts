@@ -4,12 +4,53 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 
+import { createClient } from '@supabase/supabase-js';
+
 export async function POST(request: Request) {
     try {
-        const { email } = await request.json();
+        const { email, tenantId } = await request.json();
 
         if (!email) {
             return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+        }
+
+        // If tenantId is provided, verify the email is a registered Voter
+        if (tenantId) {
+            const supabaseAdmin = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                { auth: { persistSession: false } }
+            );
+
+            const { data: existingUser, error: queryError } = await supabaseAdmin
+                .from('tenant users')
+                .select('id, user_type')
+                .eq('email', email.toLowerCase())
+                .eq('tenantID', tenantId)
+                .maybeSingle();
+
+            if (queryError) {
+                console.error('[Send OTP] DB Error:', queryError);
+            }
+
+            if (!existingUser) {
+                return NextResponse.json({ 
+                    error: 'Your email is not registered in the Voter list. Candidate registration is only allowed for registered voters.' 
+                }, { status: 400 });
+            }
+
+            const userType = existingUser.user_type?.toLowerCase();
+            if (userType === 'candidate') {
+                return NextResponse.json({ 
+                    error: 'You are already registered as a Candidate.' 
+                }, { status: 400 });
+            }
+
+            if (userType !== 'voter') {
+                return NextResponse.json({ 
+                    error: 'Only registered Voters can register as Candidates.' 
+                }, { status: 400 });
+            }
         }
 
         // Generate 6-digit cryptographically secure OTP
