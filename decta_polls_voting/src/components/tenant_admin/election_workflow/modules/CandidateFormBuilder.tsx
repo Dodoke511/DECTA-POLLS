@@ -30,6 +30,32 @@ const slugify = (t: string) =>
 const genKey = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 const genId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
+const cleanValidationRules = (rules: any): any => {
+  if (!rules) return {};
+  if (typeof rules === 'string') {
+    try {
+      const parsed = JSON.parse(rules);
+      return cleanValidationRules(parsed);
+    } catch (e) {
+      return {};
+    }
+  }
+  if (typeof rules === 'object') {
+    const keys = Object.keys(rules);
+    const numericKeys = keys.filter(k => !isNaN(Number(k)));
+    if (numericKeys.length > 5) {
+      const sortedKeys = numericKeys.map(Number).sort((a, b) => a - b);
+      let reconstructedStr = '';
+      for (const k of sortedKeys) {
+        reconstructedStr += (rules as any)[String(k)];
+      }
+      return cleanValidationRules(reconstructedStr);
+    }
+    return rules;
+  }
+  return {};
+};
+
 /**
  * Module-level cache for form field data.
  * Prevents redundant DB fetches when PhaseCard unmounts/remounts during step navigation.
@@ -502,21 +528,24 @@ export const DynamicFormBuilder = forwardRef(({
       setCustomLogicMeta(form.custom_logic_meta);
     }
 
-    let mapped = (fetched || []).map((f: any) => ({
-      id: f.id,
-      field_name: f.fieldName,
-      label: f.label,
-      field_type: f.fieldType,
-      required: f.required,
-      rule_checkable: f.rule_checkable ?? false,
-      validation_rules: {
-        ...(f.validationRules || {}),
-        placeholder: f.placeholder || f.validationRules?.placeholder || ''
-      },
-      order_index: f.orderIndex,
-      _key: genKey(),
-      _expanded: false
-    }));
+    let mapped = (fetched || []).map((f: any) => {
+      const parsedRules = cleanValidationRules(f.validationRules);
+      return {
+        id: f.id,
+        field_name: f.fieldName,
+        label: f.label,
+        field_type: f.fieldType,
+        required: f.required,
+        rule_checkable: f.rule_checkable ?? false,
+        validation_rules: {
+          ...parsedRules,
+          placeholder: f.placeholder || parsedRules?.placeholder || ''
+        },
+        order_index: f.orderIndex,
+        _key: genKey(),
+        _expanded: false
+      };
+    });
 
     // Auto-inject Position Selector for Filing phase if missing
     if (toolName === 'candidate_application') {
