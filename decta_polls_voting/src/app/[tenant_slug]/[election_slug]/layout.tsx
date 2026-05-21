@@ -7,6 +7,7 @@ import ComingSoon from '@/components/public-election/ComingSoon';
 import ElectionNotFound from '@/components/public-election/ElectionNotFound';
 import { PublicElectionShell } from '@/components/public-election/PublicElectionShell';
 import { BASIC_PUBLIC_SITE_COLORS, normalizeSubscription } from '@/lib/subscription-limits';
+import { ElectionPublicProvider } from '@/contexts/ElectionPublicContext';
 
 export default async function PublicElectionLayout({
   children,
@@ -104,28 +105,36 @@ export default async function PublicElectionLayout({
 
   // Guardrail Logic
   if (status === 'DRAFT' && !isTenantAdmin && !isDev) {
-    return <ElectionNotFound />;
+    return (
+      <ElectionPublicProvider value={contextValue}>
+        <ElectionNotFound />
+      </ElectionPublicProvider>
+    );
   }
 
   if (status === 'PUBLISHED' && !isTenantAdmin) {
     return (
-      <ComingSoon
-        title={siteConfig?.public_title || election.title}
-        banner={siteConfig?.banner_url || election.banner}
-        primaryColor={primaryColor}
-      />
+      <ElectionPublicProvider value={contextValue}>
+        <ComingSoon
+          title={siteConfig?.public_title || election.title}
+          banner={siteConfig?.banner_url || election.banner}
+          primaryColor={primaryColor}
+        />
+      </ElectionPublicProvider>
     );
   }
 
   // If ACTIVE or Tenant Admin (for preview), render full site
   return (
-    <PublicElectionShell
-      contextValue={contextValue}
-      primaryColor={primaryColor}
-      secondaryColor={secondaryColor}
-      thirdColor={thirdColor}
-    >
-      {children}
-    </PublicElectionShell>
+    <ElectionPublicProvider value={contextValue}>
+      <PublicElectionShell
+        contextValue={contextValue}
+        primaryColor={primaryColor}
+        secondaryColor={secondaryColor}
+        thirdColor={thirdColor}
+      >
+        {children}
+      </PublicElectionShell>
+    </ElectionPublicProvider>
   );
 }

@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { AlertCircle, ChevronDown, ChevronUp, Download, FileText, Loader2, Maximize2, UserRound, UsersRound, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp, Download, FileText, Loader2, Lock, Maximize2, UserRound, UsersRound, X } from 'lucide-react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from '@/components/public-election/PublicElectionBackground';
+import { isPhaseReachable } from '@/lib/public-election/phase-utils';
 
 type LayoutStyle = 'grid' | 'list' | 'detailed';
 
@@ -215,7 +216,7 @@ function CandidateCard({
 }
 
 export default function CandidatesListingPage() {
-  const { userContext, siteConfig, tenant, election } = useElectionPublic();
+  const { userContext, siteConfig, tenant, election, phases } = useElectionPublic();
   const [data, setData] = useState<CandidatesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -258,6 +259,30 @@ export default function CandidatesListingPage() {
       cancelled = true;
     };
   }, [tenant.slug, election.slug]);
+
+  const isPublicationReachable = isPhaseReachable(phases, 'publication');
+
+  if (!isPublicationReachable) {
+    const backgroundImage = getPublicElectionBackgroundImage(siteConfig, election);
+    return (
+      <div className="relative min-h-[calc(100vh-80px)] overflow-hidden">
+        <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.10]" />
+
+        <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 flex min-h-[50vh] items-center justify-center">
+          <div className="w-full max-w-md overflow-hidden rounded-[30px] border border-white/65 bg-white/35 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/60 bg-white/50 text-[var(--tenant-primary)] shadow-sm backdrop-blur-md">
+              <Lock className="h-7 w-7" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-900">You&apos;ll meet them soon</h2>
+            <p className="mt-2 text-sm font-semibold text-slate-500 leading-relaxed">
+              Candidate profiles will be visible once the publication phase begins.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (userContext?.isVoter && siteConfig?.voter_can_view_candidates === false) {
     return (
