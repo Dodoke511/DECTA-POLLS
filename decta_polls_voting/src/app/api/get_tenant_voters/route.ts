@@ -90,30 +90,30 @@ export async function GET(request: Request) {
       );
     }
 
-    // Fetch voters from tenant_users table where user_type is voter
+    // Fetch all users for this tenant
     const { data: voters, error } = await supabase
       .from("tenant users")
       .select("*")
       .eq("tenantID", tenantId)
-      .in("user_type", ["voter", "Voter"])
       .order("created_at", { ascending: false });
-
+ 
     if (error) {
       console.error("[get_tenant_voters] Supabase error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
+ 
     await Promise.all(
-      (voters || []).map((voter) => ensureVoterAuthAccount(voter, tenantId))
+      (voters || [])
+        .filter((voter) => voter.user_type?.toLowerCase() === "voter")
+        .map((voter) => ensureVoterAuthAccount(voter, tenantId))
     );
-
+ 
     const { data: syncedVoters, error: syncedError } = await supabase
       .from("tenant users")
       .select("*")
       .eq("tenantID", tenantId)
-      .in("user_type", ["voter", "Voter"])
       .order("created_at", { ascending: false });
-
+ 
     if (syncedError) {
       console.error("[get_tenant_voters] Supabase refetch error:", syncedError);
       return NextResponse.json({ error: syncedError.message }, { status: 500 });

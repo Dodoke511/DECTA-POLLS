@@ -97,7 +97,7 @@ export default async function PublicElectionLayout({
       .eq('tenantID', tenant.id)
       .maybeSingle();
 
-    if (tenantUser?.user_type === 'Tenant User') {
+    if (tenantUser && ['admin', 'sub-admin', 'tenant user'].includes(tenantUser.user_type?.toLowerCase())) {
       isTenantAdmin = true;
     }
   }

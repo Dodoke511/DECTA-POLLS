@@ -33,14 +33,7 @@ export async function POST(
         return NextResponse.json({ error: 'Tenant not found or not verified' }, { status: 404 });
       }
 
-      // 1.5 Check User Limits before proceeding
-      const limitCheck = await checkUserLimit(tenant.id);
-      if (!limitCheck.allowed) {
-        console.error(`[Registration API] Tenant user limit reached: ${tenant.id}`);
-        return NextResponse.json({ 
-          error: `Registration closed. Tenant has reached its maximum user limit of ${limitCheck.limit}.` 
-        }, { status: 403 });
-      }
+
 
       // 2. Resolve election
       const { data: election } = await supabaseAdmin
@@ -66,43 +59,53 @@ export async function POST(
         return NextResponse.json({ error: 'Candidate registration is currently closed.' }, { status: 403 });
       }
 
-      // 4. Verify email not already in tenant
+      // 4. Verify email exists in tenant and is a Voter
       const { data: existingUser } = await supabaseAdmin
         .from('tenant users')
-        .select('id')
-        .eq('email', email)
+        .select('id, user_type')
+        .eq('email', email.toLowerCase())
         .eq('tenantID', tenant.id)
-        .single();
+        .maybeSingle();
 
-      if (existingUser) {
-        return NextResponse.json({ error: 'Email already registered for this organization' }, { status: 400 });
+      if (!existingUser) {
+        return NextResponse.json({ 
+          error: 'Your email is not registered in the Voter list. Candidate registration is only allowed for registered voters.' 
+        }, { status: 400 });
       }
 
-      // 5. Create auth user
-      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          tenant_id: tenant.id,
-          election_id: election.id,
-          role_type: 'Candidate'
+      const userType = existingUser.user_type?.toLowerCase();
+      if (userType === 'candidate') {
+        return NextResponse.json({ error: 'You are already registered as a Candidate.' }, { status: 400 });
+      }
+
+      if (userType !== 'voter') {
+        return NextResponse.json({ error: 'Only registered Voters can register as Candidates.' }, { status: 400 });
+      }
+
+      // 5. Update auth user metadata and password
+      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+        existingUser.id,
+        {
+          password,
+          user_metadata: {
+            tenant_id: tenant.id,
+            election_id: election.id,
+            role_type: 'Candidate',
+            temporary_password: false
+          }
         }
-      });
+      );
 
       if (authError || !authUser.user) {
-        return NextResponse.json({ error: authError?.message || 'Failed to create user' }, { status: 400 });
+        return NextResponse.json({ error: authError?.message || 'Failed to update user credentials' }, { status: 400 });
       }
 
-      // 6. Insert tenant_users and candidate (Transactionally)
+      // 6. Update tenant_users and candidate (Transactionally)
       const now = new Date().toISOString();
 
-      const { error: insertUserError } = await supabaseAdmin
+      const { error: updateUserError } = await supabaseAdmin
         .from('tenant users')
-        .insert({
-          id: authUser.user.id,
-          tenantID: tenant.id,
-          email: email,
+        .update({
           first_name: firstName,
           middle_name: middleName || null,
           surname: lastName,
@@ -110,32 +113,34 @@ export async function POST(
           contact: contact || null,
           birth_date: birthDate,
           registered_via_election: election.id,
-          registered_via_slug: election_slug,
-          created_at: now
+          registered_via_slug: election_slug
+        })
+        .eq('id', existingUser.id);
+
+      if (updateUserError) {
+        return NextResponse.json({ error: 'Failed to update tenant user profile' }, { status: 500 });
+      }
+
+      const { error: insertCandidateError } = await supabaseAdmin
+        .from('candidate')
+        .insert({
+          electionID: election.id,
+          userID: existingUser.id,
+          status: 'DRAFT',
+          filedDate: now
         });
 
-    if (insertUserError) {
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
-      return NextResponse.json({ error: 'Failed to create tenant user profile' }, { status: 500 });
-    }
+      if (insertCandidateError) {
+        // Revert user_type back to Voter if candidacy record fails
+        await supabaseAdmin
+          .from('tenant users')
+          .update({ user_type: 'Voter' })
+          .eq('id', existingUser.id);
 
-    const { error: insertCandidateError } = await supabaseAdmin
-      .from('candidate')
-      .insert({
-        electionID: election.id,
-        userID: authUser.user.id,
-        status: 'DRAFT',
-        filedDate: now
-      });
+        return NextResponse.json({ error: 'Failed to initialize candidacy record' }, { status: 500 });
+      }
 
-    if (insertCandidateError) {
-      // Cleanup
-      await supabaseAdmin.from('tenant users').delete().eq('id', authUser.user.id);
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
-      return NextResponse.json({ error: 'Failed to initialize candidacy record' }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, userId: authUser.user.id });
+      return NextResponse.json({ success: true, userId: existingUser.id });
 
   } catch (error: any) {
     console.error('Registration error:', error);

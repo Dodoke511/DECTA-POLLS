@@ -72,7 +72,7 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
       const res = await fetch('/api/send_otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email })
+        body: JSON.stringify({ email: formData.email, tenantId: tenant.id })
       });
       const data = await res.json();
 
