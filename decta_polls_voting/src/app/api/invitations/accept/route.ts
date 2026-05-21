@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-
+import { checkUserLimit } from "@/lib/server/user-limit-check";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Service Role key is required for admin.createUser
 const supabase = createClient(supabaseUrl, supabaseKey!);
@@ -30,6 +30,15 @@ export async function POST(request: Request) {
 
     if (invite.status !== "Pending") {
       return NextResponse.json({ error: "Invitation has already been accepted" }, { status: 400 });
+    }
+
+    console.log("[accept_invitation] 1.5 Checking User Limit...");
+    const limitCheck = await checkUserLimit(invite.tenantID);
+    if (!limitCheck.allowed) {
+      console.warn(`[accept_invitation] Tenant ${invite.tenantID} has reached user limit of ${limitCheck.limit}. Cannot accept invite.`);
+      return NextResponse.json({ 
+        error: `Cannot accept invitation. The organization has reached its maximum user limit of ${limitCheck.limit}.` 
+      }, { status: 403 });
     }
 
     console.log("[accept_invitation] 2. Creating Auth User...");

@@ -42,6 +42,7 @@ export default function TenantDashboardPage() {
   const [currentPhaseLabel, setCurrentPhaseLabel] = useState("No phase is currently active");
   const [currentPhaseStatus, setCurrentPhaseStatus] = useState<PhaseStatus | null>(null);
   const [phaseDeadline, setPhaseDeadline] = useState<string | null>(null);
+  const [userLimits, setUserLimits] = useState<{ currentCount: number, limit: number | null } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -92,6 +93,12 @@ export default function TenantDashboardPage() {
             setCurrentPhaseLabel("No phase is currently active");
             setCurrentPhaseStatus(null);
           }
+        }
+
+        const limitsRes = await fetch(`/api/get_tenant_user_limits?tenantId=${tenantId}`);
+        if (limitsRes.ok) {
+          const limitsData = await limitsRes.json();
+          setUserLimits(limitsData);
         }
       } catch (error) {
         console.error("Failed to load dashboard details:", error);
@@ -154,6 +161,35 @@ export default function TenantDashboardPage() {
 
           <div className="grid gap-6">
             <TimeWidget />
+
+            {/* User Limits Tracking Widget */}
+            {userLimits && (
+              <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Account Usage</p>
+                  <h2 className="mt-1 text-lg font-semibold text-white/90">Registered Users</h2>
+                </div>
+                <div className="flex flex-col items-end">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold text-[#D0C8FF]">{userLimits.currentCount}</span>
+                    <span className="text-sm text-white/40">/ {userLimits.limit === null ? "Unlimited" : userLimits.limit}</span>
+                  </div>
+                  {userLimits.limit !== null && (
+                    <div className="mt-2 h-1.5 w-32 rounded-full bg-white/10">
+                      <div
+                        className={`h-full rounded-full ${
+                          (userLimits.currentCount / userLimits.limit) > 0.9 
+                            ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]' 
+                            : 'bg-gradient-to-r from-emerald-400 to-cyan-300'
+                        }`}
+                        style={{ width: `${Math.min(100, (userLimits.currentCount / userLimits.limit) * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
             <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Public Election Dashboard</p>
               <h2 className="mt-2 text-xl font-semibold text-white/90">Live Election Overview</h2>

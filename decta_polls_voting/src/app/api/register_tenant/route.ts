@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { SUBSCRIPTION_USER_LIMITS, SubscriptionTier } from '@/lib/subscription-limits';
 
 // Initialize the Supabase client
 // Using SUPABASE_SERVICE_ROLE_KEY for admin privileges (bypassing RLS) within a server context,
@@ -116,6 +117,7 @@ export async function POST(request: Request) {
                     email,
                     type,
                     subscription,
+                    user_limit: SUBSCRIPTION_USER_LIMITS[subscription as SubscriptionTier],
                     subscription_expires_at,
                     verification: verificationDocUrl,
                     status: tenantStatus,

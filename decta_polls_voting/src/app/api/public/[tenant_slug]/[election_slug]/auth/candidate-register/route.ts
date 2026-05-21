@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-
+import { checkUserLimit } from '@/lib/server/user-limit-check';
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant_slug: string; election_slug: string }> }
@@ -31,6 +31,15 @@ export async function POST(
       if (!tenant) {
         console.error(`[Registration API] Tenant not found or not verified: ${tenant_slug}`);
         return NextResponse.json({ error: 'Tenant not found or not verified' }, { status: 404 });
+      }
+
+      // 1.5 Check User Limits before proceeding
+      const limitCheck = await checkUserLimit(tenant.id);
+      if (!limitCheck.allowed) {
+        console.error(`[Registration API] Tenant user limit reached: ${tenant.id}`);
+        return NextResponse.json({ 
+          error: `Registration closed. Tenant has reached its maximum user limit of ${limitCheck.limit}.` 
+        }, { status: 403 });
       }
 
       // 2. Resolve election

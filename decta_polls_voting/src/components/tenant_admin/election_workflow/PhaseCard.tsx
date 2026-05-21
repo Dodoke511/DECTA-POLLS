@@ -482,6 +482,8 @@ export const PhaseCard = forwardRef(({
                 toolName="candidate_application"
                 title="Candidate Application Form"
                 initialPositions={positions}
+                disableAdd={runtimeStatus === 'completed'}
+                disableDelete={runtimeStatus === 'active' || runtimeStatus === 'completed'}
               />
             )}
 
@@ -492,7 +494,9 @@ export const PhaseCard = forwardRef(({
 
             {/* ─ Embedded AppealModule (appeal) ─ */}
             {metadata.type === 'appeal' && (
-              <AppealModule ref={moduleRef} electionId={electionId} phaseId={phase.id} subscription={subscription} />
+              <AppealModule ref={moduleRef} electionId={electionId} phaseId={phase.id} subscription={subscription}
+                runtimeStatus={runtimeStatus}
+              />
             )}
 
             {/* ─ Embedded PublicationModule (publication) ─ */}

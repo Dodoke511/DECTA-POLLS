@@ -81,6 +81,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Initialize default election site configuration
+    const { error: configError } = await supabase
+      .from('election_site_config')
+      .insert({
+        election_id: data.id,
+        tenant_id: tenantId,
+        public_title: title,
+        welcome_message: description || null,
+      });
+
+    if (configError) {
+      console.error('Failed to initialize election site config:', configError);
+      // Non-blocking: log the error, but let the election creation succeed
+    }
+
     return NextResponse.json(
       { message: 'Election draft created successfully.', electionId: data.id, banner: bannerUrl },
       { status: 201 }

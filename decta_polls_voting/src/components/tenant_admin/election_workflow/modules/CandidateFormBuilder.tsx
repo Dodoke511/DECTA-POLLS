@@ -121,7 +121,7 @@ function TypePickerPanel({ onSelect, onClose }: { onSelect: (t: FieldType) => vo
 }
 
 // ── Field card (build mode) ──────────────────────────────────────────────────
-function FieldCardBuild({ field, index, dragIndex, onUpdate, onDelete, onDragStart, onDragOver, onDrop, features }: {
+function FieldCardBuild({ field, index, dragIndex, onUpdate, onDelete, onDragStart, onDragOver, onDrop, features, disableDelete }: {
   field: FormFieldState; index: number; dragIndex: number | null;
   onUpdate: (key: string, u: Partial<FormFieldState>) => void;
   onDelete: (key: string) => void;
@@ -129,6 +129,7 @@ function FieldCardBuild({ field, index, dragIndex, onUpdate, onDelete, onDragSta
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (i: number) => void;
   features: { showRuleCheckable: boolean };
+  disableDelete?: boolean;
 }) {
   const Icon = ICONS[field.field_type];
   const vr = field.validation_rules;
@@ -164,7 +165,7 @@ function FieldCardBuild({ field, index, dragIndex, onUpdate, onDelete, onDragSta
           className="text-white/25 hover:text-white/60 transition-colors">
           {field._expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
-        {field.field_type !== 'position_selector' && (
+        {field.field_type !== 'position_selector' && !disableDelete && (
           <button type="button" onClick={() => onDelete(field._key)}
             className="text-white/18 hover:text-red-400/80 transition-colors">
             <Trash2 className="w-3.5 h-3.5" />
@@ -388,12 +389,18 @@ export const DynamicFormBuilder = forwardRef(({
   title = 'Candidate Application Form',
   features = { showRuleCheckable: true },
   initialPositions,
+  disableDelete = false,
+  disableAdd = false,
 }: {
   electionId: string,
   toolName?: string,
   title?: string,
   features?: { showRuleCheckable: boolean },
   initialPositions?: { title?: string | null }[],
+  /** When true, hides Delete buttons (phase has responses — FK protection). */
+  disableDelete?: boolean,
+  /** When true, hides the Add Field button (phase is completed). */
+  disableAdd?: boolean,
 }, ref) => {
   const [fields, setFields] = useState<FormFieldState[]>([]);
   const [customLogicMeta, setCustomLogicMeta] = useState<{ hasParty?: boolean, hasPositionField?: boolean }>({});
@@ -618,6 +625,18 @@ export const DynamicFormBuilder = forwardRef(({
               )}
             </div>
           )}
+          {(disableDelete || disableAdd) && (
+            <div className="flex items-center gap-2.5 px-4 py-3 mb-2 rounded-xl bg-amber-500/8 border border-amber-500/15">
+              <span className="text-amber-400/80 text-[10px]">⚠</span>
+              <p className="text-[11px] text-amber-400/70 font-medium">
+                {disableDelete && disableAdd
+                  ? <>This phase is <span className="font-bold">completed</span>. Fields cannot be added or removed to protect existing responses.</>
+                  : disableDelete
+                    ? <>This phase is <span className="font-bold">active</span>. Existing fields cannot be deleted while responses may exist, but you can still add new fields.</>
+                    : <>This phase is <span className="font-bold">completed</span>. New fields cannot be added.</>}
+              </p>
+            </div>
+          )}
           {fields.map((field, index) => (
             <FieldCardBuild
               key={field._key} field={field} index={index} dragIndex={dragIndex}
@@ -625,15 +644,18 @@ export const DynamicFormBuilder = forwardRef(({
               onDragOver={e => e.preventDefault()}
               onDrop={i => { if (dragIndex !== null) moveField(dragIndex, i); setDragIndex(null); }}
               features={features}
+              disableDelete={disableDelete}
             />
           ))}
-          <div className="relative">
-            <button onClick={() => setShowPicker(v => !v)}
-              className="flex items-center gap-2 w-full justify-center py-3 rounded-xl border border-dashed border-white/12 text-[12px] text-white/35 hover:text-white/65 hover:border-[#5B4FD9]/35 hover:bg-[#5B4FD9]/5 transition-all">
-              <Plus className="w-4 h-4" /> Add Field
-            </button>
-            {showPicker && <TypePickerPanel onSelect={addField} onClose={() => setShowPicker(false)} />}
-          </div>
+          {!disableAdd && (
+            <div className="relative">
+              <button onClick={() => setShowPicker(v => !v)}
+                className="flex items-center gap-2 w-full justify-center py-3 rounded-xl border border-dashed border-white/12 text-[12px] text-white/35 hover:text-white/65 hover:border-[#5B4FD9]/35 hover:bg-[#5B4FD9]/5 transition-all">
+                <Plus className="w-4 h-4" /> Add Field
+              </button>
+              {showPicker && <TypePickerPanel onSelect={addField} onClose={() => setShowPicker(false)} />}
+            </div>
+          )}
         </div>
       )}
 
