@@ -23,7 +23,7 @@ export function canUsePhase(subscription: SubscriptionTier, phaseType: PhaseType
 }
 
 export function canUseInterfaceBuilder(subscription: SubscriptionTier): boolean {
-  return subscription !== 'BASIC';
+  return subscription === 'ENTERPRISE';
 }
 
 export function enforcePhaseAccess<T extends { phase_type: PhaseType; is_enabled: boolean }>(

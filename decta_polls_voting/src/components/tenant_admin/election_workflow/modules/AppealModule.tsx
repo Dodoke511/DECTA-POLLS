@@ -46,11 +46,13 @@ function Section({
 export const AppealModule = forwardRef(({
   electionId,
   phaseId,
-  subscription = 'BASIC'
+  subscription = 'BASIC',
+  runtimeStatus,
 }: {
   electionId: string,
   phaseId?: string,
-  subscription?: 'BASIC' | 'STANDARD' | 'ENTERPRISE'
+  subscription?: 'BASIC' | 'STANDARD' | 'ENTERPRISE',
+  runtimeStatus?: string,
 }, ref) => {
   const [isLoading, setIsLoading] = useState(true);
 
@@ -161,6 +163,8 @@ export const AppealModule = forwardRef(({
           toolName="appeal_submission"
           title="Appeal Submission Form"
           features={{ showRuleCheckable: false }}
+          disableDelete={runtimeStatus === 'active' || runtimeStatus === 'completed'}
+          disableAdd={runtimeStatus === 'completed'}
         />
       </div>
 

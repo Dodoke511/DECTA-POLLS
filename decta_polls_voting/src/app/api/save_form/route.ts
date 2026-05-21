@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,28 +71,36 @@ export async function POST(request: Request) {
       .filter((f: any) => f.id)
       .map((f: any) => f.id);
 
-    // Delete fields that are no longer in the list
-    const deleteQuery = supabase
-      .from('form field')
-      .delete()
-      .eq('formId', formId);
-    
+    // Only attempt deletion if we need to remove fields that are no longer in the list.
+    // We build the query with the correct PostgREST tuple format for .not('id','in',...).
     if (incomingIds.length > 0) {
-      deleteQuery.not('id', 'in', incomingIds);
-    }
+      // Delete fields belonging to this form whose id is NOT in the incoming list
+      const { error: deleteError } = await supabase
+        .from('form field')
+        .delete()
+        .eq('formId', formId)
+        .not('id', 'in', `(${incomingIds.join(',')})`);
 
-    const { error: deleteError } = await deleteQuery;
+      if (deleteError) {
+        console.error('Delete error (likely FK violation — field has existing responses):', deleteError.message);
+      }
+    } else if (fields.length === 0) {
+      // No incoming fields at all — delete everything for this form
+      const { error: deleteError } = await supabase
+        .from('form field')
+        .delete()
+        .eq('formId', formId);
 
-    if (deleteError) {
-      // If delete fails due to foreign keys, it's likely because the user tried to delete
-      // a field that already has responses. We should probably warn them, but for now 
-      // let's just proceed with upserting the rest to avoid total failure.
-      console.error('Delete error (likely FK violation):', deleteError.message);
+      if (deleteError) {
+        console.error('Delete-all error:', deleteError.message);
+      }
     }
+    // If incomingIds is empty but fields.length > 0, all fields are new (no ids yet) —
+    // nothing to delete.
 
     if (Array.isArray(fields) && fields.length > 0) {
       const fieldRecords = fields.map((f: any, i: number) => ({
-        ...(f.id ? { id: f.id } : {}),
+        id: f.id || randomUUID(),
         formId: formId,
         fieldName: f.fieldName,
         label: f.label,
@@ -103,11 +112,15 @@ export async function POST(request: Request) {
         orderIndex: i,
       }));
 
+      console.log('[save_form] Upserting', fieldRecords.length, 'fields for formId:', formId);
+
       const { error: upsertFieldsError } = await supabase
         .from('form field')
         .upsert(fieldRecords);
 
       if (upsertFieldsError) {
+        console.error('[save_form] Upsert error:', upsertFieldsError);
+        console.error('[save_form] Field records that failed:', JSON.stringify(fieldRecords, null, 2));
         return NextResponse.json({ error: upsertFieldsError.message }, { status: 500 });
       }
     }

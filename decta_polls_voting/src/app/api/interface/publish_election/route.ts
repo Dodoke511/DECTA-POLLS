@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { canUseInterfaceBuilder, normalizeSubscription } from '@/lib/subscription-limits';
+import { PHASE_PIPELINE } from '@/lib/types/phase';
 
 export async function POST(request: Request) {
   try {
@@ -95,26 +96,57 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check Phases
-    const filing = phases.find(p => p.phase_type === 'filing');
-    const voting = phases.find(p => p.phase_type === 'voting');
-    const results = phases.find(p => p.phase_type === 'results');
-    const screening = phases.find(p => p.phase_type === 'screening');
-    const appeal = phases.find(p => p.phase_type === 'appeal');
+    // Check Phases using dynamic pipeline metadata matching the client-side isStepComplete
+    for (const meta of PHASE_PIPELINE) {
+      const phase = phases.find(p => p.phase_type === meta.type);
 
-    if (!filing) errors.push('Filing phase is missing.');
-    if (!voting) errors.push('Voting phase is missing.');
-    if (!results) errors.push('Results phase is missing.');
-    if (filing?.transition_mode === 'deadline' && !filing.deadline) errors.push('Filing phase deadline is not configured.');
-    if (voting?.transition_mode === 'deadline' && (!voting.start_date || !voting.deadline)) errors.push('Voting period (start & end) is not configured.');
-    if (results?.transition_mode === 'deadline' && (!results.start_date || !results.deadline)) errors.push('Results period (start & end) is not configured.');
+      // If a required phase is missing entirely
+      if (meta.required && !phase) {
+        errors.push(`${meta.defaultName} phase is missing.`);
+        continue;
+      }
 
-    if (screening?.is_enabled && !screening.role_assigned) {
-      errors.push('Screening phase is enabled but has no manager role assigned.');
-    }
+      // If phase exists but is disabled (and is not required)
+      if (phase && !phase.is_enabled && !meta.required) {
+        continue;
+      }
 
-    if (appeal?.is_enabled && !screening?.is_enabled) {
-      errors.push('Appeal phase cannot be enabled if Screening is disabled.');
+      if (phase) {
+        const displayName = phase.name?.trim() || meta.defaultName;
+
+        // 1. Name validation
+        if (!phase.name || phase.name.trim() === '') {
+          errors.push(`${displayName} phase name is required.`);
+        }
+
+        // 2. Transition Mode / Dates validation
+        const isDeadlineMode = phase.transition_mode === 'deadline';
+        if (isDeadlineMode) {
+          if (meta.hasDeadline && !meta.hasStartDate && !phase.deadline) {
+            errors.push(`${displayName} phase deadline is not configured.`);
+          }
+          if (meta.hasStartDate && (!phase.start_date || !phase.deadline)) {
+            errors.push(`${displayName} phase start date and deadline are not configured.`);
+          }
+        }
+
+        // 3. Role validation
+        // A role is required if:
+        // - transition_mode is manual (to advance the phase)
+        // - OR the phase has completion behaviors (screening, appeal) even in deadline mode
+        const requiresRole = phase.transition_mode === 'manual' || meta.hasCompletionBehavior;
+        if (meta.hasManagerRole && requiresRole && !phase.role_assigned) {
+          errors.push(`${displayName} phase has no manager role assigned.`);
+        }
+
+        // 4. Phase-specific dependencies
+        if (meta.type === 'appeal') {
+          const screeningEnabled = phases.find(p => p.phase_type === 'screening')?.is_enabled;
+          if (!screeningEnabled) {
+            errors.push('Appeal phase cannot be enabled if Screening is disabled.');
+          }
+        }
+      }
     }
 
     if (errors.length > 0) {

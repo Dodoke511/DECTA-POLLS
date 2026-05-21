@@ -45,11 +45,15 @@ export async function GET(request: Request) {
     ]);
 
     if (configRes.error) {
-      return NextResponse.json({ error: configRes.error.message }, { status: 500 });
+      console.error("GET CONFIG - configRes error:", configRes.error);
+      const isAuthError = configRes.error.message?.includes('JWT') || configRes.error.code === 'PGRST303';
+      return NextResponse.json({ error: configRes.error.message }, { status: isAuthError ? 401 : 500 });
     }
 
     if (electionRes.error) {
-      return NextResponse.json({ error: electionRes.error.message }, { status: 500 });
+      console.error("GET CONFIG - electionRes error:", electionRes.error);
+      const isAuthError = electionRes.error.message?.includes('JWT') || electionRes.error.code === 'PGRST303';
+      return NextResponse.json({ error: electionRes.error.message }, { status: isAuthError ? 401 : 500 });
     }
 
     let configData = configRes.data;
@@ -105,11 +109,11 @@ export async function GET(request: Request) {
     const subscription = normalizeSubscription(tenantData?.subscription);
     const basicConfig = subscription === 'BASIC'
       ? {
-          ...(configData || {}),
-          override_color: BASIC_PUBLIC_SITE_COLORS.primary,
-          secondary_override_color: BASIC_PUBLIC_SITE_COLORS.secondary,
-          third_override_color: BASIC_PUBLIC_SITE_COLORS.third,
-        }
+        ...(configData || {}),
+        override_color: BASIC_PUBLIC_SITE_COLORS.primary,
+        secondary_override_color: BASIC_PUBLIC_SITE_COLORS.secondary,
+        third_override_color: BASIC_PUBLIC_SITE_COLORS.third,
+      }
       : configData;
 
     return NextResponse.json({
@@ -125,6 +129,7 @@ export async function GET(request: Request) {
       }
     });
   } catch (err: unknown) {
+    console.error("GET CONFIG - exception:", err);
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -341,9 +341,9 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     }
 
     // ── 3. Phase-specific required fields ────────────────────────────────────
-    // Role is required only in manual mode — that designates who manually advances the phase.
-    // In deadline mode the system auto-transitions, so a role is not a hard gate here.
-    const requiresRole = phase.transition_mode === 'manual';
+    // A role is required if transition_mode is manual (to advance the phase),
+    // or if the phase has completion behaviors (like screening and appeal) even in deadline mode.
+    const requiresRole = phase.transition_mode === 'manual' || meta.hasCompletionBehavior;
 
     switch (meta.type) {
       case 'filing':

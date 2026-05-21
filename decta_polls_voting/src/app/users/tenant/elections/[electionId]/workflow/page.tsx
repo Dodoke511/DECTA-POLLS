@@ -54,6 +54,7 @@ export default function ElectionWorkflowPage() {
           if (election) setStatus(election.status);
           const normalizedSub = normalizeSubscription(fetchedSub);
           setSubscription(normalizedSub);
+          console.log(normalizedSub);
           if (!canUseInterfaceBuilder(normalizedSub)) setActiveTab('workflow');
         }
       } catch (err) {
