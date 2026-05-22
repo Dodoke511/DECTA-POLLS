@@ -12,6 +12,31 @@ import {
 } from "@/components/super_admin/Icons";
 import { BallotCastAsOfLine } from "@/components/super_admin/Stats";
 import { useRouter } from "next/navigation";
+import type { SubscriptionTier } from "@/lib/subscription-limits";
+
+type DashboardStats = {
+  subscriptionBreakdown: Record<SubscriptionTier, number>;
+  totalTenants: number;
+  activeTenantRate: number;
+  totalBallotsCast: number;
+  ballotsAsOf: string;
+};
+
+const PIE_COLORS: Record<SubscriptionTier, string> = {
+  ENTERPRISE: "#a855f7",
+  STANDARD: "#ef4444",
+  BASIC: "#14b8a6",
+};
+
+const PIE_LABELS: Record<SubscriptionTier, string> = {
+  ENTERPRISE: "Enterprise",
+  STANDARD: "Standard",
+  BASIC: "Basic",
+};
+
+function formatCount(value: number): string {
+  return value.toLocaleString();
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -82,8 +107,10 @@ function toFileName(path: string | null): string | null {
 // --- Main Page Component ---
 export default function SuperAdminDashboardPage() {
   const [leadingTenants, setLeadingTenants] = useState<TenantRow[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -99,10 +126,19 @@ export default function SuperAdminDashboardPage() {
       }
 
       try {
-        const response = await fetch("/api/get_tenants?limit=10");
-        const json = await response.json();
+        const [statsRes, tenantsRes] = await Promise.all([
+          fetch("/api/super_admin/dashboard_stats"),
+          fetch("/api/get_tenants?limit=10&activeOnly=true&sortBy=elections"),
+        ]);
 
-        if (!response.ok) throw new Error(json.error || "Failed to fetch data");
+        const statsJson = await statsRes.json();
+        const json = await tenantsRes.json();
+
+        if (!statsRes.ok) throw new Error(statsJson.error || "Failed to fetch dashboard stats");
+        if (!tenantsRes.ok) throw new Error(json.error || "Failed to fetch tenants");
+
+        setStats(statsJson as DashboardStats);
+        setStatsLoading(false);
 
         const tenants = await Promise.all(
           json.data.map(async (record: Record<string, unknown>, index: number): Promise<TenantRow> => {
@@ -136,13 +172,32 @@ export default function SuperAdminDashboardPage() {
         setLeadingTenants(tenants);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
+        setStatsLoading(false);
       } finally {
         setLoading(false);
       }
     }
 
     fetchData();
-  }, []);
+  }, [router]);
+
+  const pieData = (() => {
+    if (!stats) return [];
+    const tiers: SubscriptionTier[] = ["ENTERPRISE", "STANDARD", "BASIC"];
+    const segments = tiers
+      .map((tier, index) => ({
+        id: index,
+        value: stats.subscriptionBreakdown[tier],
+        label: PIE_LABELS[tier],
+        color: PIE_COLORS[tier],
+      }))
+      .filter((segment) => segment.value > 0);
+
+    if (segments.length === 0) {
+      return [{ id: 0, value: 1, label: "No tenants", color: "rgba(255,255,255,0.15)" }];
+    }
+    return segments;
+  })();
 
   return (
     <div className="flex h-screen flex-col text-[#f1f0f3]" style={{ background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)" }}>
@@ -167,14 +222,10 @@ export default function SuperAdminDashboardPage() {
                   <PieChart
                     series={[
                       {
-                        data: [
-                          { id: 0, value: 140, label: 'Enterprise', color: '#a855f7' },
-                          { id: 1, value: 100, label: 'Standard', color: '#ef4444' },
-                          { id: 2, value: 88, label: 'Basic', color: '#14b8a6' },
-                        ],
+                        data: pieData,
                         innerRadius: '46%',
                         outerRadius: '92%',
-                        paddingAngle: 6,
+                        paddingAngle: pieData.length > 1 ? 6 : 0,
                         cornerRadius: 10,
                       },
                     ]}
@@ -191,9 +242,18 @@ export default function SuperAdminDashboardPage() {
                   />
                 </div>
                 <ul className="flex flex-wrap justify-center gap-2 sm:flex-col sm:gap-2 sm:pl-1">
-                  <li className="flex items-center gap-1.5 text-xs text-white/80"><span className="h-2.5 w-2.5 rounded-full bg-[#a855f7] shadow-[0_0_8px_rgba(168,85,247,0.8)]" />Enterprise</li>
-                  <li className="flex items-center gap-1.5 text-xs text-white/80"><span className="h-2.5 w-2.5 rounded-full bg-[#ef4444] shadow-[0_0_8px_rgba(239,68,68,0.6)]" />Standard</li>
-                  <li className="flex items-center gap-1.5 text-xs text-white/80"><span className="h-2.5 w-2.5 rounded-full bg-[#14b8a6] shadow-[0_0_8px_rgba(20,184,166,0.7)]" />Basic</li>
+                  {(["ENTERPRISE", "STANDARD", "BASIC"] as SubscriptionTier[]).map((tier) => (
+                    <li key={tier} className="flex items-center gap-1.5 text-xs text-white/80">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ background: PIE_COLORS[tier], boxShadow: `0 0 8px ${PIE_COLORS[tier]}99` }}
+                      />
+                      {PIE_LABELS[tier]}
+                      {stats && !statsLoading && (
+                        <span className="text-white/45">({stats.subscriptionBreakdown[tier]})</span>
+                      )}
+                    </li>
+                  ))}
                 </ul>
               </div>
             </section>
@@ -202,21 +262,27 @@ export default function SuperAdminDashboardPage() {
               <article className="super-admin-card stat-card flex items-start gap-4 rounded-[22px] border px-5 py-5">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(93,68,248,0.15)] text-[#f1f0f3]"><IconBallot className="h-6 w-6" /></div>
                 <div className="min-w-0">
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">69,696,969</p>
-                  <BallotCastAsOfLine className="mt-1 text-xs text-white/45" />
+                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">
+                    {statsLoading ? "—" : formatCount(stats?.totalBallotsCast ?? 0)}
+                  </p>
+                  <BallotCastAsOfLine className="mt-1 text-xs text-white/45" asOf={stats?.ballotsAsOf} />
                 </div>
               </article>
               <article className="super-admin-card stat-card flex items-start gap-4 rounded-[22px] border px-5 py-5">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(150,134,248,0.2)] text-[#f1f0f3]"><IconUsers className="h-6 w-6" /></div>
                 <div>
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">67,676,767</p>
+                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">
+                    {statsLoading ? "—" : formatCount(stats?.totalTenants ?? 0)}
+                  </p>
                   <p className="mt-1 text-xs text-white/45">Total Registered Tenants</p>
                 </div>
               </article>
               <article className="super-admin-card stat-card flex items-start gap-4 rounded-[22px] border px-5 py-5">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(20,184,166,0.18)] text-[#5eead4]"><IconPercent className="h-6 w-6" /></div>
                 <div>
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">69.67%</p>
+                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">
+                    {statsLoading ? "—" : `${(stats?.activeTenantRate ?? 0).toFixed(2)}%`}
+                  </p>
                   <p className="mt-1 text-xs text-white/45">Rate of Active Tenants</p>
                 </div>
               </article>

@@ -1,17 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 
-export function BallotCastAsOfLine({ className }: { className?: string }) {
-  const [line] = useState(() => {
-    const d = new Date();
+export function BallotCastAsOfLine({
+  className,
+  asOf,
+}: {
+  className?: string;
+  asOf?: string | null;
+}) {
+  const line = (() => {
+    const d = asOf ? new Date(asOf) : new Date();
     const time = d.toLocaleTimeString(undefined, {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
     });
-    return `Total Ballot Cast · Today at ${time}`;
-  });
+    const dateLabel = asOf
+      ? d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+      : "Today";
+    return `Total Ballot Cast · ${dateLabel} at ${time}`;
+  })();
 
   return <p className={className}>{line}</p>;
 }

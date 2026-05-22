@@ -14,6 +14,7 @@ interface AuditLog {
   tenant: string;
   action: string;
   status: ActionStatus;
+  performedBy?: string;
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -24,6 +25,17 @@ const auditLogs: AuditLog[] = [
   { id: 4, timestamp: "2026-03-20 14:32:15", tenant: "VELEZ COLLEGE",             action: "Subscription Change", status: "Warning" },
   { id: 5, timestamp: "2026-03-20 14:32:15", tenant: "MONSTER CORP.",             action: "Subscription Change", status: "Error"   },
   { id: 6, timestamp: "2026-03-20 14:32:15", tenant: "INCORPORATED INC.",         action: "Subscription Change", status: "Error"   },
+];
+
+const tenantActivityLogs: AuditLog[] = [
+  { id: 101, timestamp: "2026-05-22 09:14:02", tenant: "CEBU INSTITUTE TECHNOLOGY", action: "Created election — Student Council 2026",     status: "Success", performedBy: "admin@cit.edu.ph" },
+  { id: 102, timestamp: "2026-05-22 08:47:31", tenant: "UNIVERSITY OF CEBU",        action: "Finished election — SGA General Vote 2025",   status: "Success", performedBy: "elections@uc.edu.ph" },
+  { id: 103, timestamp: "2026-05-22 08:22:18", tenant: "CEBU DOCTORS UNIVERSITY",   action: "Updated subscription plan — Pro tier",        status: "Success", performedBy: "billing@cdu.edu.ph" },
+  { id: 104, timestamp: "2026-05-21 16:55:44", tenant: "VELEZ COLLEGE",             action: "Created election — Department Head Poll",     status: "Success", performedBy: "admin@velez.edu.ph" },
+  { id: 105, timestamp: "2026-05-21 15:30:09", tenant: "MONSTER CORP.",             action: "Finished election — Board of Directors Vote", status: "Warning", performedBy: "System (automated)" },
+  { id: 106, timestamp: "2026-05-21 14:08:57", tenant: "INCORPORATED INC.",         action: "Updated subscription plan — Enterprise tier", status: "Success", performedBy: "finance@incorp.com" },
+  { id: 107, timestamp: "2026-05-21 11:42:33", tenant: "CEBU INSTITUTE TECHNOLOGY", action: "Started election — Class Officer Midterm",    status: "Success", performedBy: "admin@cit.edu.ph" },
+  { id: 108, timestamp: "2026-05-20 17:19:21", tenant: "UNIVERSITY OF CEBU",        action: "Created election — Faculty Senate Ballot",    status: "Success", performedBy: "registrar@uc.edu.ph" },
 ];
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
@@ -90,6 +102,66 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
+// ─── Audit Log Table ──────────────────────────────────────────────────────────
+function AuditLogTable({
+  logs,
+  actionHeader = "ACTION",
+  showStatus = true,
+  showPerformedBy = false,
+}: {
+  logs: AuditLog[];
+  actionHeader?: string;
+  showStatus?: boolean;
+  showPerformedBy?: boolean;
+}) {
+  const colCount = 3 + (showStatus || showPerformedBy ? 1 : 0);
+  return (
+    <div className="super-admin-table w-full rounded-[22px] border border-white/[0.10] overflow-hidden mb-8">
+      <div className="w-full">
+        <table className="w-full border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
+              <th className="px-6 py-4">TIMESTAMP</th>
+              <th className="px-6 py-4">TENANT</th>
+              <th className="px-6 py-4">{actionHeader}</th>
+              {showPerformedBy && <th className="px-6 py-4">PERFORMED BY</th>}
+              {showStatus && <th className="px-6 py-4">ACTION STATUS</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {logs.length === 0 ? (
+              <tr>
+                <td colSpan={colCount} className="px-24 py-16 text-center text-white/40">
+                  No results found.
+                </td>
+              </tr>
+            ) : (
+              logs.map((log) => (
+                <tr
+                  key={log.id}
+                  className="border-b border-white/[0.07] last:border-0 hover:bg-white/[0.02] transition-colors"
+                >
+                  <td className="px-6 py-4 font-mono text-white/80">{log.timestamp}</td>
+                  <td className="px-6 py-4 font-medium text-white/90">{log.tenant}</td>
+                  <td className="px-6 py-4 text-white/60">{log.action}</td>
+                  {showPerformedBy && (
+                    <td className="px-6 py-4 text-white/75">{log.performedBy ?? "—"}</td>
+                  )}
+                  {showStatus && (
+                    <td className="px-6 py-4">
+                      <StatusBadge status={log.status} />
+                    </td>
+                  )}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Search Audit ─────────────────────────────────────────────────────────────
 function SearchAudit({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
@@ -117,8 +189,9 @@ import { useRouter } from "next/navigation";
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SystemMonitoringPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"monitoring" | "config">("monitoring");
+  const [activeTab, setActiveTab] = useState<"monitoring" | "config" | "audit">("monitoring");
   const [search, setSearch] = useState("");
+  const [auditSearch, setAuditSearch] = useState("");
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -137,6 +210,13 @@ export default function SystemMonitoringPage() {
     l.tenant.toLowerCase().includes(search.toLowerCase()) ||
     l.action.toLowerCase().includes(search.toLowerCase()) ||
     l.status.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredTenantActivity = tenantActivityLogs.filter((l) =>
+    l.tenant.toLowerCase().includes(auditSearch.toLowerCase()) ||
+    l.action.toLowerCase().includes(auditSearch.toLowerCase()) ||
+    l.status.toLowerCase().includes(auditSearch.toLowerCase()) ||
+    (l.performedBy?.toLowerCase().includes(auditSearch.toLowerCase()) ?? false)
   );
 
   return (
@@ -168,56 +248,22 @@ export default function SystemMonitoringPage() {
               <div className="flex gap-2.5">
                 <TabButton label="System Monitoring"   active={activeTab === "monitoring"} onClick={() => setActiveTab("monitoring")} />
                 <TabButton label="Global Configuration" active={activeTab === "config"}    onClick={() => setActiveTab("config")} />
+                <TabButton label="Audit Log"            active={activeTab === "audit"}    onClick={() => setActiveTab("audit")} />
               </div>
               {activeTab === "monitoring" && <SearchAudit value={search} onChange={setSearch} />}
+              {activeTab === "audit" && <SearchAudit value={auditSearch} onChange={setAuditSearch} />}
             </div>
 
             {/* Main Content */}
             {activeTab === "monitoring" ? (
-              <div className="super-admin-table w-full rounded-[22px] border border-white/[0.10] overflow-hidden mb-8">
-              {/* Table Wrapper */}
-              <div className="w-full">
-                <table className="w-full border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                      <th className="px-6 py-4">TIMESTAMP</th>
-                      <th className="px-6 py-4">TENANT</th>
-                      <th className="px-6 py-4">ACTION</th>
-                      <th className="px-6 py-4">ACTION STATUS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-
-                    {filtered.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-24 py-16 text-center text-white/40">
-                          No results found.
-                        </td>
-                      </tr>
-                    ) : (
-                      filtered.map((log, index) => (
-                        <tr
-                          key={log.id}
-                          className="border-b border-white/[0.07] last:border-0 hover:bg-white/[0.02] transition-colors"
-                        >
-                          <td className="px-6 py-4 font-mono text-white/80">{log.timestamp}</td>
-                          <td className="px-6 py-4 font-medium text-white/90">{log.tenant}</td>
-                          <td className="px-6 py-4 text-white/60">{log.action}</td>
-                          <td className="px-6 py-4">
-                            <StatusBadge status={log.status} />
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              <AuditLogTable logs={filtered} />
+            ) : activeTab === "audit" ? (
+              <AuditLogTable logs={filteredTenantActivity} actionHeader="ACTIVITY" showStatus={false} showPerformedBy />
+            ) : (
+              <div className="flex-1">
+                <GlobalConfiguration />
               </div>
-            </div>
-          ) : (
-            <div className="flex-1">
-              <GlobalConfiguration />
-            </div>
-          )}
+            )}
           </div>
         </main>
       </div>
