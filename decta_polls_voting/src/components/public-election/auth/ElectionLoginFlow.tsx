@@ -84,7 +84,11 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
   );
 
   const redirectAfterLogin = () => {
-    window.location.href = `/${tenant.slug}/${election.slug}/dashboard`;
+    if (role === "Voter") {
+      window.location.href = `/${tenant.slug}/${election.slug}/dashboard`;
+    } else {
+      window.location.href = `/${tenant.slug}/${election.slug}/candidate-dashboard?tab=candidacy`;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,7 +102,14 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      const data = await res.json();
+
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error(`Server error (${res.status}): Expected JSON but received HTML. The API route might not be registered. Try restarting the dev server.`);
+      }
 
       if (!res.ok) throw new Error(data.error || 'Login failed');
 

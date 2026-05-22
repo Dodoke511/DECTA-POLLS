@@ -558,9 +558,13 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
             // Determine which wizard step corresponds to the currently live election phase.
             // steps[0] = Positions setup (not a phase); steps[1..6] map to PHASE_PIPELINE[0..5].
             // runtimeStatuses is keyed by PhaseType; 'active' or 'for_transition' = live.
-            const livePhaseType = Object.entries(runtimeStatuses).find(
-              ([, status]) => status === 'active' || status === 'for_transition'
-            )?.[0];
+            const livePhaseType = PHASE_PIPELINE
+              .map(m => m.type)
+              .find(type => {
+                const status = runtimeStatuses[type];
+                const isEnabled = phases.find(p => p.phase_type === type)?.is_enabled;
+                return isEnabled && (status === 'active' || status === 'for_transition');
+              });
             const livePhaseStepIndex = livePhaseType
               ? PHASE_PIPELINE.findIndex(m => m.type === livePhaseType) + 1  // +1 because step 0 = Positions
               : -1;

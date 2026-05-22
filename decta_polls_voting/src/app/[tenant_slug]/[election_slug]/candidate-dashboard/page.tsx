@@ -160,10 +160,10 @@ export default function CandidateDashboardPage() {
     ['DRAFT', 'PENDING_VERIFICATION'].includes(candidate.status) ||
     hasPendingAppeal;
 
-  const supabase = createClient(
+  const supabase = React.useMemo(() => createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ), []);
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab') as TabId | null;
@@ -313,7 +313,7 @@ export default function CandidateDashboardPage() {
           .from('form response value')
           .select('fieldID, value')
           .eq('responseID', resp.id);
-        
+
         setResponseValues(values || []);
 
         // Evaluate screening rules for flagged fields
@@ -322,7 +322,7 @@ export default function CandidateDashboardPage() {
           rulesData.forEach(rule => {
             let logic = rule.conditionLogic;
             if (typeof logic === 'string') {
-              try { logic = JSON.parse(logic); } catch (e) {}
+              try { logic = JSON.parse(logic); } catch (e) { }
             }
 
             if (logic && logic.fieldId) {
@@ -544,11 +544,10 @@ export default function CandidateDashboardPage() {
               onClick={() => isScreeningPersisted ? router.push(`/${tenant.slug}/${election.slug}/file/candidacy-form?editMode=appeal`) : null}
               disabled={!isScreeningPersisted}
               title={!isScreeningPersisted ? "The committee is currently not accepting screening updates." : ""}
-              className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl font-bold shadow-md transition-all group ${
-                isScreeningPersisted 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+              className={`w-full flex items-center justify-between px-6 py-5 rounded-2xl font-bold shadow-md transition-all group ${isScreeningPersisted
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-80'
-              }`}
+                }`}
             >
               <div className="flex flex-col text-left">
                 <span>Edit Your COC Information</span>
@@ -565,16 +564,16 @@ export default function CandidateDashboardPage() {
         {(() => {
           if (!candidate) return null;
           if (hasPendingAppeal) return null;
-          
+
           const s = candidate.status;
           if (s === 'PENDING_VERIFICATION' || s === 'DRAFT' || s === 'DISQUALIFIED') return null;
-          
+
           const w = appealConfig?.whoCanAppeal;
           if (w === 'rejected_only' && s !== 'REJECTED') return null;
           if (w === 'flagged_only' && s !== 'FLAGGED') return null;
           if (w === 'rejected_and_flagged' && !['REJECTED', 'FLAGGED'].includes(s)) return null;
           if (w === 'approved_only' && s !== 'APPROVED') return null;
-          
+
           const max = appealConfig?.maxAppeals || 1;
           if (appealCount >= max) return null;
 
@@ -601,8 +600,8 @@ export default function CandidateDashboardPage() {
       const message = hasPendingAppeal
         ? "Your appeal is currently being reviewed by the committee. Please wait for their decision before submitting another."
         : candidate?.status === 'PENDING_VERIFICATION'
-        ? "Your candidacy application is still under review. The appeals section will be available once a decision has been made."
-        : "You must complete your candidacy application before you can access the appeals section.";
+          ? "Your candidacy application is still under review. The appeals section will be available once a decision has been made."
+          : "You must complete your candidacy application before you can access the appeals section.";
       return (
         <GlassPanel className="flex flex-col items-center justify-center py-24 text-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
@@ -612,7 +611,7 @@ export default function CandidateDashboardPage() {
         </GlassPanel>
       );
     }
-    return <AppealPage isEmbedded={true} />;
+    return <AppealPage />;
   }
 
   function renderCandidates() {
