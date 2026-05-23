@@ -26,8 +26,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: candError.message }, { status: 500 });
     }
 
-    // 2. If approved, fetch candidate, election, tenant & form response info to send Certificate
-    if (status === 'APPROVED') {
+    // 2. Fetch candidate, election, tenant & form response info to send Certificate/Email and update roles
+    let fetchedUserId = userId;
+    
+    if (['APPROVED', 'REJECTED', 'DISQUALIFIED'].includes(status)) {
       try {
         const { data: candidateInfo } = await supabase
           .from('candidate')
@@ -42,6 +44,8 @@ export async function POST(request: Request) {
           .single();
 
         if (candidateInfo) {
+          fetchedUserId = candidateInfo.userID || userId;
+          
           const userObj: any = Array.isArray(candidateInfo.user) ? candidateInfo.user[0] : candidateInfo.user;
           const email = userObj?.email;
           const firstName = userObj?.first_name || '';
@@ -111,6 +115,29 @@ export async function POST(request: Request) {
                 auth: { user: userMail, pass: passMail }
               });
 
+              let subject = 'Certificate of Candidacy Approved';
+              let titleTag = 'Official Candidacy Verification';
+              let bodyText = 'is an officially approved candidate for the position of';
+              let badgeColors = 'linear-gradient(135deg, #fef08a 0%, #d4af37 50%, #a16207 100%)';
+              let badgeBorder = '#d4af37';
+              let badgeText = 'APPROVED';
+
+              if (status === 'REJECTED') {
+                subject = 'Candidacy Application Update';
+                titleTag = 'Application Status Update';
+                bodyText = 'has not been approved for the position of';
+                badgeColors = 'linear-gradient(135deg, #cbd5e1 0%, #94a3b8 50%, #475569 100%)';
+                badgeBorder = '#94a3b8';
+                badgeText = 'REJECTED';
+              } else if (status === 'DISQUALIFIED') {
+                subject = 'Notice of Disqualification';
+                titleTag = 'Notice of Disqualification';
+                bodyText = 'has been disqualified from the position of';
+                badgeColors = 'linear-gradient(135deg, #fca5a5 0%, #ef4444 50%, #b91c1c 100%)';
+                badgeBorder = '#ef4444';
+                badgeText = 'DISQUALIFIED';
+              }
+
               const htmlContent = `
               <div style="background-color: #f8fafc; padding: 40px 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; width: 100%; box-sizing: border-box;">
                 <div style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; overflow: hidden;">
@@ -118,23 +145,23 @@ export async function POST(request: Request) {
                   <!-- Header Banner -->
                   <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); padding: 30px 40px; text-align: center;">
                     <h2 style="color: #ffffff; margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;">DECTA Polls</h2>
-                    <p style="color: #c7d2fe; margin: 5px 0 0 0; font-size: 12px; font-weight: 500;">Official Candidacy Verification</p>
+                    <p style="color: #c7d2fe; margin: 5px 0 0 0; font-size: 12px; font-weight: 500;">${titleTag}</p>
                   </div>
 
                   <!-- Certificate Body Container -->
                   <div style="padding: 40px 50px; text-align: center; background-image: radial-gradient(circle, #f8fafc 10%, transparent 11%); background-size: 12px 12px;">
                     
                     <!-- Decorative Frame -->
-                    <div style="border: 4px double #d4af37; padding: 30px; border-radius: 16px; background-color: #ffffff;">
+                    <div style="border: 4px double ${badgeBorder}; padding: 30px; border-radius: 16px; background-color: #ffffff;">
                       
-                      <p style="font-family: 'Georgia', serif; font-style: italic; color: #64748b; font-size: 16px; margin-bottom: 20px;">This serves as official verification that</p>
+                      <p style="font-family: 'Georgia', serif; font-style: italic; color: #64748b; font-size: 16px; margin-bottom: 20px;">This serves as official ${status === 'APPROVED' ? 'verification' : 'notice'} that</p>
                       
                       <!-- Candidate Name -->
                       <h1 style="font-family: 'Georgia', serif; color: #1e1b4b; font-size: 32px; font-weight: bold; margin: 10px 0 5px 0; border-bottom: 2px solid #f1f5f9; display: inline-block; padding-bottom: 10px; width: 100%; max-width: 400px; text-transform: uppercase; letter-spacing: 1px;">
                         ${fullName}
                       </h1>
                       
-                      <p style="font-family: 'Georgia', serif; font-style: italic; color: #64748b; font-size: 16px; margin-top: 20px; margin-bottom: 10px;">is an officially approved candidate for the position of</p>
+                      <p style="font-family: 'Georgia', serif; font-style: italic; color: #64748b; font-size: 16px; margin-top: 20px; margin-bottom: 10px;">${bodyText}</p>
                       
                       <!-- Position -->
                       <div style="background-color: #f5f3ff; color: #4f46e5; font-size: 18px; font-weight: 800; padding: 12px 24px; border-radius: 12px; display: inline-block; margin: 10px auto 20px auto; border: 1px solid #ddd6fe; letter-spacing: 0.5px; text-transform: uppercase;">
@@ -149,8 +176,8 @@ export async function POST(request: Request) {
                       </h3>
 
                       <!-- Seal Decor -->
-                      <div style="margin: 20px auto; width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #fef08a 0%, #d4af37 50%, #a16207 100%); border: 3px double #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-block; position: relative;">
-                        <span style="display: block; font-family: 'Georgia', serif; font-size: 8px; font-weight: 900; color: #ffffff; text-shadow: 1px 1px 2px rgba(0,0,0,0.4); margin-top: 33px; text-transform: uppercase; letter-spacing: 1.5px;">APPROVED</span>
+                      <div style="margin: 20px auto; width: 80px; height: 80px; border-radius: 50%; background: ${badgeColors}; border: 3px double #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-block; position: relative;">
+                        <span style="display: block; font-family: 'Georgia', serif; font-size: 8px; font-weight: 900; color: #ffffff; text-shadow: 1px 1px 2px rgba(0,0,0,0.4); margin-top: 33px; text-transform: uppercase; letter-spacing: 1.5px;">${badgeText}</span>
                       </div>
 
                       <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
@@ -175,7 +202,7 @@ export async function POST(request: Request) {
               await transporter.sendMail({
                 from: `"DECTA Polls" <${userMail}>`,
                 to: email,
-                subject: 'Certificate of Candidacy Approved',
+                subject: subject,
                 html: htmlContent
               });
             } else {
@@ -184,19 +211,19 @@ export async function POST(request: Request) {
           }
         }
       } catch (err) {
-        console.error('Error sending candidacy certificate email:', err);
+        console.error('Error sending candidacy status email:', err);
         // Do not crash the API request if only the email fails to send
       }
     }
 
-    // 3. Handle Rejection Actions
-    if (status === 'REJECTED' && userId) {
+    // 3. Handle Rejection/Disqualification Actions
+    if (['REJECTED', 'DISQUALIFIED'].includes(status) && fetchedUserId) {
       if (removeFromOrg) {
         // Delete from tenant users
-        await supabase.from('tenant users').delete().eq('id', userId);
-      } else if (retainAsVoter) {
-        // Change user_type to Voter
-        await supabase.from('tenant users').update({ user_type: 'Voter' }).eq('id', userId);
+        await supabase.from('tenant users').delete().eq('id', fetchedUserId);
+      } else {
+        // Change user_type to Voter always for rejected or disqualified candidates
+        await supabase.from('tenant users').update({ user_type: 'Voter' }).eq('id', fetchedUserId);
       }
     }
 

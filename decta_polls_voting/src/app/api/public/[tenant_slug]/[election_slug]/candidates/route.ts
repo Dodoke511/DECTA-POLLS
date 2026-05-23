@@ -91,12 +91,18 @@ export async function GET(
     ]);
 
     if (!form) {
-      const { data: approvedCandidates } = await supabase
-        .from('candidate')
-        .select('id, status, filedDate, userID')
-        .eq('electionID', electionId)
-        .eq('status', 'APPROVED')
-        .order('filedDate', { ascending: true });
+      const [{ data: approvedCandidates }, { data: voteTallies }] = await Promise.all([
+        supabase
+          .from('candidate')
+          .select('id, status, filedDate, userID')
+          .eq('electionID', electionId)
+          .eq('status', 'APPROVED')
+          .order('filedDate', { ascending: true }),
+        supabase
+          .from('vote_tallies')
+          .select('candidate_id, vote_count')
+          .eq('election_id', electionId)
+      ]);
 
       const candidates = approvedCandidates || [];
       const userIds = candidates.map(candidate => candidate.userID).filter(Boolean);
@@ -107,6 +113,7 @@ export async function GET(
             .in('id', userIds)
         : { data: [] };
       const userById = new Map((users || []).map(user => [user.id, user]));
+      const tallyByCandidateId = new Map((voteTallies || []).map(t => [t.candidate_id, t.vote_count]));
 
       return NextResponse.json({
         config: null,
@@ -118,6 +125,7 @@ export async function GET(
             id: candidate.id,
             filedDate: candidate.filedDate,
             name: [user?.first_name, user?.surname].filter(Boolean).join(' ').trim() || 'Candidate',
+            voteCount: tallyByCandidateId.get(candidate.id) || 0,
             position: null,
             photoUrl: null,
             header: { department: null, course: null, tagline: null },
@@ -137,7 +145,7 @@ export async function GET(
       enable_profile_pages: false,
     };
 
-    const [{ data: fields }, { data: sectionsData }, { data: documents }, { data: approvedCandidates }] =
+    const [{ data: fields }, { data: sectionsData }, { data: documents }, { data: approvedCandidates }, { data: voteTallies }] =
       await Promise.all([
         supabase
           .from('form field')
@@ -160,6 +168,10 @@ export async function GET(
           .eq('electionID', electionId)
           .eq('status', 'APPROVED')
           .order('filedDate', { ascending: true }),
+        supabase
+          .from('vote_tallies')
+          .select('candidate_id, vote_count')
+          .eq('election_id', electionId)
       ]);
 
     const candidates = approvedCandidates || [];
@@ -193,6 +205,7 @@ export async function GET(
     const userById = new Map((users || []).map(user => [user.id, user]));
     const responseByUserId = new Map((responses || []).map(response => [response.userID, response]));
     const valuesByResponseId = new Map<string, Map<string, string>>();
+    const tallyByCandidateId = new Map((voteTallies || []).map(t => [t.candidate_id, t.vote_count]));
 
     (responseValues || []).forEach(value => {
       const values = valuesByResponseId.get(value.responseID) || new Map<string, string>();
@@ -242,6 +255,7 @@ export async function GET(
         id: candidate.id,
         filedDate: candidate.filedDate,
         name: configuredName || fallbackName,
+        voteCount: tallyByCandidateId.get(candidate.id) || 0,
         position: positionField ? values.get(positionField.id) || null : null,
         photoUrl,
         header: {

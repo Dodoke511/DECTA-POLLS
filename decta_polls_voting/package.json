@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/clear-next-dev-lock.mjs && next dev",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -23,6 +23,7 @@
     "next": "^16.2.1",
     "nodemailer": "^8.0.4",
     "ogl": "^1.0.11",
+    "papaparse": "^5.5.3",
     "radix-ui": "^1.4.3",
     "react": "19.2.4",
     "react-bits": "^1.0.5",
@@ -37,6 +38,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.11",
+    "@types/papaparse": "^5.5.2",
     "@types/prop-types": "^15.7.15",
     "@types/react": "^19",
     "@types/react-dom": "^19",

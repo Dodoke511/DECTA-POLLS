@@ -13,6 +13,7 @@ interface DashboardCandidate {
   user?: {
     name?: string;
   };
+  voteCount?: number;
 }
 
 function GlassPanel({
@@ -154,15 +155,23 @@ export default function VoterDashboardPage() {
   const isVotingPhaseActive = isPhaseActive(safePhases, 'voting');
 
   // Candidate tallies to display if voting is active
+  const totalVotes = candidates.reduce((sum, c) => sum + (c.voteCount || 0), 0);
   const displayedCandidates = candidates.length > 0
-    ? candidates.slice(0, 3).map((c, i) => ({
-      name: c.displayName || c.name || c.user?.name || `Candidate ${i + 1}`,
-      percentage: [72, 51, 34][i] || 25
-    }))
+    ? [...candidates]
+      .sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0))
+      .slice(0, 3)
+      .map((c, i) => {
+        const rawPercentage = totalVotes > 0 ? ((c.voteCount || 0) / totalVotes) * 100 : 0;
+        return {
+          name: c.displayName || c.name || c.user?.name || `Candidate ${i + 1}`,
+          percentage: Math.round(rawPercentage),
+          voteCount: c.voteCount || 0
+        };
+      })
     : [
-      { name: "Candidate 1", percentage: 72 },
-      { name: "Candidate 2", percentage: 51 },
-      { name: "Candidate 3", percentage: 34 }
+      { name: "Candidate 1", percentage: 0, voteCount: 0 },
+      { name: "Candidate 2", percentage: 0, voteCount: 0 },
+      { name: "Candidate 3", percentage: 0, voteCount: 0 }
     ];
 
   return (
@@ -264,7 +273,10 @@ export default function VoterDashboardPage() {
                     <div key={index} className="rounded-2xl border border-slate-100 bg-white/80 p-4 shadow-sm transition duration-300 hover:shadow-md hover:border-[var(--tenant-primary)]/20">
                       <div className="flex items-center justify-between text-xs font-black">
                         <span className="text-slate-700 truncate max-w-[130px]" title={cand.name}>{cand.name}</span>
-                        <span className="text-[var(--tenant-primary)]">{cand.percentage}%</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-400 font-medium">{cand.voteCount} {cand.voteCount === 1 ? 'vote' : 'votes'}</span>
+                          <span className="text-[var(--tenant-primary)]">{cand.percentage}%</span>
+                        </div>
                       </div>
                       <div className="mt-2.5 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                         <div
@@ -292,7 +304,7 @@ export default function VoterDashboardPage() {
         {/* 3 Core Stats Cards */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           <StatCard icon={CalendarDays} label="Election" value={title} />
-          <StatCard icon={Fingerprint} label="Account" value={userContext.userType} />
+          <StatCard icon={Fingerprint} label="Account" value={userContext.userType.toUpperCase()} />
           <StatCard icon={CheckCircle2} label="Status" value="Ready" accent />
         </div>
 
@@ -320,7 +332,7 @@ export default function VoterDashboardPage() {
                   </div>
                   <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/60 bg-white/45 px-4 py-3">
                     <span className="text-sm font-bold text-slate-500">Role</span>
-                    <span className="text-sm font-black text-slate-900">{userContext.userType}</span>
+                    <span className="text-sm font-black text-slate-900 uppercase">{userContext.userType}</span>
                   </div>
                 </div>
               </div>

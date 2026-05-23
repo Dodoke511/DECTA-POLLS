@@ -15,7 +15,7 @@ interface RoleSelectorProps {
 export function RoleSelector({ onSelect, config, phases }: RoleSelectorProps) {
   const isFilingActive = isPhaseActive(phases, 'filing');
   const candidateRegEnabled = config?.candidate_reg_enabled ?? true;
-  
+
   const canRegisterCandidate = isFilingActive && candidateRegEnabled;
 
   return (
@@ -49,9 +49,9 @@ export function RoleSelector({ onSelect, config, phases }: RoleSelectorProps) {
             </span>
           </button>
           {!canRegisterCandidate && (
-            <p className="mt-3 flex items-center justify-center gap-1 text-[10px] font-bold text-slate-400">
+            <p className="mt-3 flex items-center justify-center gap-1 text-[10px] font-bold text-slate-600">
               <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
-              Registration closed • Sign-in available
+              Candidate Registration is closed • Sign-in available
             </p>
           )}
         </div>

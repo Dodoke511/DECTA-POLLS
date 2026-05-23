@@ -128,6 +128,7 @@ export async function POST(
           userID: existingUser.id,
           status: 'DRAFT',
           filedDate: now
+          
         });
 
       if (insertCandidateError) {

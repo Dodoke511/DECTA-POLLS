@@ -93,7 +93,7 @@ export default function CandidacyFormPage() {
         // 5. Fetch Positions (for position_selector)
         const { data: positionsData } = await supabase
           .from('positions')
-          .select('title')
+          .select('id, title')
           .eq('electionID', election.id)
           .order('order_index', { ascending: true });
 
@@ -219,10 +219,27 @@ export default function CandidacyFormPage() {
         if (valuesError) throw valuesError;
       }
 
-      // 4. Update candidate status to PENDING_VERIFICATION
+      // Find the position numeric ID if a position was selected
+      let candidatePositionId = null;
+      const positionField = formFields.find(f => f.fieldType === 'position_selector');
+      
+      if (positionField && formData[positionField.id]) {
+        const selectedTitle = formData[positionField.id].toLowerCase().trim();
+        const matchedPosition = positions.find(p => p.title.toLowerCase().trim() === selectedTitle);
+        if (matchedPosition) {
+          candidatePositionId = matchedPosition.id;
+        }
+      }
+
+      // 4. Update candidate status to PENDING_VERIFICATION and link positionID
+      const updatePayload: any = { status: 'PENDING_VERIFICATION' };
+      if (candidatePositionId) {
+        updatePayload.positionID = candidatePositionId;
+      }
+
       const { error: statusUpdateError } = await supabase
         .from('candidate')
-        .update({ status: 'PENDING_VERIFICATION' })
+        .update(updatePayload)
         .eq('userID', userContext!.userId)
         .eq('electionID', election.id);
 

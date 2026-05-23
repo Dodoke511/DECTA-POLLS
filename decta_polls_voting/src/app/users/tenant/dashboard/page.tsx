@@ -10,6 +10,7 @@ import { PhaseStatus } from "@/lib/workflow/PhaseResolverService";
 type ElectionSummary = {
   id: string;
   title: string;
+  slug?: string;
   status: "DRAFT" | "PUBLISHED" | "ACTIVE" | "COMPLETED" | string;
 };
 
@@ -43,6 +44,8 @@ export default function TenantDashboardPage() {
   const [currentPhaseStatus, setCurrentPhaseStatus] = useState<PhaseStatus | null>(null);
   const [phaseDeadline, setPhaseDeadline] = useState<string | null>(null);
   const [userLimits, setUserLimits] = useState<{ currentCount: number, limit: number | null } | null>(null);
+  const [tenantSlug, setTenantSlug] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<any[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -79,6 +82,7 @@ export default function TenantDashboardPage() {
         const live = elections.find((e) => e.status === "ACTIVE") || elections.find((e) => e.status === "PUBLISHED") || null;
 
         setLiveElection(live);
+        setTenantSlug(electionsData?.tenantSlug || null);
 
         if (live?.id) {
           const phaseRes = await fetch(`/api/workflow/current_phase?electionId=${live.id}`);
@@ -92,6 +96,20 @@ export default function TenantDashboardPage() {
           } else {
             setCurrentPhaseLabel("No phase is currently active");
             setCurrentPhaseStatus(null);
+          }
+
+          if (electionsData?.tenantSlug && live.slug) {
+            try {
+              const candRes = await fetch(`/api/public/${electionsData.tenantSlug}/${live.slug}/candidates`);
+              if (candRes.ok) {
+                const candData = await candRes.json();
+                if (candData.candidates && Array.isArray(candData.candidates)) {
+                  setCandidates(candData.candidates);
+                }
+              }
+            } catch (err) {
+              console.error("Failed to fetch candidates:", err);
+            }
           }
         }
 
@@ -122,6 +140,25 @@ export default function TenantDashboardPage() {
       : liveElection?.status === "PUBLISHED"
         ? "bg-sky-400/15 text-sky-300 border-sky-400/20"
         : "bg-white/10 text-white/70 border-white/15";
+
+  const totalVotes = candidates.reduce((sum, c) => sum + (c.voteCount || 0), 0);
+  const displayedCandidates = candidates.length > 0
+    ? [...candidates]
+        .sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0))
+        .slice(0, 3)
+        .map((c, i) => {
+          const rawPercentage = totalVotes > 0 ? ((c.voteCount || 0) / totalVotes) * 100 : 0;
+          return {
+            name: c.displayName || c.name || `Candidate ${i + 1}`,
+            percentage: Math.round(rawPercentage),
+            voteCount: c.voteCount || 0
+          };
+        })
+    : [
+        { name: "Candidate 1", percentage: 0, voteCount: 0 },
+        { name: "Candidate 2", percentage: 0, voteCount: 0 },
+        { name: "Candidate 3", percentage: 0, voteCount: 0 }
+      ];
 
   if (loading) {
     return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
@@ -250,16 +287,19 @@ export default function TenantDashboardPage() {
                     <p className="text-xs uppercase tracking-[0.14em] text-white/40">Vote Tallies</p>
                     {isVotingPhaseActive ? (
                       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                        {[72, 51, 34].map((value, index) => (
+                        {displayedCandidates.map((cand, index) => (
                           <div key={index} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
                             <div className="flex items-center justify-between text-xs text-white/60">
-                              <span>Candidate {index + 1}</span>
-                              <span>{value}%</span>
+                              <span className="truncate max-w-[100px]" title={cand.name}>{cand.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-white/40">{cand.voteCount} {cand.voteCount === 1 ? 'vote' : 'votes'}</span>
+                                <span className="font-bold text-white/90">{cand.percentage}%</span>
+                              </div>
                             </div>
                             <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
                               <div
                                 className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-300"
-                                style={{ width: `${value}%` }}
+                                style={{ width: `${cand.percentage}%` }}
                               />
                             </div>
                           </div>

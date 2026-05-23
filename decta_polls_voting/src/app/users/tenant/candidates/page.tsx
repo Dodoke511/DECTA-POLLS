@@ -413,6 +413,12 @@ export default function TenantCandidatesPage() {
                             Flagged
                           </div>
                         )}
+                        {c.status === 'DISQUALIFIED' && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-500/20">
+                            <XCircle className="w-3 h-3" />
+                            Disqualified
+                          </div>
+                        )}
                         {(c.status === 'DRAFT' || !c.status) && (
                           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/5 text-white/30 rounded-full text-[10px] font-black uppercase tracking-wider border border-white/10">
                             <FileEdit className="w-3 h-3" />
