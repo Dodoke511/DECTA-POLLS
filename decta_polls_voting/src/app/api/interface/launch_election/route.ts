@@ -66,7 +66,10 @@ export async function POST(request: Request) {
     // Start the first phase
     const { error: phaseUpdateError } = await supabase
       .from('election phase')
-      .update({ started_at: now })
+      .update({ 
+        started_at: now,
+        start_date: now
+      })
       .eq('id', firstPhase.id);
 
     if (phaseUpdateError) {

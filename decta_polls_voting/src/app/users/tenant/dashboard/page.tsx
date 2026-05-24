@@ -42,6 +42,49 @@ interface LiveElectionDetails {
   candidates: any[];
 }
 
+interface CandidateWithPosition {
+  id: string;
+  name?: string;
+  displayName?: string;
+  voteCount?: number;
+  position?: string | null;
+  user?: {
+    name?: string;
+  };
+}
+
+const getCandidatesByPosition = (candidatesList: CandidateWithPosition[], totalUsers: number) => {
+  const groups: Record<string, CandidateWithPosition[]> = {};
+  candidatesList.forEach((c) => {
+    const pos = c.position || "General";
+    if (!groups[pos]) {
+      groups[pos] = [];
+    }
+    groups[pos].push(c);
+  });
+
+  const result: { position: string; candidates: any[] }[] = [];
+  Object.keys(groups).forEach((pos) => {
+    const sorted = [...groups[pos]]
+      .sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0))
+      .map((c, i) => {
+        const rawPercentage = totalUsers > 0 ? ((c.voteCount || 0) / totalUsers) * 100 : 0;
+        return {
+          id: c.id,
+          name: c.displayName || c.name || c.user?.name || `Candidate ${i + 1}`,
+          percentage: Math.round(rawPercentage),
+          voteCount: c.voteCount || 0,
+        };
+      });
+    result.push({
+      position: pos,
+      candidates: sorted,
+    });
+  });
+
+  return result.sort((a, b) => a.position.localeCompare(b.position));
+};
+
 export default function TenantDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -155,24 +198,24 @@ export default function TenantDashboardPage() {
 
   const isPending = tenantStatus === 'PENDING';
 
-  const totalVotes = candidates.reduce((sum, c) => sum + (c.voteCount || 0), 0);
+  const totalUsers = userLimits?.currentCount || 0;
   const displayedCandidates = candidates.length > 0
     ? [...candidates]
-        .sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0))
-        .slice(0, 3)
-        .map((c, i) => {
-          const rawPercentage = totalVotes > 0 ? ((c.voteCount || 0) / totalVotes) * 100 : 0;
-          return {
-            name: c.displayName || c.name || `Candidate ${i + 1}`,
-            percentage: Math.round(rawPercentage),
-            voteCount: c.voteCount || 0
-          };
-        })
+      .sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0))
+      .slice(0, 3)
+      .map((c, i) => {
+        const rawPercentage = totalUsers > 0 ? ((c.voteCount || 0) / totalUsers) * 100 : 0;
+        return {
+          name: c.displayName || c.name || `Candidate ${i + 1}`,
+          percentage: Math.round(rawPercentage),
+          voteCount: c.voteCount || 0
+        };
+      })
     : [
-        { name: "Candidate 1", percentage: 0, voteCount: 0 },
-        { name: "Candidate 2", percentage: 0, voteCount: 0 },
-        { name: "Candidate 3", percentage: 0, voteCount: 0 }
-      ];
+      { name: "Candidate 1", percentage: 0, voteCount: 0 },
+      { name: "Candidate 2", percentage: 0, voteCount: 0 },
+      { name: "Candidate 3", percentage: 0, voteCount: 0 }
+    ];
 
   if (loading) {
     return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
@@ -228,11 +271,10 @@ export default function TenantDashboardPage() {
                   {userLimits.limit !== null && (
                     <div className="mt-2 h-1.5 w-32 rounded-full bg-white/10">
                       <div
-                        className={`h-full rounded-full ${
-                          (userLimits.currentCount / userLimits.limit) > 0.9 
-                            ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]' 
+                        className={`h-full rounded-full ${(userLimits.currentCount / userLimits.limit) > 0.9
+                            ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]'
                             : 'bg-gradient-to-r from-emerald-400 to-cyan-300'
-                        }`}
+                          }`}
                         style={{ width: `${Math.min(100, (userLimits.currentCount / userLimits.limit) * 100)}%` }}
                       />
                     </div>
@@ -261,24 +303,24 @@ export default function TenantDashboardPage() {
                           ? "bg-sky-400/15 text-sky-300 border-sky-400/20"
                           : "bg-white/10 text-white/70 border-white/15";
 
-                    const totalVotes = data.candidates.reduce((sum: number, c: any) => sum + (c.voteCount || 0), 0);
+                    const totalUsers = userLimits?.currentCount || 0;
                     const displayedCandidates = data.candidates.length > 0
                       ? [...data.candidates]
-                          .sort((a: any, b: any) => (b.voteCount || 0) - (a.voteCount || 0))
-                          .slice(0, 3)
-                          .map((c: any, i) => {
-                            const rawPercentage = totalVotes > 0 ? ((c.voteCount || 0) / totalVotes) * 100 : 0;
-                            return {
-                              name: c.displayName || c.name || `Candidate ${i + 1}`,
-                              percentage: Math.round(rawPercentage),
-                              voteCount: c.voteCount || 0
-                            };
-                          })
+                        .sort((a: any, b: any) => (b.voteCount || 0) - (a.voteCount || 0))
+                        .slice(0, 3)
+                        .map((c: any, i) => {
+                          const rawPercentage = totalUsers > 0 ? ((c.voteCount || 0) / totalUsers) * 100 : 0;
+                          return {
+                            name: c.displayName || c.name || `Candidate ${i + 1}`,
+                            percentage: Math.round(rawPercentage),
+                            voteCount: c.voteCount || 0
+                          };
+                        })
                       : [
-                          { name: "Candidate 1", percentage: 0, voteCount: 0 },
-                          { name: "Candidate 2", percentage: 0, voteCount: 0 },
-                          { name: "Candidate 3", percentage: 0, voteCount: 0 }
-                        ];
+                        { name: "Candidate 1", percentage: 0, voteCount: 0 },
+                        { name: "Candidate 2", percentage: 0, voteCount: 0 },
+                        { name: "Candidate 3", percentage: 0, voteCount: 0 }
+                      ];
 
                     return (
                       <div key={data.election.id || idx} className="grid gap-3 sm:grid-cols-2">
@@ -335,21 +377,38 @@ export default function TenantDashboardPage() {
                         <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:col-span-2">
                           <p className="text-xs uppercase tracking-[0.14em] text-white/40">Vote Tallies</p>
                           {isVotingOrResultsPhaseActive ? (
-                            <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                              {displayedCandidates.map((cand, index) => (
-                                <div key={index} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
-                                  <div className="flex items-center justify-between text-xs text-white/60">
-                                    <span className="truncate max-w-[100px]" title={cand.name}>{cand.name}</span>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-white/40">{cand.voteCount} {cand.voteCount === 1 ? 'vote' : 'votes'}</span>
-                                      <span className="font-bold text-white/90">{cand.percentage}%</span>
-                                    </div>
-                                  </div>
-                                  <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
-                                    <div
-                                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-300"
-                                      style={{ width: `${cand.percentage}%` }}
-                                    />
+                            <div className="mt-4 space-y-6">
+                              {getCandidatesByPosition(data.candidates, totalUsers).map((group, gIdx) => (
+                                <div key={group.position || gIdx} className="space-y-2">
+                                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#D0C8FF]/80 border-b border-white/5 pb-1">
+                                    {group.position}
+                                  </h4>
+                                  <div className="grid gap-3 sm:grid-cols-3">
+                                    {group.candidates.map((cand, index) => {
+                                      const isLeader = index === 0 && cand.voteCount > 0;
+                                      return (
+                                        <div key={cand.id || index} className={`rounded-lg border p-3 transition-all relative overflow-hidden ${isLeader ? 'border-[#5d44f8]/40 bg-[#5d44f8]/5 shadow-[0_0_15px_rgba(93,68,248,0.1)]' : 'border-white/10 bg-white/[0.02]'}`}>
+                                          {isLeader && (
+                                            <span className="absolute top-1.5 right-1.5 text-[8px] font-black uppercase tracking-widest bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded-md">
+                                              Leading
+                                            </span>
+                                          )}
+                                          <div className="flex items-center justify-between text-xs text-white/60 pr-12">
+                                            <span className="truncate max-w-[120px]" title={cand.name}>{cand.name}</span>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-white/40">{cand.voteCount} {cand.voteCount === 1 ? 'vote' : 'votes'}</span>
+                                              <span className="font-bold text-white/90">{cand.percentage}%</span>
+                                            </div>
+                                          </div>
+                                          <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
+                                            <div
+                                              className={`h-full rounded-full ${isLeader ? 'bg-gradient-to-r from-emerald-400 to-cyan-300' : 'bg-gradient-to-r from-[#6f59ff] to-[#9a8bff]'}`}
+                                              style={{ width: `${cand.percentage}%` }}
+                                            />
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               ))}
@@ -399,7 +458,7 @@ export default function TenantDashboardPage() {
 
                   <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:col-span-2">
                     <p className="text-xs uppercase tracking-[0.14em] text-white/40">Vote Tallies</p>
-                    {isVotingPhaseActive ? (
+                    {false ? (
                       <div className="mt-3 grid gap-3 sm:grid-cols-3">
                         {displayedCandidates.map((cand, index) => (
                           <div key={index} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">

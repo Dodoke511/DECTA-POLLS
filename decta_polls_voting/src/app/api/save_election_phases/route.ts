@@ -60,16 +60,50 @@ export async function POST(request: Request) {
 
     const subscription = normalizeSubscription(tenant?.subscription);
 
+    // Fetch existing phase records to determine if start_date has changed
+    const { data: existingPhases, error: existingPhasesError } = await supabase
+      .from('election phase')
+      .select('id, phase_type, start_date, started_at')
+      .eq('electionID', electionId);
+
+    if (existingPhasesError) {
+      console.error('Error fetching existing phases:', existingPhasesError);
+      return NextResponse.json({ error: existingPhasesError.message }, { status: 500 });
+    }
+
+    const normalizeToISO = (dateStr: string | null | undefined): string | null => {
+      if (!dateStr) return null;
+      try {
+        const d = new Date(dateStr);
+        return isNaN(d.getTime()) ? null : d.toISOString();
+      } catch {
+        return null;
+      }
+    };
+
     const records = (phases as IncomingPhase[]).map((p) => {
       const phaseType = p.phase_type;
-      const row: PhaseRecord = {
+      const existing = existingPhases?.find((ep) => ep.phase_type === phaseType);
+
+      const incomingStartDate = normalizeToISO(p.start_date);
+      const existingStartDate = normalizeToISO(existing?.start_date);
+
+      let finalStartedAt: string | null = existing ? existing.started_at : null;
+
+      if (incomingStartDate !== existingStartDate) {
+        // If start_date was edited/configured, sync started_at with the new start_date
+        finalStartedAt = incomingStartDate;
+      }
+
+      const row: PhaseRecord & { started_at?: string | null } = {
         electionID: electionId,
         phase_type: phaseType,
         phase_index: p.phase_index,
         is_enabled: canUsePhase(subscription, phaseType) ? p.is_enabled : false,
         name: p.name || '',
-        start_date: p.start_date || null,
-        deadline: p.deadline || null,
+        start_date: incomingStartDate,
+        started_at: finalStartedAt,
+        deadline: normalizeToISO(p.deadline),
         role_assigned: p.role_assigned || null,
         transition_mode: p.transition_mode || 'manual',
         completion_behavior: p.completion_behavior,
@@ -77,7 +111,7 @@ export async function POST(request: Request) {
       };
 
       // Crucial: Only include the id key if it actually exists. 
-      // Providing { id: undefined } or { id: null } can crash PosegREST if it's a primary key.
+      // Providing { id: undefined } or { id: null } can crash PostgREST if it's a primary key.
       if (p.id) row.id = p.id;
       if (row.completion_behavior === undefined) delete row.completion_behavior;
       if (row.auto_resolve_action === undefined) delete row.auto_resolve_action;

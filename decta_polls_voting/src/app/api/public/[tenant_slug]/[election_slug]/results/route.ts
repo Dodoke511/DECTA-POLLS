@@ -179,8 +179,7 @@ export async function GET(
     const { count: totalVoters } = await supabaseAdmin
       .from('tenant users')
       .select('id', { count: 'exact', head: true })
-      .eq('tenantID', tenant.id)
-      .eq('user_type', 'voter');
+      .eq('tenantID', tenant.id);
 
     const turnoutPercentage = totalVoters ? Math.round((totalVotes / totalVoters) * 1000) / 10 : 0;
 

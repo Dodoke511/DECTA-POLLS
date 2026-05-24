@@ -155,7 +155,7 @@ export class PhaseResolverService {
   /**
    * 5. Phase Transition Executor
    */
-  async transitionToNextPhase(electionId: string): Promise<void> {
+  async transitionToNextPhase(electionId: string, force = false): Promise<void> {
     const currentPhase = await this.getCurrentActivePhase(electionId);
     
     if (!currentPhase) {
@@ -192,7 +192,7 @@ export class PhaseResolverService {
       let shouldActivate = false;
 
       // START DATE LOGIC
-      if (!nextPhase.start_date) {
+      if (force || !nextPhase.start_date) {
         shouldActivate = true;
       } else {
         const start = new Date(nextPhase.start_date);
@@ -204,10 +204,17 @@ export class PhaseResolverService {
       if (shouldActivate) {
         await this.supabase
           .from('election phase')
-          .update({ started_at: now.toISOString() })
+          .update({ 
+            started_at: now.toISOString(),
+            start_date: now.toISOString()
+          })
           .eq('id', nextPhase.id);
         
-        await this.onPhaseStarted(nextPhase);
+        await this.onPhaseStarted({
+          ...nextPhase,
+          started_at: now.toISOString(),
+          start_date: now.toISOString()
+        });
       }
     }
   }

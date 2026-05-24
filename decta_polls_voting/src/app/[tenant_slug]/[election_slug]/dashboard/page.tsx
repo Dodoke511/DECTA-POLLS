@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from '@/components/public-election/PublicElectionBackground';
 import { AlertCircle, BadgeCheck, CalendarDays, CheckCircle2, Fingerprint, Home, UserRound } from 'lucide-react';
-import { isPhaseActive, getActivePhase } from '@/lib/public-election/phase-utils';
+import { isPhaseActive, getActivePhase, isPhaseReachable } from '@/lib/public-election/phase-utils';
 
 interface DashboardCandidate {
   id: string;
@@ -14,7 +14,40 @@ interface DashboardCandidate {
     name?: string;
   };
   voteCount?: number;
+  position?: string | null;
 }
+
+const getCandidatesByPosition = (candidatesList: DashboardCandidate[], totalUsers: number) => {
+  const groups: Record<string, DashboardCandidate[]> = {};
+  candidatesList.forEach((c) => {
+    const pos = c.position || "General";
+    if (!groups[pos]) {
+      groups[pos] = [];
+    }
+    groups[pos].push(c);
+  });
+
+  const result: { position: string; candidates: any[] }[] = [];
+  Object.keys(groups).forEach((pos) => {
+    const sorted = [...groups[pos]]
+      .sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0))
+      .map((c, i) => {
+        const rawPercentage = totalUsers > 0 ? ((c.voteCount || 0) / totalUsers) * 100 : 0;
+        return {
+          id: c.id,
+          name: c.displayName || c.name || c.user?.name || `Candidate ${i + 1}`,
+          percentage: Math.round(rawPercentage),
+          voteCount: c.voteCount || 0,
+        };
+      });
+    result.push({
+      position: pos,
+      candidates: sorted,
+    });
+  });
+
+  return result.sort((a, b) => a.position.localeCompare(b.position));
+};
 
 function GlassPanel({
   children,
@@ -69,6 +102,21 @@ export default function VoterDashboardPage() {
 
   const [currentTime, setCurrentTime] = useState<string>("");
   const [candidates, setCandidates] = useState<DashboardCandidate[]>([]);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+
+  // Fetch tenant user limits/count to use as the denominator in vote tallies
+  useEffect(() => {
+    if (tenant?.id) {
+      fetch(`/api/get_tenant_user_limits?tenantId=${tenant.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && typeof data.currentCount === 'number') {
+            setTotalUsers(data.currentCount);
+          }
+        })
+        .catch(err => console.error("Failed to fetch user limits:", err));
+    }
+  }, [tenant?.id]);
 
   // Format real-time clock: "20:40 • Monday, May 11, 2026"
   useEffect(() => {
@@ -152,16 +200,17 @@ export default function VoterDashboardPage() {
     ? ((activePhaseIndexInEnabled + 1) / totalPhases) * 100
     : 0;
 
-  const isVotingPhaseActive = isPhaseActive(safePhases, 'voting');
+  const isVotingReachable = isPhaseReachable(safePhases, 'voting');
 
   // Candidate tallies to display if voting is active
   const totalVotes = candidates.reduce((sum, c) => sum + (c.voteCount || 0), 0);
+  const turnoutDenominator = totalUsers > 0 ? totalUsers : totalVotes;
   const displayedCandidates = candidates.length > 0
     ? [...candidates]
       .sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0))
       .slice(0, 3)
       .map((c, i) => {
-        const rawPercentage = totalVotes > 0 ? ((c.voteCount || 0) / totalVotes) * 100 : 0;
+        const rawPercentage = turnoutDenominator > 0 ? ((c.voteCount || 0) / turnoutDenominator) * 100 : 0;
         return {
           name: c.displayName || c.name || c.user?.name || `Candidate ${i + 1}`,
           percentage: Math.round(rawPercentage),
@@ -267,22 +316,39 @@ export default function VoterDashboardPage() {
               <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vote Tallies</p>
 
-              {isVotingPhaseActive ? (
-                <div className="mt-5 grid gap-4 sm:grid-cols-3 relative">
-                  {displayedCandidates.map((cand, index) => (
-                    <div key={index} className="rounded-2xl border border-slate-100 bg-white/80 p-4 shadow-sm transition duration-300 hover:shadow-md hover:border-[var(--tenant-primary)]/20">
-                      <div className="flex items-center justify-between text-xs font-black">
-                        <span className="text-slate-700 truncate max-w-[130px]" title={cand.name}>{cand.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-400 font-medium">{cand.voteCount} {cand.voteCount === 1 ? 'vote' : 'votes'}</span>
-                          <span className="text-[var(--tenant-primary)]">{cand.percentage}%</span>
-                        </div>
-                      </div>
-                      <div className="mt-2.5 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-[var(--tenant-primary)] via-[var(--tenant-third)] to-[var(--tenant-secondary)] shadow-[0_0_8px_rgba(93,68,248,0.25)] transition-all duration-500"
-                          style={{ width: `${cand.percentage}%` }}
-                        />
+              {isVotingReachable ? (
+                <div className="mt-6 space-y-6">
+                  {getCandidatesByPosition(candidates, totalUsers).map((group, gIdx) => (
+                    <div key={group.position || gIdx} className="space-y-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200/50 pb-1">
+                        {group.position}
+                      </h4>
+                      <div className="grid gap-4 sm:grid-cols-3 relative">
+                        {group.candidates.map((cand, index) => {
+                          const isLeader = index === 0 && cand.voteCount > 0;
+                          return (
+                            <div key={cand.id || index} className={`rounded-2xl border p-4 shadow-sm transition duration-300 hover:shadow-md relative overflow-hidden ${isLeader ? 'border-[var(--tenant-primary)] bg-[var(--tenant-primary)]/[0.03]' : 'border-slate-100 bg-white/80'}`}>
+                              {isLeader && (
+                                <span className="absolute top-2 right-2 text-[8px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-md">
+                                  Leading
+                                </span>
+                              )}
+                              <div className="flex items-center justify-between text-xs font-black pr-12">
+                                <span className="text-slate-700 truncate max-w-[130px]" title={cand.name}>{cand.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-slate-400 font-medium">{cand.voteCount} {cand.voteCount === 1 ? 'vote' : 'votes'}</span>
+                                  <span className="text-[var(--tenant-primary)]">{cand.percentage}%</span>
+                                </div>
+                              </div>
+                              <div className="mt-2.5 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${isLeader ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_8px_rgba(16,185,129,0.25)]' : 'bg-gradient-to-r from-[var(--tenant-primary)] via-[var(--tenant-third)] to-[var(--tenant-secondary)] shadow-[0_0_8px_rgba(93,68,248,0.25)]'}`}
+                                  style={{ width: `${cand.percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}

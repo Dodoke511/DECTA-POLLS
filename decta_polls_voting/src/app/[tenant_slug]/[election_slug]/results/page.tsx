@@ -6,8 +6,6 @@ import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from 
 import { ResultsPageContainer } from '@/components/results/ResultsPageContainer';
 import { Award } from 'lucide-react';
 
-import { ResultsPageContainer } from '@/components/results/ResultsPageContainer';
-
 export default function ResultsPage() {
   const { userContext, siteConfig, tenant, election, brandColor } = useElectionPublic();
   const backgroundImage = getPublicElectionBackgroundImage(siteConfig, election);
@@ -28,14 +26,14 @@ export default function ResultsPage() {
   return (
     <div className="relative min-h-[calc(100vh-80px)] overflow-hidden px-4 py-12 sm:px-6">
       <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
-      
+
       {/* Visual background decorations for rich depth */}
       <div className="pointer-events-none absolute left-[-8rem] top-20 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 right-[-7rem] h-96 w-96 rounded-full bg-[var(--tenant-secondary)]/20 blur-3xl" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/35 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl space-y-8">
-        
+
         {/* Header Title Panel */}
         <div className="relative overflow-hidden rounded-[30px] border border-white/65 bg-white/45 px-8 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.09]" />
@@ -60,8 +58,8 @@ export default function ResultsPage() {
         <div className="relative overflow-hidden rounded-[30px] border border-white/65 bg-white/45 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl sm:p-10">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.05]" />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
-          
-          <ResultsPageContainer 
+
+          <ResultsPageContainer
             tenantSlug={tenant?.slug || ''}
             electionSlug={election?.slug || ''}
             primaryColor={brandColor || '#5D44F8'}

@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     const resolver = new PhaseResolverService(supabase);
-    await resolver.transitionToNextPhase(electionId);
+    await resolver.transitionToNextPhase(electionId, true);
 
     return NextResponse.json({ message: 'Phase successfully advanced.' }, { status: 200 });
 
