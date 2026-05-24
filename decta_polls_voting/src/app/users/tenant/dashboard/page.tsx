@@ -50,6 +50,7 @@ export default function TenantDashboardPage() {
   const [liveElectionsData, setLiveElectionsData] = useState<LiveElectionDetails[]>([]);
   const [userLimits, setUserLimits] = useState<{ currentCount: number, limit: number | null } | null>(null);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<any[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -153,6 +154,25 @@ export default function TenantDashboardPage() {
   }, [loading]);
 
   const isPending = tenantStatus === 'PENDING';
+
+  const totalVotes = candidates.reduce((sum, c) => sum + (c.voteCount || 0), 0);
+  const displayedCandidates = candidates.length > 0
+    ? [...candidates]
+        .sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0))
+        .slice(0, 3)
+        .map((c, i) => {
+          const rawPercentage = totalVotes > 0 ? ((c.voteCount || 0) / totalVotes) * 100 : 0;
+          return {
+            name: c.displayName || c.name || `Candidate ${i + 1}`,
+            percentage: Math.round(rawPercentage),
+            voteCount: c.voteCount || 0
+          };
+        })
+    : [
+        { name: "Candidate 1", percentage: 0, voteCount: 0 },
+        { name: "Candidate 2", percentage: 0, voteCount: 0 },
+        { name: "Candidate 3", percentage: 0, voteCount: 0 }
+      ];
 
   if (loading) {
     return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
@@ -379,10 +399,32 @@ export default function TenantDashboardPage() {
 
                   <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:col-span-2">
                     <p className="text-xs uppercase tracking-[0.14em] text-white/40">Vote Tallies</p>
-                    <div className="mt-3 rounded-lg border border-dashed border-white/20 bg-white/[0.01] px-4 py-3">
-                      <p className="text-sm font-medium text-white/80">Vote tally appears when Voting phase is active.</p>
-                      <p className="mt-1 text-xs text-white/50">A visual chart will automatically appear here once the election enters voting.</p>
-                    </div>
+                    {isVotingPhaseActive ? (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                        {displayedCandidates.map((cand, index) => (
+                          <div key={index} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                            <div className="flex items-center justify-between text-xs text-white/60">
+                              <span className="truncate max-w-[100px]" title={cand.name}>{cand.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-white/40">{cand.voteCount} {cand.voteCount === 1 ? 'vote' : 'votes'}</span>
+                                <span className="font-bold text-white/90">{cand.percentage}%</span>
+                              </div>
+                            </div>
+                            <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-300"
+                                style={{ width: `${cand.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-lg border border-dashed border-white/20 bg-white/[0.01] px-4 py-3">
+                        <p className="text-sm font-medium text-white/80">Vote tally appears when Voting phase is active.</p>
+                        <p className="mt-1 text-xs text-white/50">A visual chart will automatically appear here once the election enters voting.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

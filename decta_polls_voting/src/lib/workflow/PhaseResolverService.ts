@@ -216,8 +216,63 @@ export class PhaseResolverService {
    * Hooks (Currently placeholders per spec)
    */
   async onPhaseStarted(phase: RuntimePhase): Promise<void> {
-     // TODO: Emit webhooks, push notifications, or launch background prep jobs
      console.log(`[Runtime Orchestrator] Phase Started: ${phase.phase_type}`);
+
+     if (phase.phase_type === 'results') {
+       try {
+         // Fetch the results config for this election
+         const { data: config, error: configErr } = await this.supabase
+           .from('results_config')
+           .select('*')
+           .eq('election_id', phase.electionID)
+           .maybeSingle();
+
+         if (configErr) {
+           console.error('[PhaseResolverService] Error fetching results config:', configErr);
+           return;
+         }
+
+         // If publish mode is 'immediate', compute results and mark as published
+         if (config && config.publish_mode === 'immediate') {
+           console.log(`[PhaseResolverService] Immediate publish mode detected. Computing results for election ${phase.electionID}`);
+
+           // Fetch the election to get tenantID
+           const { data: election, error: electionErr } = await this.supabase
+             .from('election')
+             .select('tenantID')
+             .eq('id', phase.electionID)
+             .single();
+
+           if (electionErr || !election) {
+             console.error('[PhaseResolverService] Error fetching election for tenantID:', electionErr);
+             return;
+           }
+
+           const { error: rpcError } = await this.supabase.rpc('compute_election_results', {
+             p_election_id: phase.electionID,
+             p_tenant_id: election.tenantID
+           });
+
+           if (rpcError) {
+             console.error('[PhaseResolverService] Error computing election results via RPC:', rpcError);
+             return;
+           }
+
+           const { error: updateError } = await this.supabase
+             .from('results_config')
+             .update({ published_at: new Date().toISOString() })
+             .eq('election_id', phase.electionID);
+
+           if (updateError) {
+             console.error('[PhaseResolverService] Error updating results config published_at:', updateError);
+           } else {
+             console.log(`[PhaseResolverService] Results computed and published successfully for election ${phase.electionID}`);
+           }
+         }
+       } catch (err) {
+         console.error('[PhaseResolverService] Exception in onPhaseStarted results handling:', err);
+       }
+     }
   }
 
   async onPhaseCompleted(phase: RuntimePhase): Promise<void> {

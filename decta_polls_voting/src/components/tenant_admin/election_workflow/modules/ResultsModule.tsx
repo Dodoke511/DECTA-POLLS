@@ -3,10 +3,16 @@
 import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { 
   BarChart3, Settings2, Eye, Lock, Download, ShieldCheck, 
-  Clock, Check, Loader2, Users, Zap, AlertCircle
+  Clock, Check, Loader2, Users, Zap, AlertCircle, Rocket
 } from 'lucide-react';
 import { ResultsConfig, PublishMode, ResultsVisibility, DownloadFormat, DownloadVisibility } from '@/lib/types/results';
 import { TenantRole } from '../PhaseCard';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface ResultsModuleProps {
   electionId: string;
@@ -37,6 +43,40 @@ export const ResultsModule = forwardRef<{ save: () => Promise<boolean> }, Result
 
     const isStandardPlus = subscription === 'STANDARD' || subscription === 'ENTERPRISE';
     const isEnterprise = subscription === 'ENTERPRISE';
+
+    const [isPublishing, setIsPublishing] = useState(false);
+    const [publishError, setPublishError] = useState<string | null>(null);
+    const [publishSuccess, setPublishSuccess] = useState(false);
+
+    const handlePublishResults = useCallback(async () => {
+      setIsPublishing(true);
+      setPublishError(null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || sessionStorage.getItem('supabaseToken');
+        const res = await fetch(`/api/elections/${electionId}/results/publish`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token || ''}`
+          }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to publish results');
+        
+        setConfig((prev: ResultsConfig) => ({
+          ...prev,
+          published_at: new Date().toISOString()
+        }));
+        
+        setPublishSuccess(true);
+        setTimeout(() => setPublishSuccess(false), 3000);
+      } catch (err: any) {
+        setPublishError(err.message);
+      } finally {
+        setIsPublishing(false);
+      }
+    }, [electionId]);
 
     useEffect(() => {
       const fetchConfig = async () => {
@@ -132,6 +172,45 @@ export const ResultsModule = forwardRef<{ save: () => Promise<boolean> }, Result
                   {vis}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Release Results Control Panel */}
+          <div className="mt-6 flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-xl border border-white/5 bg-white/[0.01]">
+            <div className="flex-1">
+              <span className="text-[11px] font-bold text-white/40 uppercase tracking-wider block mb-1">
+                Release Control
+              </span>
+              <p className="text-[11px] text-white/30">
+                {config.published_at 
+                  ? `Results were published on ${new Date(config.published_at).toLocaleString()}. You can re-compute and update them if needed.`
+                  : 'Compute election results from raw ballots and publish them to the public site.'}
+              </p>
+            </div>
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={handlePublishResults}
+                disabled={isPublishing}
+                className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-[12px] font-bold px-5 py-2.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-emerald-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {isPublishing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Rocket className="w-3.5 h-3.5 animate-pulse" />
+                )}
+                {config.published_at ? 'Recalculate & Re-publish Results' : 'Compute & Publish Results'}
+              </button>
+              {publishSuccess && (
+                <span className="text-emerald-400 text-[10px] font-medium flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Published successfully!
+                </span>
+              )}
+              {publishError && (
+                <span className="text-red-400 text-[10px] font-medium flex items-center gap-1 bg-red-500/10 px-2.5 py-1 rounded-md border border-red-500/20">
+                  <AlertCircle className="w-3 h-3" /> {publishError}
+                </span>
+              )}
             </div>
           </div>
         </section>

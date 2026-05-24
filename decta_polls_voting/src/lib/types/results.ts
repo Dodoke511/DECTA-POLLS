@@ -11,6 +11,7 @@ export interface ResultsConfig {
   // Publication
   publish_mode: PublishMode;
   results_visibility: ResultsVisibility;
+  published_at?: string | null;
 
   // Display (all tiers)
   show_vote_counts: boolean;

@@ -47,7 +47,10 @@ export function buildRoleAwareNav(
     return nav;
   }
 
-  if (userContext.isVoter) {
+  if (userContext.isCandidate) {
+    // Candidates have a unified dashboard as their home
+    nav.push({ label: 'My Dashboard', href: `${basePath}/candidate-dashboard`, highlight: true });
+  } else if (userContext.isVoter) {
     nav.push({ label: 'Dashboard', href: `${basePath}/dashboard` });
     if (isPhaseReachable(phases, 'publication') && siteConfig?.voter_can_view_candidates !== false) {
       nav.push({ label: navLabels.candidates, href: `${basePath}/candidates` });
@@ -58,9 +61,6 @@ export function buildRoleAwareNav(
     if (isPhaseReachable(phases, 'results')) {
       nav.push({ label: navLabels.results, href: `${basePath}/results` });
     }
-  } else if (userContext.isCandidate) {
-    // Candidates have a unified dashboard as their home
-    nav.push({ label: 'My Dashboard', href: `${basePath}/candidate-dashboard`, highlight: true });
   }
 
   return nav;

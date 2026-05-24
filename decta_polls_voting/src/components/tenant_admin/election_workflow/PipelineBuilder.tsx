@@ -326,6 +326,13 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     // Optional phase that has been deliberately disabled — counts as skipped/complete
     if (!phase.is_enabled && !meta.required) return true;
 
+    // If the phase has already started running, is completed, or is ready to transition,
+    // we consider the configuration phase complete for wizard navigation.
+    const runtimeStatus = runtimeStatuses[meta.type];
+    if (runtimeStatus === 'completed' || runtimeStatus === 'active' || runtimeStatus === 'for_transition') {
+      return true;
+    }
+
     // ── 1. Name is always required ───────────────────────────────────────────
     const hasName = (!!phase.name && phase.name.trim() !== '') || !!phase.id;
     if (!hasName) return false;
@@ -374,7 +381,7 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     }
 
     return true;
-  }, [positionsCount, phases]);
+  }, [positionsCount, phases, runtimeStatuses]);
 
   const canAccessStep = useCallback((idx: number) => {
     if (idx < 0 || idx > PHASE_PIPELINE.length) return false;

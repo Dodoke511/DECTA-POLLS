@@ -148,7 +148,7 @@ export default function CandidacyFormPage() {
 
       // 1. Get or create "form response"
       let responseId = null;
-      
+
       if (editMode === 'appeal') {
         const { data: existingResp } = await supabase
           .from('form response')
@@ -174,7 +174,19 @@ export default function CandidacyFormPage() {
         responseId = responseData.id;
       }
 
-      // 2. Prepare array of values for "form response value", handling file uploads
+      // 2. Fetch existing response values if responseId exists to match IDs for standard upsert
+      let existingValues: any[] = [];
+      if (responseId) {
+        const { data: existingData } = await supabase
+          .from('form response value')
+          .select('id, fieldID')
+          .eq('responseID', responseId);
+        if (existingData) {
+          existingValues = existingData;
+        }
+      }
+
+      // 3. Prepare array of values for "form response value", handling file uploads
       const responseValues = await Promise.all(
         Object.entries(formData).map(async ([fieldId, value]) => {
           let finalValue = String(value);
@@ -202,7 +214,10 @@ export default function CandidacyFormPage() {
             finalValue = publicUrlData.publicUrl;
           }
 
+          const existingValue = existingValues.find(v => v.fieldID === fieldId);
+
           return {
+            ...(existingValue ? { id: existingValue.id } : {}),
             responseID: responseId,
             fieldID: fieldId,
             value: finalValue
@@ -210,11 +225,11 @@ export default function CandidacyFormPage() {
         })
       );
 
-      // 3. Upsert into "form response value"
+      // 4. Upsert into "form response value"
       if (responseValues.length > 0) {
         const { error: valuesError } = await supabase
           .from('form response value')
-          .upsert(responseValues, { onConflict: 'responseID, fieldID' });
+          .upsert(responseValues);
 
         if (valuesError) throw valuesError;
       }
@@ -222,7 +237,7 @@ export default function CandidacyFormPage() {
       // Find the position numeric ID if a position was selected
       let candidatePositionId = null;
       const positionField = formFields.find(f => f.fieldType === 'position_selector');
-      
+
       if (positionField && formData[positionField.id]) {
         const selectedTitle = formData[positionField.id].toLowerCase().trim();
         const matchedPosition = positions.find(p => p.title.toLowerCase().trim() === selectedTitle);
@@ -279,7 +294,7 @@ export default function CandidacyFormPage() {
     );
   }
 
-  if (!userContext?.userId || userContext.isVoter) {
+  if (!userContext?.userId || userContext.userType !== 'Candidate') {
     return (
       <div className="min-h-[calc(100vh-80px)] flex items-center justify-center py-12 px-6 text-center">
         <div className="max-w-md p-8 bg-white border border-slate-200 rounded-3xl shadow-xl">
@@ -365,9 +380,57 @@ export default function CandidacyFormPage() {
                 {field.fieldType === 'number' && (
                   <input
                     type="number"
+                    step="any"
                     required={field.required}
                     min={field.validationRules?.min}
                     max={field.validationRules?.max}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    style={{ color: '#0f172a' }}
+                    value={formData[field.id] || ''}
+                    onChange={(e) => handleInputChange(field.id, e.target.value)}
+                  />
+                )}
+
+                {field.fieldType === 'email' && (
+                  <input
+                    type="email"
+                    required={field.required}
+                    placeholder={field.validationRules?.placeholder || ''}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    style={{ color: '#0f172a' }}
+                    value={formData[field.id] || ''}
+                    onChange={(e) => handleInputChange(field.id, e.target.value)}
+                  />
+                )}
+
+                {field.fieldType === 'phone' && (
+                  <input
+                    type="tel"
+                    required={field.required}
+                    placeholder={field.validationRules?.placeholder || ''}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    style={{ color: '#0f172a' }}
+                    value={formData[field.id] || ''}
+                    onChange={(e) => handleInputChange(field.id, e.target.value)}
+                  />
+                )}
+
+                {field.fieldType === 'date' && (
+                  <input
+                    type="date"
+                    required={field.required}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all [color-scheme:light]"
+                    style={{ color: '#0f172a' }}
+                    value={formData[field.id] || ''}
+                    onChange={(e) => handleInputChange(field.id, e.target.value)}
+                  />
+                )}
+
+                {field.fieldType === 'url' && (
+                  <input
+                    type="url"
+                    required={field.required}
+                    placeholder={field.validationRules?.placeholder || ''}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
