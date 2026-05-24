@@ -34,15 +34,20 @@ function getTimeRemaining(deadline: string): string {
 
 import { TimeWidget } from "@/components/tenant_admin/TimeWidget";
 
+interface LiveElectionDetails {
+  election: ElectionSummary;
+  currentPhaseLabel: string;
+  currentPhaseStatus: PhaseStatus | null;
+  phaseDeadline: string | null;
+  candidates: any[];
+}
+
 export default function TenantDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [tenantStatus, setTenantStatus] = useState<string | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
-  const [liveElection, setLiveElection] = useState<ElectionSummary | null>(null);
-  const [currentPhaseLabel, setCurrentPhaseLabel] = useState("No phase is currently active");
-  const [currentPhaseStatus, setCurrentPhaseStatus] = useState<PhaseStatus | null>(null);
-  const [phaseDeadline, setPhaseDeadline] = useState<string | null>(null);
+  const [liveElectionsData, setLiveElectionsData] = useState<LiveElectionDetails[]>([]);
   const [userLimits, setUserLimits] = useState<{ currentCount: number, limit: number | null } | null>(null);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
@@ -79,38 +84,56 @@ export default function TenantDashboardPage() {
         const electionsRes = await fetch(`/api/get_tenant_elections?tenantId=${tenantId}`);
         const electionsData = await electionsRes.json();
         const elections: ElectionSummary[] = electionsData?.elections ?? [];
-        const live = elections.find((e) => e.status === "ACTIVE") || elections.find((e) => e.status === "PUBLISHED") || null;
+        const activeElections = elections.filter((e) => e.status === "ACTIVE" || e.status === "PUBLISHED");
 
-        setLiveElection(live);
         setTenantSlug(electionsData?.tenantSlug || null);
 
-        if (live?.id) {
-          const phaseRes = await fetch(`/api/workflow/current_phase?electionId=${live.id}`);
-          const phaseData = await phaseRes.json();
+        if (activeElections.length > 0) {
+          const detailsList = await Promise.all(activeElections.map(async (live) => {
+            let currentPhaseLabel = "No phase is currently active";
+            let currentPhaseStatus: PhaseStatus | null = null;
+            let phaseDeadline: string | null = null;
+            let candidates: any[] = [];
 
-          if (phaseData?.phase_type) {
-            const readable = phaseData.phase_type.charAt(0).toUpperCase() + phaseData.phase_type.slice(1);
-            setCurrentPhaseLabel(readable);
-            setCurrentPhaseStatus(phaseData.status || 'active');
-            setPhaseDeadline(phaseData.deadline || null);
-          } else {
-            setCurrentPhaseLabel("No phase is currently active");
-            setCurrentPhaseStatus(null);
-          }
-
-          if (electionsData?.tenantSlug && live.slug) {
             try {
-              const candRes = await fetch(`/api/public/${electionsData.tenantSlug}/${live.slug}/candidates`);
-              if (candRes.ok) {
-                const candData = await candRes.json();
-                if (candData.candidates && Array.isArray(candData.candidates)) {
-                  setCandidates(candData.candidates);
+              const phaseRes = await fetch(`/api/workflow/current_phase?electionId=${live.id}`);
+              if (phaseRes.ok) {
+                const phaseData = await phaseRes.json();
+                if (phaseData?.phase_type) {
+                  currentPhaseLabel = phaseData.phase_type.charAt(0).toUpperCase() + phaseData.phase_type.slice(1);
+                  currentPhaseStatus = phaseData.status || 'active';
+                  phaseDeadline = phaseData.deadline || null;
                 }
               }
             } catch (err) {
-              console.error("Failed to fetch candidates:", err);
+              console.error("Failed to fetch phase for election:", live.id, err);
             }
-          }
+
+            if (electionsData?.tenantSlug && live.slug) {
+              try {
+                const candRes = await fetch(`/api/public/${electionsData.tenantSlug}/${live.slug}/candidates`);
+                if (candRes.ok) {
+                  const candData = await candRes.json();
+                  if (candData.candidates && Array.isArray(candData.candidates)) {
+                    candidates = candData.candidates;
+                  }
+                }
+              } catch (err) {
+                console.error("Failed to fetch candidates:", err);
+              }
+            }
+
+            return {
+              election: live,
+              currentPhaseLabel,
+              currentPhaseStatus,
+              phaseDeadline,
+              candidates,
+            };
+          }));
+          setLiveElectionsData(detailsList);
+        } else {
+          setLiveElectionsData([]);
         }
 
         const limitsRes = await fetch(`/api/get_tenant_user_limits?tenantId=${tenantId}`);
@@ -131,15 +154,6 @@ export default function TenantDashboardPage() {
   }, [loading]);
 
   const isPending = tenantStatus === 'PENDING';
-  const isVotingPhaseActive = currentPhaseLabel.toLowerCase() === "voting";
-  const currentPhaseIndex = phaseOrder.findIndex((phase) => phase.toLowerCase() === currentPhaseLabel.toLowerCase());
-  const phaseProgressPercent = currentPhaseIndex >= 0 ? ((currentPhaseIndex + 1) / phaseOrder.length) * 100 : 0;
-  const statusTone =
-    liveElection?.status === "ACTIVE"
-      ? "bg-emerald-400/15 text-emerald-300 border-emerald-400/20"
-      : liveElection?.status === "PUBLISHED"
-        ? "bg-sky-400/15 text-sky-300 border-sky-400/20"
-        : "bg-white/10 text-white/70 border-white/15";
 
   const totalVotes = candidates.reduce((sum, c) => sum + (c.voteCount || 0), 0);
   const displayedCandidates = candidates.length > 0
@@ -233,49 +247,149 @@ export default function TenantDashboardPage() {
 
               {dashboardLoading ? (
                 <p className="mt-5 text-sm text-white/60">Loading public dashboard details...</p>
+              ) : liveElectionsData.length > 0 ? (
+                <div className="mt-5 flex flex-col gap-6">
+                  {liveElectionsData.map((data, idx) => {
+                    const phaseLabel = data.currentPhaseLabel.toLowerCase();
+                    const isVotingOrResultsPhaseActive = phaseLabel === "voting" || phaseLabel === "results";
+                    const currentPhaseIndex = phaseOrder.findIndex((phase) => phase.toLowerCase() === phaseLabel);
+                    const phaseProgressPercent = currentPhaseIndex >= 0 ? ((currentPhaseIndex + 1) / phaseOrder.length) * 100 : 0;
+                    const statusTone =
+                      data.election.status === "ACTIVE"
+                        ? "bg-emerald-400/15 text-emerald-300 border-emerald-400/20"
+                        : data.election.status === "PUBLISHED"
+                          ? "bg-sky-400/15 text-sky-300 border-sky-400/20"
+                          : "bg-white/10 text-white/70 border-white/15";
+
+                    const totalVotes = data.candidates.reduce((sum: number, c: any) => sum + (c.voteCount || 0), 0);
+                    const displayedCandidates = data.candidates.length > 0
+                      ? [...data.candidates]
+                          .sort((a: any, b: any) => (b.voteCount || 0) - (a.voteCount || 0))
+                          .slice(0, 3)
+                          .map((c: any, i) => {
+                            const rawPercentage = totalVotes > 0 ? ((c.voteCount || 0) / totalVotes) * 100 : 0;
+                            return {
+                              name: c.displayName || c.name || `Candidate ${i + 1}`,
+                              percentage: Math.round(rawPercentage),
+                              voteCount: c.voteCount || 0
+                            };
+                          })
+                      : [
+                          { name: "Candidate 1", percentage: 0, voteCount: 0 },
+                          { name: "Candidate 2", percentage: 0, voteCount: 0 },
+                          { name: "Candidate 3", percentage: 0, voteCount: 0 }
+                        ];
+
+                    return (
+                      <div key={data.election.id || idx} className="grid gap-3 sm:grid-cols-2">
+                        {/* Status Card */}
+                        <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4">
+                          <div className="flex items-start justify-between">
+                            <p className="text-xs uppercase tracking-[0.14em] text-white/40">Live Election Status</p>
+                            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${statusTone}`}>
+                              {data.election.status}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-base font-semibold text-white/90">{data.election.title}</p>
+                          <div className="mt-3 flex items-center gap-2 text-xs text-white/60">
+                            <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+                            Public page is available
+                          </div>
+                        </div>
+
+                        {/* Phase Card */}
+                        <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs uppercase tracking-[0.14em] text-white/40">Current Phase</p>
+                            {data.currentPhaseStatus && <PhaseStatusBadge status={data.currentPhaseStatus} size="sm" />}
+                          </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            <p className="text-base font-semibold text-white/90">{data.currentPhaseLabel}</p>
+                            {currentPhaseIndex >= 0 && (
+                              <span className="rounded-md bg-[#5d44f8]/20 px-2 py-0.5 text-[11px] font-medium text-[#c4b9ff]">
+                                {currentPhaseIndex + 1}/{phaseOrder.length}
+                              </span>
+                            )}
+                          </div>
+                          {data.phaseDeadline && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                              <span className="text-[11px] font-medium text-amber-400/80">
+                                {getTimeRemaining(data.phaseDeadline)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-[#6f59ff] to-[#9a8bff] shadow-[0_0_20px_rgba(111,89,255,0.55)] transition-all"
+                              style={{ width: `${phaseProgressPercent}%` }}
+                            />
+                          </div>
+                          <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-white/40">
+                            <span>Filing</span>
+                            <span>Results</span>
+                          </div>
+                        </div>
+
+                        {/* Vote Tallies */}
+                        <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4 sm:col-span-2">
+                          <p className="text-xs uppercase tracking-[0.14em] text-white/40">Vote Tallies</p>
+                          {isVotingOrResultsPhaseActive ? (
+                            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                              {displayedCandidates.map((cand, index) => (
+                                <div key={index} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                                  <div className="flex items-center justify-between text-xs text-white/60">
+                                    <span className="truncate max-w-[100px]" title={cand.name}>{cand.name}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-white/40">{cand.voteCount} {cand.voteCount === 1 ? 'vote' : 'votes'}</span>
+                                      <span className="font-bold text-white/90">{cand.percentage}%</span>
+                                    </div>
+                                  </div>
+                                  <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
+                                    <div
+                                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-300"
+                                      style={{ width: `${cand.percentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="mt-3 rounded-lg border border-dashed border-white/20 bg-white/[0.01] px-4 py-3">
+                              <p className="text-sm font-medium text-white/80">Vote tally appears when Voting phase is active.</p>
+                              <p className="mt-1 text-xs text-white/50">A visual chart will automatically appear here once the election enters voting.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4">
                     <div className="flex items-start justify-between">
                       <p className="text-xs uppercase tracking-[0.14em] text-white/40">Live Election Status</p>
-                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${statusTone}`}>
-                        {liveElection?.status ?? "NONE"}
+                      <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider bg-white/10 text-white/70 border-white/15">
+                        NONE
                       </span>
                     </div>
-                    <p className="mt-2 text-base font-semibold text-white/90">{liveElection?.title ?? "No live election"}</p>
+                    <p className="mt-2 text-base font-semibold text-white/90">No live election</p>
                     <div className="mt-3 flex items-center gap-2 text-xs text-white/60">
-                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
-                      {liveElection ? "Public page is available" : "No election is publicly live"}
+                      <span className="inline-block h-2 w-2 rounded-full bg-white/20" />
+                      No election is publicly live
                     </div>
                   </div>
 
                   <div className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent p-4">
                     <div className="flex items-center justify-between">
                       <p className="text-xs uppercase tracking-[0.14em] text-white/40">Current Phase</p>
-                      {currentPhaseStatus && <PhaseStatusBadge status={currentPhaseStatus} size="sm" />}
                     </div>
                     <div className="mt-2 flex items-center gap-2">
-                      <p className="text-base font-semibold text-white/90">{liveElection ? currentPhaseLabel : "N/A"}</p>
-                      {liveElection && currentPhaseIndex >= 0 && (
-                        <span className="rounded-md bg-[#5d44f8]/20 px-2 py-0.5 text-[11px] font-medium text-[#c4b9ff]">
-                          {currentPhaseIndex + 1}/{phaseOrder.length}
-                        </span>
-                      )}
+                      <p className="text-base font-semibold text-white/90">N/A</p>
                     </div>
-                    {/* Deadline Countdown */}
-                    {phaseDeadline && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                        <span className="text-[11px] font-medium text-amber-400/80">
-                          {getTimeRemaining(phaseDeadline)}
-                        </span>
-                      </div>
-                    )}
                     <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-[#6f59ff] to-[#9a8bff] shadow-[0_0_20px_rgba(111,89,255,0.55)] transition-all"
-                        style={{ width: `${phaseProgressPercent}%` }}
-                      />
+                      <div className="h-full rounded-full bg-white/5 transition-all" style={{ width: '0%' }} />
                     </div>
                     <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-white/40">
                       <span>Filing</span>

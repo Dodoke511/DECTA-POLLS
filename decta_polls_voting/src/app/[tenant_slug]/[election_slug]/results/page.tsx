@@ -6,6 +6,8 @@ import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from 
 import { ResultsPageContainer } from '@/components/results/ResultsPageContainer';
 import { Award } from 'lucide-react';
 
+import { ResultsPageContainer } from '@/components/results/ResultsPageContainer';
+
 export default function ResultsPage() {
   const { userContext, siteConfig, tenant, election, brandColor } = useElectionPublic();
   const backgroundImage = getPublicElectionBackgroundImage(siteConfig, election);
