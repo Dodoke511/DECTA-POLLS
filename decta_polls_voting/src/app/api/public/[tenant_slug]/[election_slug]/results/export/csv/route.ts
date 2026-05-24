@@ -13,9 +13,10 @@ export async function GET(
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    const supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     // 1. Resolve Tenant & Election
-    const { data: tenant } = await supabaseClient
+    const { data: tenant } = await supabaseAdmin
       .from('tenants')
       .select('id')
       .eq('slug', tenant_slug)
@@ -23,7 +24,7 @@ export async function GET(
 
     if (!tenant) return new NextResponse('Tenant not found', { status: 404 });
 
-    const { data: election } = await supabaseClient
+    const { data: election } = await supabaseAdmin
       .from('election')
       .select('id, title')
       .eq('slug', election_slug)
@@ -33,7 +34,7 @@ export async function GET(
     if (!election) return new NextResponse('Election not found', { status: 404 });
 
     // 2. Resolve Config
-    const { data: config } = await supabaseClient
+    const { data: config } = await supabaseAdmin
       .from('results_config')
       .select('*')
       .eq('election_id', election.id)
@@ -49,7 +50,7 @@ export async function GET(
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return new NextResponse('Unauthorized', { status: 401 });
       
-      const { data: tenantUser } = await supabaseClient
+      const { data: tenantUser } = await supabaseAdmin
         .from('tenant users')
         .select('user_type')
         .eq('id', user.id)
@@ -67,21 +68,38 @@ export async function GET(
     }
 
     // 4. Fetch Results Data
-    const { data: results } = await supabaseClient
+    const { data: results } = await supabaseAdmin
       .from('election_results')
       .select('position_id, candidate_id, vote_count, rank, is_winner, abstain_count')
       .eq('election_id', election.id)
       .order('rank', { ascending: true, nullsFirst: false });
 
-    const { data: positions } = await supabaseClient
+    const { data: positions } = await supabaseAdmin
       .from('positions')
       .select('id, title')
-      .eq('election_id', election.id);
+      .eq('electionID', election.id);
 
-    const { data: candidates } = await supabaseClient
+    // Fetch candidates properly with names
+    const { data: rawCandidates } = await supabaseAdmin
       .from('candidate')
-      .select('id, name, party_name')
-      .eq('election_id', election.id);
+      .select(`
+        id,
+        userID,
+        status,
+        user:userID!inner ( id, first_name, surname )
+      `)
+      .eq('electionID', election.id)
+      .ilike('status', 'approved');
+
+    const candidates = (rawCandidates || []).map(c => {
+      const u = Array.isArray(c.user) ? c.user[0] : c.user;
+      const name = `${u?.first_name || ''} ${u?.surname || ''}`.trim() || 'Candidate';
+      return {
+        id: c.id,
+        name,
+        party_name: undefined
+      };
+    });
 
     // 5. Build CSV Data
     const csvData: any[] = [];

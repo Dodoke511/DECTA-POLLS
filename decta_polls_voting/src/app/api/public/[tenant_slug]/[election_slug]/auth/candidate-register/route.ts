@@ -82,11 +82,13 @@ export async function POST(
         return NextResponse.json({ error: 'Only registered Voters can register as Candidates.' }, { status: 400 });
       }
 
-      // 5. Update auth user metadata and password
+      // 5. Update auth user metadata, email, and password
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
         existingUser.id,
         {
+          email: email.toLowerCase().trim(),
           password,
+          email_confirm: true,
           user_metadata: {
             tenant_id: tenant.id,
             election_id: election.id,

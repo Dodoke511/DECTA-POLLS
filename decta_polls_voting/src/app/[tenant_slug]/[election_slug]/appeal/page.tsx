@@ -586,6 +586,7 @@ export default function AppealPage() {
                   {field.fieldType === 'number' && (
                     <input
                       type="number"
+                      step="any"
                       required={field.required}
                       min={field.validationRules?.min}
                       max={field.validationRules?.max}

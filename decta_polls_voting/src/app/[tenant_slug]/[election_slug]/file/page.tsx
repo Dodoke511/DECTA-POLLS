@@ -68,7 +68,7 @@ export default function CandidateFilingPage() {
     );
   }
 
-  if (userContext.isVoter) {
+  if (!userContext.isCandidate) {
     return (
       <div className="min-h-[calc(100vh-80px)] flex items-center justify-center py-12 px-6 text-center">
         <div className="max-w-md p-8 bg-white border border-slate-200 rounded-3xl shadow-xl">
