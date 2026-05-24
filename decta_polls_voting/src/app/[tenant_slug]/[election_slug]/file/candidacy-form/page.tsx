@@ -148,7 +148,7 @@ export default function CandidacyFormPage() {
 
       // 1. Get or create "form response"
       let responseId = null;
-      
+
       if (editMode === 'appeal') {
         const { data: existingResp } = await supabase
           .from('form response')
@@ -237,7 +237,7 @@ export default function CandidacyFormPage() {
       // Find the position numeric ID if a position was selected
       let candidatePositionId = null;
       const positionField = formFields.find(f => f.fieldType === 'position_selector');
-      
+
       if (positionField && formData[positionField.id]) {
         const selectedTitle = formData[positionField.id].toLowerCase().trim();
         const matchedPosition = positions.find(p => p.title.toLowerCase().trim() === selectedTitle);
@@ -294,7 +294,7 @@ export default function CandidacyFormPage() {
     );
   }
 
-  if (!userContext?.userId || !userContext.isCandidate) {
+  if (!userContext?.userId || userContext.userType !== 'Candidate') {
     return (
       <div className="min-h-[calc(100vh-80px)] flex items-center justify-center py-12 px-6 text-center">
         <div className="max-w-md p-8 bg-white border border-slate-200 rounded-3xl shadow-xl">

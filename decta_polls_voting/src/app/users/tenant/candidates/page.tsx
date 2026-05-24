@@ -107,7 +107,7 @@ export default function TenantCandidatesPage() {
   };
 
   const handleStatusUpdate = async (candidateId: string, newStatus: string) => {
-    setActionLoading(candidateId);
+    setActionLoading(`${candidateId}-${newStatus}`);
     try {
       const candidate = candidates.find(c => c.id === candidateId);
       const oldStatus = candidate?.status;
@@ -210,7 +210,7 @@ export default function TenantCandidatesPage() {
   const isReadOnly = currentPhaseType === 'voting' || currentPhaseType === 'results';
   const isTransitionPending = phaseStatus === 'for_transition';
 
-  const canModifyStatus = (!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly && isAppealPhase;
+  const canModifyStatus = (!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly;
 
   // Allow tenant admins to act on candidates returned to PENDING_VERIFICATION
   // by the appeal workflow even during the appeal phase. This keeps the
@@ -434,19 +434,19 @@ export default function TenantCandidatesPage() {
                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleStatusUpdate(c.id, 'APPROVED')}
-                                disabled={actionLoading === c.id}
+                                disabled={actionLoading?.startsWith(c.id)}
                                 className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-xl border border-emerald-500/20 transition-all active:scale-95 disabled:opacity-50"
                                 title="Approve Candidate"
                               >
-                                <UserCheck className="w-4 h-4" />
+                                {actionLoading === `${c.id}-APPROVED` ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
                               </button>
                               <button
                                 onClick={() => isScreeningPhase ? setRejectTarget(c) : handleStatusUpdate(c.id, 'REJECTED')}
-                                disabled={actionLoading === c.id}
+                                disabled={actionLoading?.startsWith(c.id)}
                                 className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl border border-red-500/20 transition-all active:scale-95 disabled:opacity-50"
                                 title="Reject Application"
                               >
-                                <UserX className="w-4 h-4" />
+                                {actionLoading === `${c.id}-REJECTED` ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
                               </button>
                             </div>
                           )}
@@ -456,11 +456,11 @@ export default function TenantCandidatesPage() {
                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleStatusUpdate(c.id, 'DISQUALIFIED')}
-                                disabled={actionLoading === c.id}
+                                disabled={actionLoading?.startsWith(c.id)}
                                 className="p-2 bg-red-900/40 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/20 transition-all active:scale-95 disabled:opacity-50"
                                 title="Disqualify Candidate"
                               >
-                                <UserX className="w-4 h-4" />
+                                {actionLoading === `${c.id}-DISQUALIFIED` ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
                               </button>
                             </div>
                           )}
