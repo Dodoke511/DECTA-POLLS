@@ -69,9 +69,9 @@ export async function getElectionUserContext(
 
   console.log(`[Session Debug] Successfully resolved user: ${tenantUser.first_name} (${tenantUser.user_type})`);
 
-  const userType = tenantUser.user_type?.toLowerCase() === 'candidate' ? 'Candidate' : 'Voter';
+  const userType = tenantUser.user_type;
   const isCandidate = userType === 'Candidate';
-  const isVoter = userType === 'Voter';
+  const isVoter = userType === 'Voter' || userType === 'Candidate' || userType === 'admin' || userType === 'sub-admin';
 
   return {
     userId: tenantUser.id,

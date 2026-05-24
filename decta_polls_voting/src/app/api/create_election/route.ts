@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -57,6 +58,10 @@ export async function POST(request: Request) {
       }
     }
 
+    // Generate secure encryption keys for the ballot
+    const publicKey = crypto.randomBytes(32).toString('hex');
+    const privateKey = crypto.randomBytes(32).toString('hex');
+
     // Insert election draft into database
     const { data, error } = await supabase
       .from('election')
@@ -68,6 +73,8 @@ export async function POST(request: Request) {
           description: description || null,
           status: 'DRAFT',
           banner: bannerUrl,
+          encryption_key_public: publicKey,
+          encryption_key_private: privateKey,
         },
       ])
       .select('id')

@@ -3,8 +3,10 @@
 import React from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 
+import { ResultsPageContainer } from '@/components/results/ResultsPageContainer';
+
 export default function ResultsPage() {
-  const { userContext, siteConfig } = useElectionPublic();
+  const { userContext, siteConfig, tenant, election, brandColor } = useElectionPublic();
 
   if (userContext?.isCandidate && siteConfig?.candidate_can_view_results === false) {
     return (
@@ -24,10 +26,12 @@ export default function ResultsPage() {
         <p className="text-white/60">Final results for this election.</p>
       </div>
 
-      <div className="bg-[#140B2D]/80 backdrop-blur-md rounded-xl p-8 border border-white/10">
-        <p className="text-white/60 text-center py-12">
-          [Results Module will be mounted here]
-        </p>
+      <div className="bg-[#140B2D]/80 backdrop-blur-md rounded-xl p-8 border border-white/10 shadow-2xl">
+        <ResultsPageContainer 
+          tenantSlug={tenant?.slug || ''}
+          electionSlug={election?.slug || ''}
+          primaryColor={brandColor || '#5D44F8'}
+        />
       </div>
     </div>
   );

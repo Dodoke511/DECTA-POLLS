@@ -40,9 +40,10 @@ export async function POST(request: Request) {
 
     // If there are positions to insert, proceed
     if (recordsToInsert.length > 0) {
-      const { error: insError } = await supabase
+      const { data: insertedPositions, error: insError } = await supabase
         .from('positions')
-        .insert(recordsToInsert);
+        .insert(recordsToInsert)
+        .select('id, electionID');
 
       if (insError) {
         console.error('API Error: Insert positions failed:', insError);
@@ -50,6 +51,22 @@ export async function POST(request: Request) {
           { error: 'Failed to save formulated positions.' },
           { status: 500 }
         );
+      }
+
+      // Automatically generate cryptographic ballots for these new positions
+      if (insertedPositions && insertedPositions.length > 0) {
+        const ballotsToInsert = insertedPositions.map(pos => ({
+          election_id: pos.electionID,
+          position_id: pos.id
+        }));
+
+        const { error: ballotError } = await supabase
+          .from('ballots')
+          .insert(ballotsToInsert);
+
+        if (ballotError) {
+          console.error('API Error: Failed to generate ballots for positions:', ballotError);
+        }
       }
     }
 

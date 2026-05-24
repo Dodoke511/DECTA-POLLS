@@ -1,8 +1,29 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { checkUserLimit } from "@/lib/server/user-limit-check";
 
 const TEMPORARY_VOTER_PASSWORD = "12345";
+
+function parseDateString(dateStr: string | null) {
+  if (!dateStr) return null;
+  const parts = dateStr.split(/[\/\-]/);
+  if (parts.length === 3 && parts[2].length === 4) {
+    // If first part is > 12, it MUST be day (DD/MM/YYYY)
+    if (parseInt(parts[0]) > 12) {
+       return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    } 
+    // If second part is > 12, it MUST be day (MM/DD/YYYY)
+    else if (parseInt(parts[1]) > 12) {
+       return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+    } 
+    // Ambiguous (e.g., 05/06/2000) - default to DD/MM/YYYY to match user's explicit DD/MM/YYYY usage
+    else {
+       return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+  return dateStr;
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey =
@@ -20,6 +41,8 @@ interface ParsedVoter {
   birth_date: string | null;
   user_type: string;
   department: string | null;
+  registered_via_election?: string | null;
+  registered_via_slug?: string | null;
 }
 
 function getErrorMessage(err: unknown) {
@@ -31,6 +54,8 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const tenantId = formData.get("tenantId") as string;
+    const electionId = formData.get("electionId") as string | null;
+    const electionSlug = formData.get("electionSlug") as string | null;
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -122,9 +147,11 @@ export async function POST(request: Request) {
         middle_name: row.middle_name || null,
         surname: row.surname,
         contact: row.contact || null,
-        birth_date: row.birth_date || null,
+        birth_date: parseDateString(row.birth_date || null),
         user_type: "voter",
         department: row.department || null,
+        registered_via_election: electionId || null,
+        registered_via_slug: electionSlug || null,
       });
     }
 

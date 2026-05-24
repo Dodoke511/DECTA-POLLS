@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isPhaseActive } from '@/lib/public-election/phase-utils';
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Internal server error';
@@ -73,6 +74,45 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized user type for this portal' }, { status: 403 });
     }
 
+    // 5. Generate vote token if voting phase is active and user doesn't have one
+    const { data: phases } = await supabase
+      .from('election phase')
+      .select('*')
+      .eq('electionID', election.id);
+
+    if (isPhaseActive(phases || [], 'voting')) {
+      const supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      
+      const { data: existingToken } = await supabaseAdmin
+        .from('vote_tokens')
+        .select('id')
+        .eq('election_id', election.id)
+        .eq('voter_id', authData.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!existingToken) {
+        const crypto = require('crypto');
+        const rawTokenData = `${election.id}:${authData.user.id}:${crypto.randomUUID()}`;
+        const secureHash = crypto.createHash('sha256').update(rawTokenData).digest('hex');
+
+        const { error: insertError } = await supabaseAdmin
+          .from('vote_tokens')
+          .insert({
+            election_id: election.id,
+            voter_id: authData.user.id,
+            token_hash: secureHash,
+            used: false
+          });
+          
+        if (insertError) {
+          console.error(`[Election Login API] Failed to auto-generate token for ${email}:`, insertError);
+        } else {
+          console.log(`[Election Login API] Auto-generated vote token for ${email}`);
+        }
+      }
+    }
+
     if (userType === 'voter' && password === temporaryVoterPassword) {
       return NextResponse.json({
         success: true,
@@ -82,8 +122,7 @@ export async function POST(
       });
     }
 
-    // Optional: Check if voted
-    // const { data: voteToken } = await supabase.from('vote_tokens').select('used').eq('user_id', tenantUser.id).single();
+
 
     return NextResponse.json({ success: true, session: authData.session });
 

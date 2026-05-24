@@ -89,9 +89,8 @@ export function PublicElectionHeader() {
             href={href}
             aria-label={label}
             aria-current={isActive ? 'page' : undefined}
-            className={`group relative flex h-10 w-10 items-center justify-center rounded-full text-white transition-all hover:bg-white hover:text-[var(--tenant-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-              isActive ? 'bg-white text-[var(--tenant-primary)] shadow-md' : 'bg-white/10'
-            }`}
+            className={`group relative flex h-10 w-10 items-center justify-center rounded-full text-white transition-all hover:bg-white hover:text-[var(--tenant-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${isActive ? 'bg-white text-[var(--tenant-primary)] shadow-md' : 'bg-white/10'
+              }`}
           >
             <Icon className="h-5 w-5" style={{ color: isActive ? 'var(--tenant-primary)' : undefined }} />
             <div
@@ -146,7 +145,7 @@ export function PublicElectionHeader() {
         <div className="flex items-center gap-4">
           {userContext && (
             <div className="flex items-center gap-2">
-              {userContext.isVoter && (
+              {userContext.isVoter && !userContext.isCandidate && (
                 renderIconNav(voterNavItems, 'Voter navigation')
               )}
               {userContext.isCandidate && (
