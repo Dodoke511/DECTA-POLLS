@@ -1,0 +1,117 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+export async function POST(request: Request) {
+  try {
+    const formData = await request.formData();
+
+    const tenantId = formData.get('tenantId') as string;
+    const title = formData.get('title') as string;
+    const slug = formData.get('slug') as string;
+    const description = formData.get('description') as string;
+    const bannerFile = formData.get('banner') as File | null;
+
+    console.log('tenantId:', tenantId);
+    console.log('title:', title);
+    console.log('slug:', slug);
+
+    const missing = [];
+    if (!tenantId) missing.push('tenantId');
+    if (!title) missing.push('title');
+    if (!slug) missing.push('slug');
+
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { error: `Missing required fields: ${missing.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Upload banner to Supabase Storage if provided
+    let bannerUrl: string | null = null;
+    if (bannerFile && bannerFile.size > 0) {
+      const fileExt = bannerFile.name.split('.').pop();
+      const fileName = `elections/${tenantId}/${Date.now()}.${fileExt}`;
+      const arrayBuffer = await bannerFile.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      const { error: uploadError } = await supabase.storage
+        .from('election-banners')
+        .upload(fileName, buffer, {
+          contentType: bannerFile.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Banner upload error:', uploadError);
+        // Non-fatal: continue without banner
+      } else {
+        const { data: publicUrlData } = supabase.storage
+          .from('election-banners')
+          .getPublicUrl(fileName);
+        bannerUrl = publicUrlData?.publicUrl ?? null;
+      }
+    }
+
+    // Generate secure encryption keys for the ballot
+    const publicKey = crypto.randomBytes(32).toString('hex');
+    const privateKey = crypto.randomBytes(32).toString('hex');
+
+    // Insert election draft into database
+    const { data, error } = await supabase
+      .from('election')
+      .insert([
+        {
+          tenantID: tenantId,
+          title,
+          slug,
+          description: description || null,
+          status: 'DRAFT',
+          banner: bannerUrl,
+          encryption_key_public: publicKey,
+          encryption_key_private: privateKey,
+        },
+      ])
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('Supabase insert error:', error);
+      return NextResponse.json(
+        { error: error.message || 'Failed to create election record.' },
+        { status: 500 }
+      );
+    }
+
+    // Initialize default election site configuration
+    const { error: configError } = await supabase
+      .from('election_site_config')
+      .insert({
+        election_id: data.id,
+        tenant_id: tenantId,
+        public_title: title,
+        welcome_message: description || null,
+      });
+
+    if (configError) {
+      console.error('Failed to initialize election site config:', configError);
+      // Non-blocking: log the error, but let the election creation succeed
+    }
+
+    return NextResponse.json(
+      { message: 'Election draft created successfully.', electionId: data.id, banner: bannerUrl },
+      { status: 201 }
+    );
+  } catch (err: any) {
+    console.error('create_election API error:', err);
+    return NextResponse.json(
+      { error: err.message || 'Internal Server Error' },
+      { status: 500 }
+    );
+  }
+}
