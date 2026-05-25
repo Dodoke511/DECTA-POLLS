@@ -1,83 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { SuperAdminHeader } from "@/components/super_admin/Header";
 import { SuperAdminSidebar } from "@/components/super_admin/Sidebar";
 import { GlobalConfiguration } from "@/app/users/super_admin/system-configuration/page";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type ActionStatus = "Success" | "Warning" | "Error";
-
 interface AuditLog {
-  id: number;
+  id: string;
   timestamp: string;
   tenant: string;
   action: string;
-  status: ActionStatus;
-  performedBy?: string;
-}
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const auditLogs: AuditLog[] = [
-  { id: 1, timestamp: "2026-03-20 14:32:15", tenant: "CEBU INSTITUTE TECHNOLOGY", action: "Subscription Change", status: "Success" },
-  { id: 2, timestamp: "2026-03-20 14:32:15", tenant: "UNIVERSITY OF CEBU",        action: "Password Reset",       status: "Success" },
-  { id: 3, timestamp: "2026-03-20 14:32:15", tenant: "CEBU DOCTORS UNIVERSITY",   action: "Subscription Change", status: "Warning" },
-  { id: 4, timestamp: "2026-03-20 14:32:15", tenant: "VELEZ COLLEGE",             action: "Subscription Change", status: "Warning" },
-  { id: 5, timestamp: "2026-03-20 14:32:15", tenant: "MONSTER CORP.",             action: "Subscription Change", status: "Error"   },
-  { id: 6, timestamp: "2026-03-20 14:32:15", tenant: "INCORPORATED INC.",         action: "Subscription Change", status: "Error"   },
-];
-
-const tenantActivityLogs: AuditLog[] = [
-  { id: 101, timestamp: "2026-05-22 09:14:02", tenant: "CEBU INSTITUTE TECHNOLOGY", action: "Created election — Student Council 2026",     status: "Success", performedBy: "admin@cit.edu.ph" },
-  { id: 102, timestamp: "2026-05-22 08:47:31", tenant: "UNIVERSITY OF CEBU",        action: "Finished election — SGA General Vote 2025",   status: "Success", performedBy: "elections@uc.edu.ph" },
-  { id: 103, timestamp: "2026-05-22 08:22:18", tenant: "CEBU DOCTORS UNIVERSITY",   action: "Updated subscription plan — Pro tier",        status: "Success", performedBy: "billing@cdu.edu.ph" },
-  { id: 104, timestamp: "2026-05-21 16:55:44", tenant: "VELEZ COLLEGE",             action: "Created election — Department Head Poll",     status: "Success", performedBy: "admin@velez.edu.ph" },
-  { id: 105, timestamp: "2026-05-21 15:30:09", tenant: "MONSTER CORP.",             action: "Finished election — Board of Directors Vote", status: "Warning", performedBy: "System (automated)" },
-  { id: 106, timestamp: "2026-05-21 14:08:57", tenant: "INCORPORATED INC.",         action: "Updated subscription plan — Enterprise tier", status: "Success", performedBy: "finance@incorp.com" },
-  { id: 107, timestamp: "2026-05-21 11:42:33", tenant: "CEBU INSTITUTE TECHNOLOGY", action: "Started election — Class Officer Midterm",    status: "Success", performedBy: "admin@cit.edu.ph" },
-  { id: 108, timestamp: "2026-05-20 17:19:21", tenant: "UNIVERSITY OF CEBU",        action: "Created election — Faculty Senate Ballot",    status: "Success", performedBy: "registrar@uc.edu.ph" },
-];
-
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-function StatusBadge({ status }: { status: ActionStatus }) {
-  const map: Record<ActionStatus, { bg: string; border: string; color: string }> = {
-    Success: {
-      bg:     "rgba(80,200,120,0.18)",
-      border: "rgba(93,68,248,0.50)",
-      color:  "rgba(80,200,120,0.85)",
-    },
-    Warning: {
-      bg:     "rgba(245,248,68,0.22)",
-      border: "rgba(245,248,68,0.35)",
-      color:  "rgba(220,224,50,0.95)",
-    },
-    Error: {
-      bg:     "rgba(255,150,50,0.18)",
-      border: "rgba(93,68,248,0.50)",
-      color:  "#FF9632",
-    },
-  };
-  const s = map[status];
-  return (
-    <span style={{
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minWidth: 80,
-      padding: "4px 16px",
-      borderRadius: 999,
-      background: s.bg,
-      border: `1px solid ${s.border}`,
-      color: s.color,
-      fontSize: 11,
-      fontWeight: 700,
-      fontFamily: "Montserrat, sans-serif",
-      letterSpacing: "0.06em",
-      whiteSpace: "nowrap",
-    }}>
-      {status}
-    </span>
-  );
+  performedBy: string;
 }
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -86,6 +21,32 @@ function IconUser() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="8" r="4" fill="#F1F0F3" opacity="0.9"/>
       <path d="M4 20c0-3.866 3.582-7 8-7s8 3.134 8 7" fill="#F1F0F3" opacity="0.9"/>
+    </svg>
+  );
+}
+
+function IconRefresh({ spinning }: { spinning?: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      className={spinning ? "animate-spin" : undefined}
+    >
+      <path
+        d="M21 12a9 9 0 1 1-2.64-6.36"
+        stroke="#F1F0F3"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M21 3v6h-6"
+        stroke="#F1F0F3"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -105,16 +66,14 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
 // ─── Audit Log Table ──────────────────────────────────────────────────────────
 function AuditLogTable({
   logs,
-  actionHeader = "ACTION",
-  showStatus = true,
-  showPerformedBy = false,
+  loading,
+  error,
 }: {
   logs: AuditLog[];
-  actionHeader?: string;
-  showStatus?: boolean;
-  showPerformedBy?: boolean;
+  loading: boolean;
+  error: string | null;
 }) {
-  const colCount = 3 + (showStatus || showPerformedBy ? 1 : 0);
+  const colCount = 4;
   return (
     <div className="super-admin-table w-full rounded-[22px] border border-white/[0.10] overflow-hidden mb-8">
       <div className="w-full">
@@ -123,13 +82,24 @@ function AuditLogTable({
             <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
               <th className="px-6 py-4">TIMESTAMP</th>
               <th className="px-6 py-4">TENANT</th>
-              <th className="px-6 py-4">{actionHeader}</th>
-              {showPerformedBy && <th className="px-6 py-4">PERFORMED BY</th>}
-              {showStatus && <th className="px-6 py-4">ACTION STATUS</th>}
+              <th className="px-6 py-4">ACTION</th>
+              <th className="px-6 py-4">PERFORMED BY</th>
             </tr>
           </thead>
           <tbody>
-            {logs.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={colCount} className="px-24 py-16 text-center text-white/40">
+                  Loading audit logs...
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan={colCount} className="px-24 py-16 text-center text-red-300/80">
+                  {error}
+                </td>
+              </tr>
+            ) : logs.length === 0 ? (
               <tr>
                 <td colSpan={colCount} className="px-24 py-16 text-center text-white/40">
                   No results found.
@@ -144,14 +114,7 @@ function AuditLogTable({
                   <td className="px-6 py-4 font-mono text-white/80">{log.timestamp}</td>
                   <td className="px-6 py-4 font-medium text-white/90">{log.tenant}</td>
                   <td className="px-6 py-4 text-white/60">{log.action}</td>
-                  {showPerformedBy && (
-                    <td className="px-6 py-4 text-white/75">{log.performedBy ?? "—"}</td>
-                  )}
-                  {showStatus && (
-                    <td className="px-6 py-4">
-                      <StatusBadge status={log.status} />
-                    </td>
-                  )}
+                  <td className="px-6 py-4 text-white/75">{log.performedBy}</td>
                 </tr>
               ))
             )}
@@ -162,38 +125,60 @@ function AuditLogTable({
   );
 }
 
-// ─── Search Audit ─────────────────────────────────────────────────────────────
-function SearchAudit({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+// ─── Search + Refresh ─────────────────────────────────────────────────────────
+function MonitoringToolbar({
+  search,
+  onSearchChange,
+  onRefresh,
+  refreshing,
+}: {
+  search: string;
+  onSearchChange: (v: string) => void;
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
   return (
-    <div className="super-admin-button flex items-center gap-2.5 rounded-xl px-4 py-2 min-w-[210px]">
-      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{
-        background: "rgba(255,255,255,0.13)",
-        border: "1px solid rgba(255,255,255,0.2)",
-      }}>
-        <IconUser />
+    <div className="flex items-center gap-2.5">
+      <div className="super-admin-button flex items-center gap-2.5 rounded-xl px-4 py-2 min-w-[210px]">
+        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{
+          background: "rgba(255,255,255,0.13)",
+          border: "1px solid rgba(255,255,255,0.2)",
+        }}>
+          <IconUser />
+        </div>
+        <input
+          type="text"
+          placeholder="Search Audit"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="bg-transparent border-none outline-none font-montserrat text-sm font-bold w-32"
+          style={{ color: "#f1f0f3" }}
+        />
       </div>
-      <input
-        type="text"
-        placeholder="Search Audit"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="bg-transparent border-none outline-none font-montserrat text-sm font-bold w-32"
-        style={{ color: '#f1f0f3' }}
-      />
+      <button
+        type="button"
+        onClick={onRefresh}
+        disabled={refreshing}
+        aria-label="Refresh audit logs"
+        title="Refresh table"
+        className="super-admin-button flex h-[42px] w-[42px] items-center justify-center rounded-xl transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <IconRefresh spinning={refreshing} />
+      </button>
     </div>
   );
 }
 
-import { useRouter } from "next/navigation";
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SystemMonitoringPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"monitoring" | "config" | "audit">("monitoring");
+  const [activeTab, setActiveTab] = useState<"monitoring" | "config">("monitoring");
   const [search, setSearch] = useState("");
-  const [auditSearch, setAuditSearch] = useState("");
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [logsError, setLogsError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const role = params.get('role');
     const random = params.get('random');
@@ -204,19 +189,51 @@ export default function SystemMonitoringPage() {
     }
   }, [router]);
 
+  const loadAuditLogs = useCallback(async (signal?: { cancelled: boolean }) => {
+    setLogsLoading(true);
+    setLogsError(null);
+
+    try {
+      const res = await fetch("/api/super_admin/audit_logs");
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to fetch audit logs");
+      }
+
+      if (!signal?.cancelled) {
+        setAuditLogs(json.logs ?? []);
+      }
+    } catch (err) {
+      if (!signal?.cancelled) {
+        setLogsError(err instanceof Error ? err.message : "Failed to fetch audit logs");
+        setAuditLogs([]);
+      }
+    } finally {
+      if (!signal?.cancelled) {
+        setLogsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== "monitoring") return;
+
+    const token = { cancelled: false };
+    loadAuditLogs(token);
+
+    return () => {
+      token.cancelled = true;
+    };
+  }, [activeTab, loadAuditLogs]);
+
   const pageTitle = activeTab === "config" ? "Settings" : "Settings";
 
   const filtered = auditLogs.filter((l) =>
     l.tenant.toLowerCase().includes(search.toLowerCase()) ||
     l.action.toLowerCase().includes(search.toLowerCase()) ||
-    l.status.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const filteredTenantActivity = tenantActivityLogs.filter((l) =>
-    l.tenant.toLowerCase().includes(auditSearch.toLowerCase()) ||
-    l.action.toLowerCase().includes(auditSearch.toLowerCase()) ||
-    l.status.toLowerCase().includes(auditSearch.toLowerCase()) ||
-    (l.performedBy?.toLowerCase().includes(auditSearch.toLowerCase()) ?? false)
+    l.performedBy.toLowerCase().includes(search.toLowerCase()) ||
+    l.timestamp.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -248,17 +265,20 @@ export default function SystemMonitoringPage() {
               <div className="flex gap-2.5">
                 <TabButton label="System Monitoring"   active={activeTab === "monitoring"} onClick={() => setActiveTab("monitoring")} />
                 <TabButton label="Global Configuration" active={activeTab === "config"}    onClick={() => setActiveTab("config")} />
-                <TabButton label="Audit Log"            active={activeTab === "audit"}    onClick={() => setActiveTab("audit")} />
               </div>
-              {activeTab === "monitoring" && <SearchAudit value={search} onChange={setSearch} />}
-              {activeTab === "audit" && <SearchAudit value={auditSearch} onChange={setAuditSearch} />}
+              {activeTab === "monitoring" && (
+                <MonitoringToolbar
+                  search={search}
+                  onSearchChange={setSearch}
+                  onRefresh={() => loadAuditLogs()}
+                  refreshing={logsLoading}
+                />
+              )}
             </div>
 
             {/* Main Content */}
             {activeTab === "monitoring" ? (
-              <AuditLogTable logs={filtered} />
-            ) : activeTab === "audit" ? (
-              <AuditLogTable logs={filteredTenantActivity} actionHeader="ACTIVITY" showStatus={false} showPerformedBy />
+              <AuditLogTable logs={filtered} loading={logsLoading} error={logsError} />
             ) : (
               <div className="flex-1">
                 <GlobalConfiguration />
