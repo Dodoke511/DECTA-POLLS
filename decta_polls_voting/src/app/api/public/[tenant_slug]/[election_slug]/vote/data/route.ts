@@ -53,6 +53,7 @@ export async function GET(
         electionID,
         userID,
         status,
+        political_party,
         user:userID!inner ( id, first_name, surname )
       `)
       .eq('electionID', election.id)
@@ -124,7 +125,7 @@ export async function GET(
         return {
           id: c.id,
           name: name || 'Unknown Candidate',
-          party_name: undefined, // Party name currently not supported by schema
+          party_name: c.political_party || 'INDEPENDENT',
           photo_url: undefined, // Will be handled if we pull from file_upload fields later
           position_id: positionId ? Number(positionId) : null
         };

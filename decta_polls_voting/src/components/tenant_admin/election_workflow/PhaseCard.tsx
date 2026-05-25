@@ -124,6 +124,38 @@ export const PhaseCard = forwardRef(({
     }
   };
 
+  const handleFinalizeElection = async (finalStatus: 'COMPLETED' | 'FAILED') => {
+    // If deadline mode, validate slug inputs match actual slugs
+    if (phase.transition_mode === 'deadline') {
+      if (slugInput.tenant.trim() !== (tenantSlug ?? '').trim()) {
+        setAdvanceError('Tenant slug does not match. Please try again.');
+        return;
+      }
+      if (slugInput.election.trim() !== (electionSlug ?? '').trim()) {
+        setAdvanceError('Election slug does not match. Please try again.');
+        return;
+      }
+    }
+    setIsAdvancing(true);
+    setAdvanceError(null);
+    try {
+      const res = await fetch('/api/workflow/complete_election', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ electionId, finalStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to finalize election');
+      setShowAdvanceConfirm(false);
+      setSlugInput({ tenant: '', election: '' });
+      onRefresh?.();
+    } catch (err: any) {
+      setAdvanceError(err.message);
+    } finally {
+      setIsAdvancing(false);
+    }
+  };
+
   const openAdvanceConfirm = () => {
     setSlugInput({ tenant: '', election: '' });
     setAdvanceError(null);
@@ -604,9 +636,14 @@ export const PhaseCard = forwardRef(({
                 <FastForward className="w-10 h-10 text-[#6648EB]" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-2xl font-bold text-white">Advance Phase?</h3>
+                <h3 className="text-2xl font-bold text-white">
+                  {metadata.type === 'results' ? 'Finalize Election?' : 'Advance Phase?'}
+                </h3>
                 <p className="text-white/60 text-sm leading-relaxed">
-                  This will complete the <span className="text-white font-bold capitalize">{phase.name || metadata.defaultName}</span> phase and activate the next phase in the pipeline.
+                  {metadata.type === 'results' 
+                    ? 'This will finalize the election. You can mark it as successful (Completed) or unsuccessful (Failed). This will also downgrade candidates back to voters.'
+                    : `This will complete the <span className="text-white font-bold capitalize">${phase.name || metadata.defaultName}</span> phase and activate the next phase in the pipeline.`
+                  }
                 </p>
                 {advanceError && (
                   <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
@@ -662,27 +699,65 @@ export const PhaseCard = forwardRef(({
                 )}
               </div>
               <div className="flex gap-4 pt-4">
-                <button
-                  disabled={isAdvancing}
-                  onClick={() => { setShowAdvanceConfirm(false); setSlugInput({ tenant: '', election: '' }); setAdvanceError(null); }}
-                  className="flex-1 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/70 font-bold hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={isAdvancing || (
-                    phase.transition_mode === 'deadline' && (
-                      slugInput.tenant.trim() !== (tenantSlug ?? '').trim() ||
-                      slugInput.election.trim() !== (electionSlug ?? '').trim()
-                    )
-                  )}
-                  onClick={handleAdvancePhase}
-                  className="flex-1 px-6 py-3 rounded-2xl bg-gradient-to-r from-[#6648EB] to-[#8B5CF6] text-white font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#6648EB]/20"
-                >
-                  {isAdvancing ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Advancing...</>
-                  ) : 'Yes, Advance'}
-                </button>
+                {metadata.type === 'results' ? (
+                  <div className="flex gap-3 w-full">
+                    <button
+                      disabled={isAdvancing}
+                      onClick={() => { setShowAdvanceConfirm(false); setSlugInput({ tenant: '', election: '' }); setAdvanceError(null); }}
+                      className="flex-1 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/70 font-bold hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleFinalizeElection('FAILED')}
+                      disabled={isAdvancing || (
+                        phase.transition_mode === 'deadline' && (
+                          slugInput.tenant.trim() !== (tenantSlug ?? '').trim() ||
+                          slugInput.election.trim() !== (electionSlug ?? '').trim()
+                        )
+                      )}
+                      className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isAdvancing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Fail Election'}
+                    </button>
+                    <button
+                      onClick={() => handleFinalizeElection('COMPLETED')}
+                      disabled={isAdvancing || (
+                        phase.transition_mode === 'deadline' && (
+                          slugInput.tenant.trim() !== (tenantSlug ?? '').trim() ||
+                          slugInput.election.trim() !== (electionSlug ?? '').trim()
+                        )
+                      )}
+                      className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isAdvancing ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Complete'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-4 w-full">
+                    <button
+                      disabled={isAdvancing}
+                      onClick={() => { setShowAdvanceConfirm(false); setSlugInput({ tenant: '', election: '' }); setAdvanceError(null); }}
+                      className="flex-1 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/70 font-bold hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={isAdvancing || (
+                        phase.transition_mode === 'deadline' && (
+                          slugInput.tenant.trim() !== (tenantSlug ?? '').trim() ||
+                          slugInput.election.trim() !== (electionSlug ?? '').trim()
+                        )
+                      )}
+                      onClick={handleAdvancePhase}
+                      className="flex-1 px-6 py-3 rounded-2xl bg-gradient-to-r from-[#6648EB] to-[#8B5CF6] text-white font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#6648EB]/20"
+                    >
+                      {isAdvancing ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Advancing...</>
+                      ) : 'Yes, Advance'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

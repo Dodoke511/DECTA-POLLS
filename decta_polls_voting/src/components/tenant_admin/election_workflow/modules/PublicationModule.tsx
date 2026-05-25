@@ -4,7 +4,7 @@ import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'rea
 import {
     LayoutGrid, List, Maximize,
     Plus, Trash2, ChevronDown, ChevronUp, GripVertical,
-    Eye, EyeOff, FileText, Settings, Loader2
+    Eye, EyeOff, FileText, Settings, Loader2, Users
 } from 'lucide-react';
 
 interface FormField {
@@ -310,6 +310,17 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                                 </div>
                             </div>
                             <div className="text-[9px] font-bold text-emerald-400 border border-emerald-400/30 px-2 py-0.5 rounded uppercase tracking-tighter bg-emerald-400/10">System Map</div>
+                        </div>
+
+                        <div className="p-4 rounded-xl border border-[#A78BFA]/20 bg-[#A78BFA]/5 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Users className="w-4 h-4 text-[#A78BFA]" />
+                                <div>
+                                    <p className="text-[12px] font-bold text-[#A78BFA]/90">Party Affiliation</p>
+                                    <p className="text-[10px] text-white/30 italic">Included if enabled in Filing phase</p>
+                                </div>
+                            </div>
+                            <div className="text-[9px] font-bold text-[#A78BFA] border border-[#A78BFA]/30 px-2 py-0.5 rounded uppercase tracking-tighter bg-[#A78BFA]/10">System Map</div>
                         </div>
 
                         {[

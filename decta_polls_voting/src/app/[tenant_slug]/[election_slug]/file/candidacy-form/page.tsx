@@ -19,6 +19,8 @@ export default function CandidacyFormPage() {
   const [phaseRules, setPhaseRules] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [politicalParty, setPoliticalParty] = useState('');
+  const [existingParties, setExistingParties] = useState<string[]>(['INDEPENDENT']);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,13 +40,16 @@ export default function CandidacyFormPage() {
         // 1. Fetch Candidate
         const { data: candidateData } = await supabase
           .from('candidate')
-          .select('id, status')
+          .select('id, status, political_party')
           .eq('userID', userContext.userId)
           .eq('electionID', election.id)
           .maybeSingle();
 
         if (candidateData) {
           setCandidateStatus(candidateData.status);
+          if (candidateData.political_party) {
+            setPoliticalParty(candidateData.political_party);
+          }
         }
 
         // 2. Fetch Form
@@ -99,6 +104,21 @@ export default function CandidacyFormPage() {
 
         if (positionsData) {
           setPositions(positionsData);
+        }
+
+        // 5b. Fetch Existing Parties
+        const { data: partiesData } = await supabase
+          .from('candidate')
+          .select('political_party')
+          .eq('electionID', election.id)
+          .neq('political_party', 'INDEPENDENT')
+          .not('political_party', 'is', null);
+
+        if (partiesData) {
+          const uniqueParties = ['INDEPENDENT', ...new Set(partiesData.map(p => p.political_party))];
+          setExistingParties(uniqueParties as string[]);
+        } else {
+          setExistingParties(['INDEPENDENT']);
         }
 
         // 6. Pre-fill form if editMode=appeal
@@ -251,6 +271,9 @@ export default function CandidacyFormPage() {
       if (candidatePositionId) {
         updatePayload.positionID = candidatePositionId;
       }
+      if (formConfig?.custom_logic_meta?.hasParty) {
+        updatePayload.political_party = politicalParty.trim() || 'INDEPENDENT';
+      }
 
       const { error: statusUpdateError } = await supabase
         .from('candidate')
@@ -343,6 +366,32 @@ export default function CandidacyFormPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          {formConfig?.custom_logic_meta?.hasParty && (
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-slate-900">
+                Electoral Party Affiliation <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                list="party-list"
+                placeholder="Type or select a party"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                style={{ color: '#0f172a' }}
+                value={politicalParty}
+                onChange={(e) => setPoliticalParty(e.target.value)}
+              />
+              <datalist id="party-list">
+                {existingParties.map((party, idx) => (
+                  <option key={idx} value={party} />
+                ))}
+              </datalist>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Leave as Independent or choose your party affiliation.
+              </p>
+            </div>
+          )}
+
           {formFields.map((field) => {
             // Find if there is a phase rule specific to this field
             const relatedRule = phaseRules.find(r => r.condition_logic?.fieldId === field.id);
@@ -388,6 +437,7 @@ export default function CandidacyFormPage() {
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
+                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
                   />
                 )}
 

@@ -31,6 +31,7 @@ interface PublishedCandidate {
   filedDate?: string | null;
   name: string;
   position?: string | null;
+  political_party?: string | null;
   photoUrl?: string | null;
   header: {
     department?: string | null;
@@ -97,24 +98,24 @@ function CandidateSections({ sections, documents }: { sections: CandidateSection
 
             {section.displayStyle === 'tags' ? (
               <div className="flex flex-wrap gap-2">
-                {section.fields.map(field => (
-                  <span key={`${section.id}-${field.label}`} className="rounded-full border border-white/70 bg-white/60 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-md">
+                {section.fields.map((field, index) => (
+                  <span key={`${section.id}-${field.label}-${index}`} className="rounded-full border border-white/70 bg-white/60 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm backdrop-blur-md">
                     {field.value}
                   </span>
                 ))}
               </div>
             ) : section.displayStyle === 'prose' ? (
               <div className="space-y-3">
-                {section.fields.map(field => (
-                  <p key={`${section.id}-${field.label}`} className="text-sm leading-relaxed text-slate-700">
+                {section.fields.map((field, index) => (
+                  <p key={`${section.id}-${field.label}-${index}`} className="text-sm leading-relaxed text-slate-700">
                     {field.value}
                   </p>
                 ))}
               </div>
             ) : (
               <dl className="space-y-3">
-                {section.fields.map(field => (
-                  <div key={`${section.id}-${field.label}`} className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,auto)] items-center gap-4">
+                {section.fields.map((field, index) => (
+                  <div key={`${section.id}-${field.label}-${index}`} className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,auto)] items-center gap-4">
                     <dt className="min-w-0 text-[11px] font-black uppercase tracking-wider text-slate-400">{field.label}</dt>
                     <dd className="justify-self-end whitespace-normal text-right text-sm font-black text-slate-800">{field.value}</dd>
                   </div>
@@ -129,9 +130,9 @@ function CandidateSections({ sections, documents }: { sections: CandidateSection
         <section className="space-y-3 rounded-2xl border border-white/65 bg-white/40 p-5 shadow-sm backdrop-blur-xl">
           <h3 className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">Documents</h3>
           <div className="flex flex-wrap gap-2">
-            {documents.map(document => (
+            {documents.map((document, index) => (
               <a
-                key={`${document.label}-${document.url}`}
+                key={`${document.label}-${document.url}-${index}`}
                 href={document.url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -187,6 +188,11 @@ function CandidateCard({
                 <p className="mt-2 text-xs font-bold uppercase tracking-wider text-slate-400">Filed {filedDate}</p>
               )}
               <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+                {candidate.political_party && (
+                  <span className="rounded-full border border-[var(--tenant-primary)]/40 bg-[var(--tenant-primary)]/10 px-3 py-1 text-xs font-bold text-[var(--tenant-primary)] shadow-sm backdrop-blur-md">
+                    {candidate.political_party}
+                  </span>
+                )}
                 {[candidate.header.department, candidate.header.course].filter(Boolean).map(item => (
                   <span key={item} className="rounded-full border border-white/60 bg-white/45 px-3 py-1 text-xs font-bold text-slate-600 shadow-sm backdrop-blur-md">
                     {item}

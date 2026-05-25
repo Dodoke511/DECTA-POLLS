@@ -64,7 +64,14 @@ export function TallyTable({
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-4">
-                    <h4 className="truncate font-bold text-slate-900">{cand?.name || 'Unknown'}</h4>
+                    <div>
+                      <h4 className="truncate font-bold text-slate-900">{cand?.name || 'Unknown'}</h4>
+                      {cand?.party_name && (
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${cand.party_name === 'INDEPENDENT' ? 'text-slate-400' : 'text-[var(--tenant-primary)]'}`}>
+                          {cand.party_name}
+                        </p>
+                      )}
+                    </div>
                     {showCounts && (
                       <div className="text-right">
                         <span className="font-black text-slate-900">{result.vote_count.toLocaleString()}</span>
