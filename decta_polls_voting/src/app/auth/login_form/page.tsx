@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import GradientText from '../../../components/mainlanding/ui/GradientText.jsx';
+import { DEFAULT_SECURITY_SETTINGS, validatePassword } from '@/lib/security';
 
 type ForgotStep = 'idle' | 'email' | 'otp' | 'newPassword' | 'success';
 
@@ -35,6 +36,7 @@ export default function LogInPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [securitySettings, setSecuritySettings] = useState(DEFAULT_SECURITY_SETTINGS);
 
     // Memoized gradient colors to match landing page
     const gradientColors = useMemo(() => ["#5227FF", "#FF9FFC", "#B19EEF"], []);
@@ -156,6 +158,25 @@ export default function LogInPage() {
         };
     }, []);
 
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const response = await fetch('/api/super_admin/settings');
+                const json = await response.json();
+                if (response.ok && json.settings?.security) {
+                    setSecuritySettings((prev) => ({
+                        ...prev,
+                        ...json.settings.security,
+                    }));
+                }
+            } catch (err) {
+                console.warn('[LoginPage] Failed to load security settings.', err);
+            }
+        };
+
+        fetchSettings();
+    }, []);
+
     // Forgot password: send OTP
     const handleSendOtp = async () => {
         if (!fpEmail.trim()) {
@@ -233,8 +254,9 @@ export default function LogInPage() {
 
     // Forgot password: submit new password
     const handleResetPassword = async () => {
-        if (newPassword.length < 8) {
-            setFpError('Password must be at least 8 characters.');
+        const passwordPolicy = validatePassword(newPassword, securitySettings);
+        if (!passwordPolicy.valid) {
+            setFpError(passwordPolicy.errors[0] || 'Password does not meet security requirements.');
             return;
         }
         if (newPassword !== confirmPassword) {
