@@ -36,6 +36,8 @@ export default function LogInPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [cooldownSecondsLeft, setCooldownSecondsLeft] = useState(0);
+    const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [securitySettings, setSecuritySettings] = useState(DEFAULT_SECURITY_SETTINGS);
 
     // Memoized gradient colors to match landing page
@@ -86,10 +88,16 @@ export default function LogInPage() {
             const data = await response.json();
 
             if (!response.ok) {
+                const retryAfterSeconds = data.retryAfterSeconds ?? 0;
+                if (retryAfterSeconds > 0) {
+                    setCooldownSecondsLeft(retryAfterSeconds);
+                }
                 setError(data.error || 'Login failed');
                 setIsLoading(false);
                 return;
             }
+
+            setCooldownSecondsLeft(0);
 
             // Store tenant token and email
             const random = Math.random().toString(36).substring(2, 12);
@@ -155,8 +163,37 @@ export default function LogInPage() {
     useEffect(() => {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
+            if (cooldownRef.current) clearInterval(cooldownRef.current);
         };
     }, []);
+
+    useEffect(() => {
+        if (cooldownRef.current) {
+            clearInterval(cooldownRef.current);
+            cooldownRef.current = null;
+        }
+        if (cooldownSecondsLeft > 0) {
+            cooldownRef.current = setInterval(() => {
+                setCooldownSecondsLeft((prev) => {
+                    if (prev <= 1) {
+                        if (cooldownRef.current) {
+                            clearInterval(cooldownRef.current);
+                            cooldownRef.current = null;
+                        }
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+
+        return () => {
+            if (cooldownRef.current) {
+                clearInterval(cooldownRef.current);
+                cooldownRef.current = null;
+            }
+        };
+    }, [cooldownSecondsLeft]);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -645,14 +682,19 @@ export default function LogInPage() {
                                 <button
                                     id="login-submit-btn"
                                     type="submit"
-                                    disabled={!isFormValid || isLoading}
-                                    className={`w-full rounded-xl py-4 text-lg font-semibold text-white transition-all duration-300 font-montserrat ${isFormValid && !isLoading
+                                    disabled={!isFormValid || isLoading || cooldownSecondsLeft > 0}
+                                    className={`w-full rounded-xl py-4 text-lg font-semibold text-white transition-all duration-300 font-montserrat ${isFormValid && !isLoading && cooldownSecondsLeft === 0
                                         ? 'bg-[#5D44F8] hover:bg-[#4c35d1] hover:shadow-[0_0_40px_rgba(93,68,248,0.4)] transform hover:-translate-y-1'
                                         : 'cursor-not-allowed bg-white/5 text-white/20'
                                         }`}
                                 >
                                     {isLoading ? 'Loading...' : 'Login'}
                                 </button>
+                                {cooldownSecondsLeft > 0 && (
+                                    <div className="mt-3 text-center text-sm text-yellow-300">
+                                        Try again in {cooldownSecondsLeft} second{cooldownSecondsLeft === 1 ? '' : 's'}.
+                                    </div>
+                                )}
                             </form>
 
                             <p className="mt-8 text-center text-sm text-white/40 font-source-sans">

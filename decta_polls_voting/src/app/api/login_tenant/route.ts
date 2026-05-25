@@ -9,7 +9,10 @@ import {
 } from '@/lib/security';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for login_tenant route when login_attempts uses RLS.');
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -22,9 +25,14 @@ export async function POST(request: Request) {
 
         const blockedState = await isLoginBlocked(email, supabase);
         if (blockedState.blocked) {
+            const retryAfterSeconds = blockedState.lockedUntil
+                ? Math.max(0, Math.ceil((new Date(blockedState.lockedUntil).getTime() - Date.now()) / 1000))
+                : 0;
+
             return NextResponse.json({
-                error: `Too many failed login attempts. Try again after ${blockedState.lockedUntil}.`,
+                error: `Too many failed login attempts. Try again after ${retryAfterSeconds} seconds.`,
                 lockedUntil: blockedState.lockedUntil,
+                retryAfterSeconds,
             }, { status: 429 });
         }
 
@@ -43,9 +51,13 @@ export async function POST(request: Request) {
 
         if (error) {
             const failure = await recordFailedLoginAttempt(email, securitySettings.max_login_attempts, securitySettings.lockout_seconds, supabase);
+            const retryAfterSeconds = failure.lockedUntil
+                ? Math.max(0, Math.ceil((new Date(failure.lockedUntil).getTime() - Date.now()) / 1000))
+                : 0;
             return NextResponse.json({
-                error: failure.blocked ? `Too many failed login attempts. Try again after ${failure.lockedUntil}.` : 'Invalid email or password',
+                error: failure.blocked ? `Too many failed login attempts. Try again later.` : 'Invalid email or password',
                 lockedUntil: failure.lockedUntil,
+                retryAfterSeconds,
             }, { status: failure.blocked ? 429 : 401 });
         }
 
