@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { checkUserLimit } from '@/lib/server/user-limit-check';
+import { triggerNotification } from '@/lib/server/notifications';
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ tenant_slug: string; election_slug: string }> }
@@ -142,6 +143,11 @@ export async function POST(
 
         return NextResponse.json({ error: 'Failed to initialize candidacy record' }, { status: 500 });
       }
+
+      // Trigger notification asynchronously
+      triggerNotification('Candidate Added', tenant.id, election.id, {
+        candidateId: existingUser.id
+      }).catch(err => console.error('[Registration API] Notification trigger error:', err));
 
       return NextResponse.json({ success: true, userId: existingUser.id });
 
