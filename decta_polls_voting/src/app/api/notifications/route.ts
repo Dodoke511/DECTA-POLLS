@@ -2,12 +2,20 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { persistSession: false },
+});
+
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: { persistSession: false },
+});
+
 export async function GET(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
     // 1. Resolve Auth Token
     const authHeader = request.headers.get("authorization");
     let token = authHeader?.replace("Bearer ", "");
@@ -22,7 +30,6 @@ export async function GET(request: Request) {
     }
 
     // 2. Fetch authenticated user
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
@@ -30,7 +37,6 @@ export async function GET(request: Request) {
     }
 
     // 3. Resolve user type and tenant from tenant users using admin client
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const { data: tenantUser, error: dbError } = await supabaseAdmin
       .from("tenant users")
       .select("tenantID, user_type")
@@ -112,10 +118,6 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
     const authHeader = request.headers.get("authorization");
     let token = authHeader?.replace("Bearer ", "");
 
@@ -128,7 +130,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
@@ -137,8 +138,6 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { notificationId, markAll } = body;
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     if (markAll) {
       // Fetch all eligible notification IDs for this user
