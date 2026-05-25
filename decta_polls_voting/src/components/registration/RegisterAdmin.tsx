@@ -3,11 +3,10 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 
-// Interface for admin registration
 interface RegisterAdminProps {
   plan: string | null;
   onBack: () => void;
-  onContinue: (data: any) => void; // Handler for the continue button
+  onContinue: (data: any) => void;
 }
 
 export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdminProps) {
@@ -18,6 +17,9 @@ export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdmi
   const [email, setEmail] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [error, setError] = useState('');
+  const [showEmailError, setShowEmailError] = useState(false);
+  const [emailError, setEmailError] = useState('');
+
   const today = new Date();
   const eighteenYearsAgo = new Date();
   eighteenYearsAgo.setFullYear(today.getFullYear() - 18);
@@ -29,8 +31,40 @@ export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdmi
     email.trim() &&
     contactNumber.trim();
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError('Email is required');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/check_email_exists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        if (json.existsNonAdmin) {
+          setEmailError('Email is already registered as a  or candidate');
+          setShowEmailError(true);
+          setTimeout(() => setShowEmailError(false), 4000);
+          return;
+        }
+        if (json.existsAdmin) {
+          setEmailError('Email address already registered with another admin');
+          setShowEmailError(true);
+          setTimeout(() => setShowEmailError(false), 4000);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('[RegisterAdmin] Email existence check failed', err);
+    }
+
     if (birthDate > eighteenYearsAgo.toISOString().split('T')[0]) {
       setError('You must be at least 18 years old');
       return;
@@ -39,20 +73,9 @@ export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdmi
       setError('Contact Number must be at least 11 digits');
       return;
     }
-    else {
-      setError('');
-    }
 
-    const payload = {
-      firstName,
-      lastName,
-      middleName,
-      birthDate,
-      email,
-      contactNumber,
-    };
-
-    onContinue(payload);
+    setError('');
+    onContinue({ firstName, lastName, middleName, birthDate, email: normalizedEmail, contactNumber });
   };
 
   return (
@@ -101,6 +124,8 @@ export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdmi
           className="glass-card w-full max-w-[640px] p-8 mb-6"
         >
           <div className="grid grid-cols-1 gap-4">
+
+            {/* First Name & Last Name */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <label className="block text-white/90 text-sm font-medium font-source-sans">
                 <input
@@ -123,6 +148,8 @@ export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdmi
                 />
               </label>
             </div>
+
+            {/* Middle Name & Birth Date */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <label className="block text-white/90 text-sm font-medium font-source-sans">
                 <input
@@ -130,7 +157,6 @@ export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdmi
                   value={middleName}
                   onChange={(e) => setMiddleName(e.target.value)}
                   placeholder="Middle Name"
-                  required
                   className="mt-2 w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-white outline-none transition focus:border-[#5D44F8] font-source-sans"
                 />
               </label>
@@ -141,24 +167,42 @@ export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdmi
                   onChange={(e) => setBirthDate(e.target.value)}
                   required
                   className="mt-2 w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-white outline-none transition focus:border-[#5D44F8] font-source-sans [color-scheme:dark]"
-                  style={{ 
+                  style={{
                     color: birthDate ? 'white' : 'rgba(255,255,255,0.5)',
-                    colorScheme: 'dark'
+                    colorScheme: 'dark',
                   }}
                 />
               </label>
             </div>
-            <label className="block text-white/90 text-sm font-medium font-source-sans">
+
+            {/* Email Address — with inline fade error */}
+            <label className="block text-white/90 text-sm font-medium font-source-sans relative pb-6">
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (showEmailError) setShowEmailError(false);
+                }}
                 placeholder="Email Address"
                 required
-                className="mt-2 w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-white outline-none transition focus:border-[#5D44F8] font-source-sans"
+                className={`mt-2 w-full rounded-lg border bg-white/10 px-4 py-3 text-white outline-none transition focus:border-[#5D44F8] font-source-sans ${
+                  showEmailError ? 'border-yellow-400/60' : 'border-white/30'
+                }`}
               />
+              {/* Fade-in/out error — sits directly below the field */}
+              <span
+                className={`absolute left-0 bottom-0 text-xs text-yellow-300 transition-all duration-500 ${
+                  showEmailError
+                    ? 'opacity-100 translate-y-0'
+                    : 'opacity-0 -translate-y-1 pointer-events-none'
+                }`}
+              >
+                {emailError}
+              </span>
             </label>
 
+            {/* Contact Number */}
             <label className="block text-white/90 text-sm font-medium font-source-sans">
               <input
                 type="tel"
@@ -169,9 +213,12 @@ export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdmi
                 className="mt-2 w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-white outline-none transition focus:border-[#5D44F8] font-source-sans"
               />
             </label>
+
+            {/* General error */}
             {error && (
-              <p className="text-red-500 text-sm font-source-sans">{error}</p>
+              <p className="text-red-400 text-sm font-source-sans">{error}</p>
             )}
+
           </div>
         </form>
 
@@ -180,15 +227,14 @@ export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdmi
           type="submit"
           form="registration-form"
           disabled={!isFormValid}
-          className={`inline-flex items-center justify-center px-8 py-0 h-12 rounded-xl font-montserrat text-white text-xl font-semibold cursor-pointer transition-all duration-300 leading-tight ${
+          className={`inline-flex items-center justify-center px-8 py-0 h-12 rounded-xl font-montserrat text-white text-xl font-semibold transition-all duration-300 leading-tight ${
             isFormValid
-              ? 'bg-[#5D44F8] hover:bg-[#4c35d1] hover:shadow-[0_0_40px_rgba(93,68,248,0.4)] transform hover:-translate-y-1'
+              ? 'cursor-pointer bg-[#5D44F8] hover:bg-[#4c35d1] hover:shadow-[0_0_40px_rgba(93,68,248,0.4)] hover:-translate-y-1'
               : 'cursor-not-allowed bg-white/5 text-white/20'
           }`}
           style={{
-            background: isFormValid ? '#5D44F8' : 'rgba(255, 255, 255, 0.05)',
             border: 'none',
-            boxShadow: isFormValid ? '0 4px 12px rgba(93, 68, 248, 0.3)' : 'none'
+            boxShadow: isFormValid ? '0 4px 12px rgba(93, 68, 248, 0.3)' : 'none',
           }}
         >
           Submit

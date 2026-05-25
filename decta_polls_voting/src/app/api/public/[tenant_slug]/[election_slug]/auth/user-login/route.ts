@@ -21,6 +21,7 @@ export async function POST(
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabaseService = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const temporaryVoterPassword = '12345';
 
   try {
@@ -28,9 +29,9 @@ export async function POST(
 
     console.log(`[Election Login API] Attempting login for: ${tenant_slug} / ${election_slug}`);
 
-    const settings = await loadGlobalSettingsFromDb(supabase);
+    const settings = await loadGlobalSettingsFromDb(supabaseService);
     const securitySettings = settings.security;
-    const blockedState = await isLoginBlocked(email, supabase);
+    const blockedState = await isLoginBlocked(email, supabaseService);
     if (blockedState.blocked) {
       return NextResponse.json({
         error: `Too many failed login attempts. Try again after ${blockedState.lockedUntil}.`,
@@ -68,7 +69,7 @@ export async function POST(
     });
 
     if (authError || !authData.user) {
-      const failure = await recordFailedLoginAttempt(email, securitySettings.max_login_attempts, securitySettings.lockout_seconds, supabase);
+      const failure = await recordFailedLoginAttempt(email, securitySettings.max_login_attempts, securitySettings.lockout_seconds, supabaseService);
       return NextResponse.json({
         error: failure.blocked ? `Too many failed login attempts. Try again after ${failure.lockedUntil}.` : 'Invalid email or password',
         lockedUntil: failure.lockedUntil,
@@ -134,14 +135,14 @@ export async function POST(
       }
     }
 
-    await clearLoginAttempts(email, supabase);
+    await clearLoginAttempts(email, supabaseService);
     const sessionExpiration = new Date(Date.now() + securitySettings.session_timeout * 60 * 1000).toISOString();
     const sessionRegistration = await registerSingleDeviceSession(
       authData.user.id,
       authData.session?.access_token || '',
       'public-election-login',
       sessionExpiration,
-      supabase
+      supabaseService
     );
 
     if (!sessionRegistration.success) {

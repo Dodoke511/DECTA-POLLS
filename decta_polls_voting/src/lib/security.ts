@@ -164,10 +164,71 @@ export async function loadGlobalSettingsFromDb(supabaseClient: any): Promise<Glo
   return normalizeGlobalSettings(raw);
 }
 
+function isMissingLoginAttemptsTableError(error: any) {
+  const message = String(error?.message || error?.details || '').toLowerCase();
+  return (
+    message.includes('could not find the table') ||
+    message.includes('public.login_attempts') ||
+    (message.includes('login_attempts') && message.includes('does not exist'))
+  );
+}
+
+function getDatabaseUrl() {
+  return process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || process.env.SUPABASE_DATABASE_URL || '';
+}
+
+async function ensureLoginAttemptsTableExists() {
+  const databaseUrl = getDatabaseUrl();
+  if (!databaseUrl) {
+    console.warn('[security] No DATABASE_URL available; cannot auto-create login_attempts table');
+    return false;
+  }
+
+  let pgModule: any = null;
+  try {
+    const requireFn: any = eval('require');
+    pgModule = requireFn('pg');
+  } catch (err) {
+    console.warn('[security] Could not require pg module for auto-creation:', err);
+  }
+
+  const Client = pgModule?.Client;
+  if (!Client) {
+    console.warn('[security] pg Client unavailable; cannot auto-create login_attempts table');
+    return false;
+  }
+
+  const client = new Client({ connectionString: databaseUrl });
+  try {
+    await client.connect();
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS login_attempts (
+        identifier TEXT PRIMARY KEY,
+        attempt_count INTEGER NOT NULL DEFAULT 0,
+        last_failed_at TIMESTAMPTZ,
+        locked_until TIMESTAMPTZ
+      );
+    `);
+    return true;
+  } catch (error) {
+    console.warn('[security] Failed to auto-create login_attempts table:', error);
+    return false;
+  } finally {
+    await client.end();
+  }
+}
+
 export async function isLoginBlocked(identifier: string, supabaseClient: any) {
   const normalizedIdentifier = identifier.trim().toLowerCase();
   const { data, error } = await supabaseClient.from('login_attempts').select('*').eq('identifier', normalizedIdentifier).maybeSingle();
   if (error) {
+    if (isMissingLoginAttemptsTableError(error)) {
+      const created = await ensureLoginAttemptsTableExists();
+      if (created) {
+        return isLoginBlocked(identifier, supabaseClient);
+      }
+      return { blocked: false, lockedUntil: null, attemptCount: 0 };
+    }
     throw error;
   }
 
@@ -192,6 +253,13 @@ export async function recordFailedLoginAttempt(identifier: string, maxAttempts: 
     .eq('identifier', normalizedIdentifier)
     .maybeSingle();
   if (error) {
+    if (isMissingLoginAttemptsTableError(error)) {
+      const created = await ensureLoginAttemptsTableExists();
+      if (created) {
+        return recordFailedLoginAttempt(identifier, maxAttempts, lockoutSeconds, supabaseClient);
+      }
+      return { blocked: false, lockedUntil: null, attemptCount: 0 };
+    }
     throw error;
   }
 
@@ -216,6 +284,9 @@ export async function recordFailedLoginAttempt(identifier: string, maxAttempts: 
     locked_until: lockedUntil,
   }, { onConflict: 'identifier' });
   if (upsertError) {
+    if (isMissingLoginAttemptsTableError(upsertError)) {
+      return { blocked: false, lockedUntil: null, attemptCount };
+    }
     throw upsertError;
   }
 
@@ -224,7 +295,10 @@ export async function recordFailedLoginAttempt(identifier: string, maxAttempts: 
 
 export async function clearLoginAttempts(identifier: string, supabaseClient: any) {
   const normalizedIdentifier = identifier.trim().toLowerCase();
-  await supabaseClient.from('login_attempts').delete().eq('identifier', normalizedIdentifier);
+  const { error } = await supabaseClient.from('login_attempts').delete().eq('identifier', normalizedIdentifier);
+  if (error && !isMissingLoginAttemptsTableError(error)) {
+    throw error;
+  }
 }
 
 export async function registerSingleDeviceSession(
@@ -235,34 +309,67 @@ export async function registerSingleDeviceSession(
   supabaseClient: any
 ) {
   const now = new Date().toISOString();
-  await supabaseClient.from('user_sessions').update({ active: false }).lt('expires_at', now);
+  try {
+    await supabaseClient.from('user_sessions').update({ active: false }).lt('expires_at', now);
 
-  const { data: existingSession, error: existingError } = await supabaseClient
-    .from('user_sessions')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('active', true)
-    .maybeSingle();
-  if (existingError) {
-    throw existingError;
-  }
-  if (existingSession) {
-    return { success: false, reason: 'Another active session already exists for this user.' };
-  }
+    const { data: existingSession, error: existingError } = await supabaseClient
+      .from('user_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('active', true)
+      .maybeSingle();
+    if (existingError) {
+      const msg = String(existingError?.message || '').toLowerCase();
+      if (msg.includes('could not find the table') || msg.includes('does not exist') || msg.includes('user_sessions')) {
+        console.warn('[security] user_sessions table missing, cannot enforce single-device');
+        return { success: true };
+      }
+      throw existingError;
+    }
+    if (existingSession) {
+      return { success: false, reason: 'Another active session already exists for this user.' };
+    }
 
-  const { error } = await supabaseClient.from('user_sessions').insert([{ user_id: userId, session_id: sessionId, device_info: deviceInfo, expires_at: expiresAt, active: true }]);
-  if (error) {
-    throw error;
-  }
+    const { error } = await supabaseClient.from('user_sessions').insert([{ user_id: userId, session_id: sessionId, device_info: deviceInfo, expires_at: expiresAt, active: true }]);
+    if (error) {
+      const msg = String(error?.message || '').toLowerCase();
+      if (msg.includes('could not find the table') || msg.includes('does not exist') || msg.includes('user_sessions')) {
+        console.warn('[security] user_sessions table missing at insert, skipping');
+        return { success: true };
+      }
+      throw error;
+    }
 
-  return { success: true };
+    return { success: true };
+  } catch (err: any) {
+    console.warn('[security] registerSingleDeviceSession error -', err?.message || err);
+    return { success: true };
+  }
 
 }
 
 export async function clearUserSession(sessionId: string, supabaseClient: any) {
-  await supabaseClient.from('user_sessions').update({ active: false }).eq('session_id', sessionId);
+  try {
+    await supabaseClient.from('user_sessions').update({ active: false }).eq('session_id', sessionId);
+  } catch (err: any) {
+    const msg = String(err?.message || '').toLowerCase();
+    if (msg.includes('could not find the table') || msg.includes('does not exist') || msg.includes('user_sessions')) {
+      console.warn('[security] clearUserSession: user_sessions table missing, nothing to clear');
+      return;
+    }
+    console.warn('[security] clearUserSession error -', err?.message || err);
+  }
 }
 
 export async function clearUserSessionsForUser(userId: string, supabaseClient: any) {
-  await supabaseClient.from('user_sessions').update({ active: false }).eq('user_id', userId);
+  try {
+    await supabaseClient.from('user_sessions').update({ active: false }).eq('user_id', userId);
+  } catch (err: any) {
+    const msg = String(err?.message || '').toLowerCase();
+    if (msg.includes('could not find the table') || msg.includes('does not exist') || msg.includes('user_sessions')) {
+      console.warn('[security] clearUserSessionsForUser: user_sessions table missing, nothing to clear');
+      return;
+    }
+    console.warn('[security] clearUserSessionsForUser error -', err?.message || err);
+  }
 }
