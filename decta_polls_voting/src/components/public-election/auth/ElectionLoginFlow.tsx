@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { Session, createClient } from '@supabase/supabase-js';
+import { DEFAULT_SECURITY_SETTINGS, validatePassword } from '@/lib/security';
 
 interface Props {
   onBack: () => void;
@@ -65,6 +66,12 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
   const [returningVoterMode, setReturningVoterMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [securitySettings, setSecuritySettings] = useState(DEFAULT_SECURITY_SETTINGS);
+
+  const newPasswordPolicy = useMemo(
+    () => validatePassword(newPassword, securitySettings),
+    [newPassword, securitySettings]
+  );
 
   const getErrorMessage = (err: unknown) => err instanceof Error ? err.message : 'Something went wrong';
 
@@ -90,6 +97,22 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
       window.location.href = `/${tenant.slug}/${election.slug}/candidate-dashboard?tab=candidacy`;
     }
   };
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/super_admin/settings');
+        if (!res.ok) return;
+        const { settings } = await res.json();
+        if (settings?.security) {
+          setSecuritySettings({ ...DEFAULT_SECURITY_SETTINGS, ...settings.security });
+        }
+      } catch (err) {
+        console.warn('[ElectionLoginFlow] failed to load security settings', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,6 +173,10 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
 
       if (newPassword === '12345') {
         throw new Error('Choose a new password different from the temporary password.');
+      }
+
+      if (!newPasswordPolicy.valid) {
+        throw new Error(newPasswordPolicy.errors[0] || 'Please choose a stronger password.');
       }
 
       const supabase = getSupabaseClient();
@@ -241,17 +268,39 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
           </>
         ) : (
           <>
-            <PasswordField
-              placeholder="New Password"
-              minLength={6}
-              value={newPassword}
-              onChange={setNewPassword}
-              visible={showNewPassword}
-              onToggleVisible={() => setShowNewPassword(value => !value)}
-            />
+            <div className="group relative">
+              <PasswordField
+                placeholder="New Password"
+                minLength={securitySettings.min_password_length}
+                value={newPassword}
+                onChange={setNewPassword}
+                visible={showNewPassword}
+                onToggleVisible={() => setShowNewPassword(value => !value)}
+              />
+              <div className="absolute bottom-full left-0 mb-2 z-50 w-[240px] rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-md p-4 shadow-xl pointer-events-none opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+                <p className="font-semibold mb-2 text-xs text-slate-700">Password Requirements</p>
+                <ul className="space-y-1 text-xs">
+                  <li className={newPasswordPolicy.checks.length ? 'text-emerald-600' : 'text-red-500'}>
+                    • At least {securitySettings.min_password_length} characters
+                  </li>
+                  <li className={newPasswordPolicy.checks.uppercase ? 'text-emerald-600' : 'text-red-500'}>
+                    • One uppercase letter (A–Z)
+                  </li>
+                  <li className={newPasswordPolicy.checks.lowercase ? 'text-emerald-600' : 'text-red-500'}>
+                    • One lowercase letter (a–z)
+                  </li>
+                  <li className={newPasswordPolicy.checks.number ? 'text-emerald-600' : 'text-red-500'}>
+                    • One number (0–9)
+                  </li>
+                  <li className={newPasswordPolicy.checks.special ? 'text-emerald-600' : 'text-red-500'}>
+                    • One special character ({securitySettings.allowed_special_chars})
+                  </li>
+                </ul>
+              </div>
+            </div>
             <PasswordField
               placeholder="Confirm New Password"
-              minLength={6}
+              minLength={securitySettings.min_password_length}
               value={confirmPassword}
               onChange={setConfirmPassword}
               visible={showConfirmPassword}
