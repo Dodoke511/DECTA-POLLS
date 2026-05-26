@@ -6,7 +6,8 @@ import { StepByStepBallot } from './StepByStepBallot';
 import { BallotIntegrityOverlay } from './BallotIntegrityOverlay';
 import { useBallotIntegrity } from '@/lib/public-election/ballot-integrity';
 import { startBallotSession, submitBallot } from '@/lib/public-election/vote-submission';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
+import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 
 interface BallotContainerProps {
   tenantSlug: string;
@@ -24,6 +25,7 @@ export function BallotContainer({
   subscriptionTier
 }: BallotContainerProps) {
   const router = useRouter();
+  const { userContext, basePath } = useElectionPublic();
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [positions, setPositions] = useState<any[]>([]);
@@ -35,6 +37,22 @@ export function BallotContainer({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const integrityStatus = useBallotIntegrity(tenantSlug, electionSlug, sessionId);
+
+  const handleReturnToDashboard = () => {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(err => {
+        console.warn('Failed to exit fullscreen on redirect:', err);
+      });
+    }
+
+    if (userContext?.isCandidate) {
+      window.location.href = `${basePath}/candidate-dashboard`;
+    } else if (userContext?.isVoter) {
+      window.location.href = `${basePath}/dashboard`;
+    } else {
+      window.location.href = basePath || '/';
+    }
+  };
 
   useEffect(() => {
     async function initBallot() {
@@ -102,6 +120,35 @@ export function BallotContainer({
   }
 
   if (error) {
+    const isAlreadyVoted = error.toLowerCase().includes('already submitted') || 
+                           error.toLowerCase().includes('already voted');
+    
+    if (isAlreadyVoted) {
+      return (
+        <div className="text-center py-10 px-4 space-y-6">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/25 shadow-[0_0_30px_rgba(16,185,129,0.2)] animate-bounce">
+            <CheckCircle2 className="h-10 w-10" />
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-slate-900">Voting Completed</h2>
+            <p className="text-sm font-semibold text-slate-650 max-w-md mx-auto leading-relaxed">
+              You have already successfully cast your vote in this election! Your ballot has been encrypted and recorded.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={handleReturnToDashboard}
+              className="inline-flex items-center justify-center rounded-full bg-[var(--tenant-primary)] px-8 py-3 text-sm font-black text-white shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-transform cursor-pointer"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
         <h3 className="text-lg font-bold text-red-800">Oops! X_X</h3>

@@ -269,25 +269,42 @@ export async function GET(
           label: section.label,
           displayStyle: section.display_style || 'rows',
           fields: section.listing_section_fields
-            .map((sectionField: ListingSectionField) => ({
-              label: sectionField.display_label || fieldById.get(sectionField.field_id)?.label || 'Field',
-              value: values.get(sectionField.field_id) || '',
-            }))
-            .filter((field: PublicField) => field.value),
+            .map((sectionField: ListingSectionField) => {
+              const field = fieldById.get(sectionField.field_id);
+              return {
+                label: sectionField.display_label || field?.label || 'Field',
+                value: values.get(sectionField.field_id) || '',
+                fieldType: field?.fieldType || '',
+              };
+            })
+            .filter((field: any) => field.value && field.fieldType !== 'checkbox')
+            .map((field: any) => ({
+              label: field.label,
+              value: field.value,
+            })),
           })),
           {
             id: 'all-candidate-details',
             label: 'Additional Details',
             displayStyle: 'rows',
-            fields: (fields || [])
-              .filter(field => field.fieldType !== 'file_upload')
-              .filter(field => !configuredSectionFieldIds.has(field.id))
-              .filter(field => !headerFieldIds.has(field.id))
-              .map(field => ({
-                label: field.label || 'Field',
-                value: values.get(field.id) || '',
-              }))
-              .filter(field => field.value),
+            fields: (() => {
+              const seen = new Set<string>();
+              return (fields || [])
+                .filter(field => field.fieldType !== 'file_upload' && field.fieldType !== 'checkbox')
+                .filter(field => !configuredSectionFieldIds.has(field.id))
+                .filter(field => !headerFieldIds.has(field.id))
+                .map(field => ({
+                  label: field.label || 'Field',
+                  value: values.get(field.id) || '',
+                }))
+                .filter(field => field.value)
+                .filter(item => {
+                  const key = `${item.label.trim().toLowerCase()}:${item.value.trim().toLowerCase()}`;
+                  if (seen.has(key)) return false;
+                  seen.add(key);
+                  return true;
+                });
+            })(),
           },
         ].filter(section => section.fields.length > 0),
         documents: [

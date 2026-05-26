@@ -260,7 +260,7 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
           </>
         )}
 
-        <button type="submit" disabled={loading} className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center">
+        <button type="submit" disabled={loading} className="w-full bg-[var(--tenant-primary)] hover:bg-[var(--tenant-primary)]/90 text-slate-950 font-bold py-3 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center gap-2">
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : requiresPasswordChange ? 'Change Password and Continue' : 'Log In securely'}
         </button>
 

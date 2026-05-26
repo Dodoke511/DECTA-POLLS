@@ -24,7 +24,7 @@ function GlassPanel({
   className?: string;
 }) {
   return (
-    <section className={`relative overflow-hidden rounded-[30px] border border-white/65 bg-white/45 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl ${className}`}>
+    <section className={`relative overflow-hidden rounded-[30px] border border-white/65 bg-white/75 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl ${className}`}>
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.09]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
       <div className="pointer-events-none absolute -right-20 -top-24 h-48 w-48 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
@@ -46,7 +46,7 @@ function StatCard({
   accent?: boolean;
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-[26px] border p-6 shadow-[0_18px_45px_rgba(15,23,42,0.10)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.16)] ${accent ? 'border-[var(--tenant-primary)]/25 bg-[var(--tenant-primary)]/10 text-slate-900' : 'border-white/65 bg-white/45 text-slate-800'}`}>
+    <div className={`relative overflow-hidden rounded-[26px] border p-6 shadow-[0_18px_45px_rgba(15,23,42,0.10)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.16)] ${accent ? 'border-[var(--tenant-primary)]/25 bg-[var(--tenant-primary)]/10 text-slate-900' : 'border-white/65 bg-white/75 text-slate-800'}`}>
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.08]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
       <div className="flex items-center gap-4">
@@ -54,7 +54,7 @@ function StatCard({
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
           <p className="mt-1 truncate text-lg font-black leading-none text-slate-900" title={value}>{value}</p>
         </div>
       </div>
@@ -142,6 +142,13 @@ export default function ElectionLandingPage() {
       { name: "Candidate 3", percentage: 34 }
     ];
 
+  const titleLength = title.length;
+  const titleSizeClass = titleLength > 40
+    ? "text-3xl md:text-4xl lg:text-5xl"
+    : titleLength > 25
+    ? "text-4xl md:text-5xl lg:text-6xl"
+    : "text-5xl md:text-6xl lg:text-7xl";
+
   if (userContext) {
     const roleLabel = userContext.userType || (userContext.isCandidate ? 'Candidate' : 'Voter');
     const roleLower = roleLabel.toLowerCase();
@@ -171,7 +178,7 @@ export default function ElectionLandingPage() {
             <h1 className="text-4xl font-black leading-tight tracking-tight text-slate-950 md:text-5xl lg:text-6xl">
               Welcome, {userContext.name}
             </h1>
-            <p className="mt-5 max-w-2xl text-base font-semibold leading-7 text-slate-600">
+            <p className="mt-5 max-w-2xl text-base font-semibold leading-7 text-slate-700">
               You are signed in for {title}. Your election access, account type, and readiness status are shown below.
             </p>
 
@@ -182,29 +189,29 @@ export default function ElectionLandingPage() {
               </div>
 
               <div className="flex w-full flex-col gap-6 sm:flex-row">
-                <div className="relative flex min-h-[145px] flex-1 flex-col justify-between overflow-hidden rounded-[26px] border border-white/65 bg-white/70 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)]">
+                <div className="relative flex min-h-[145px] flex-1 flex-col justify-between overflow-hidden rounded-[26px] border border-white/65 bg-white/80 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)]">
                   <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.07]" />
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
                   <div className="flex items-center justify-between gap-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Election Status</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Live Election Status</p>
                     <span className="rounded-full border border-emerald-200/50 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-emerald-600 shadow-sm">
                       ACTIVE
                     </span>
                   </div>
                   <div className="mt-4">
                     <h3 className="truncate text-xl font-black leading-snug text-slate-950" title={title}>{title}</h3>
-                    <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                    <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-slate-600">
                       <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
                       Public page is available.
                     </p>
                   </div>
                 </div>
 
-                <div className="relative flex min-h-[145px] flex-1 flex-col justify-between overflow-hidden rounded-[26px] border border-white/65 bg-white/70 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)]">
+                <div className="relative flex min-h-[145px] flex-1 flex-col justify-between overflow-hidden rounded-[26px] border border-white/65 bg-white/80 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:-translate-y-0.5 hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)]">
                   <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.07]" />
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
                   <div className="flex items-center justify-between gap-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Phase</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Current Phase</p>
                     <span className="rounded-full border border-emerald-200/50 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-emerald-600 shadow-sm">
                       LIVE
                     </span>
@@ -213,7 +220,7 @@ export default function ElectionLandingPage() {
                     <h3 className="flex items-baseline text-xl font-black text-slate-950">
                       {activePhaseLabel}
                       {phaseIndexLabel && (
-                        <span className="ml-2 text-sm font-bold text-slate-400">{phaseIndexLabel}</span>
+                        <span className="ml-2 text-sm font-bold text-slate-500">{phaseIndexLabel}</span>
                       )}
                     </h3>
                     <div className="mt-4">
@@ -228,10 +235,10 @@ export default function ElectionLandingPage() {
                 </div>
               </div>
 
-              <div className="relative w-full overflow-hidden rounded-[26px] border border-white/65 bg-white/70 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)]">
+              <div className="relative w-full overflow-hidden rounded-[26px] border border-white/65 bg-white/80 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition hover:shadow-[0_26px_65px_rgba(15,23,42,0.1)]">
                 <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.06]" />
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vote Tallies</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Vote Tallies</p>
 
                 {isVotingPhaseActive ? (
                   <div className="mt-5 grid gap-4 sm:grid-cols-3">
@@ -255,7 +262,7 @@ export default function ElectionLandingPage() {
                     <p className="text-sm font-extrabold text-slate-700">
                       Vote tally appears when Voting phase is active.
                     </p>
-                    <p className="mt-1 text-xs font-semibold text-slate-400">
+                    <p className="mt-1 text-xs font-semibold text-slate-500">
                       A visual chart will automatically appear here once the election enters voting.
                     </p>
                   </div>
@@ -277,22 +284,22 @@ export default function ElectionLandingPage() {
                   <BadgeCheck className="h-5 w-5" />
                 </div>
                 <p className="text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)]">Be the Change</p>
-                <h2 className="mt-3 text-2xl font-black text-slate-950">Your {roleLower} session is active</h2>
-                <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
+                <h2 className="mt-3 text-2xl font-black text-slate-955">Your {roleLower} session is active</h2>
+                <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-700">
                   Use the navigation above to view candidates, open election tools when their phases are active, and check published results when the election reaches the results phase.
                 </p>
               </div>
 
               <div className="lg:col-span-1">
-                <div className="rounded-[26px] border border-white/65 bg-white/45 p-5 shadow-sm backdrop-blur-xl">
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Quick Summary</p>
+                <div className="rounded-[26px] border border-white/65 bg-white/75 p-5 shadow-sm backdrop-blur-xl">
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-500">Quick Summary</p>
                   <div className="mt-4 space-y-3">
-                    <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/60 bg-white/45 px-4 py-3">
-                      <span className="text-sm font-bold text-slate-500">Election</span>
+                    <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/60 bg-white/75 px-4 py-3">
+                      <span className="text-sm font-bold text-slate-655">Election</span>
                       <span className="max-w-[170px] truncate text-right text-sm font-black text-slate-900" title={title}>{title}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/60 bg-white/45 px-4 py-3">
-                      <span className="text-sm font-bold text-slate-500">Role</span>
+                    <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/60 bg-white/75 px-4 py-3">
+                      <span className="text-sm font-bold text-slate-655">Role</span>
                       <span className="text-sm font-black text-slate-900">{roleLabel}</span>
                     </div>
                   </div>
@@ -304,7 +311,6 @@ export default function ElectionLandingPage() {
       </div>
     );
   }
-
   return (
     <div className="relative min-h-[calc(100vh-136px)] overflow-hidden px-4 py-8 sm:px-6 lg:py-10">
       <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
@@ -313,14 +319,14 @@ export default function ElectionLandingPage() {
       <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/35 blur-3xl" />
 
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-216px)] w-full max-w-7xl grid-cols-1 items-center gap-7 lg:grid-cols-[1.05fr_0.95fr] xl:gap-10">
-        <div className="relative overflow-hidden rounded-[34px] border border-white/65 bg-white/35 p-8 shadow-[0_28px_80px_rgba(15,23,42,0.12)] backdrop-blur-2xl sm:p-10 lg:p-12">
+        <div className="relative overflow-hidden rounded-[34px] border border-white/65 bg-white/75 p-8 shadow-[0_28px_80px_rgba(15,23,42,0.12)] backdrop-blur-2xl sm:p-10 lg:p-12">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
           <div className="pointer-events-none absolute -left-24 -top-24 h-56 w-56 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl" />
           <div className="relative">
-            <p className="mb-5 inline-flex rounded-full border border-white/65 bg-white/50 px-4 py-2 text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] shadow-sm backdrop-blur-xl">
+            <p className="mb-5 inline-flex rounded-full border border-white/65 bg-white/70 px-4 py-2 text-xs font-black uppercase tracking-widest text-[var(--tenant-primary)] shadow-sm backdrop-blur-xl">
               Election Home
             </p>
-            <h1 className="max-w-3xl text-5xl font-black leading-[1.02] tracking-tight text-slate-950 md:text-6xl lg:text-7xl">
+            <h1 className={`max-w-3xl font-black leading-[1.02] tracking-tight text-slate-955 ${titleSizeClass}`}>
               {title}
             </h1>
             {siteConfig?.tagline && (
@@ -329,7 +335,7 @@ export default function ElectionLandingPage() {
               </p>
             )}
             {siteConfig?.welcome_message && (
-              <p className="mt-6 max-w-2xl whitespace-pre-wrap text-lg font-semibold leading-8 text-slate-600">
+              <p className="mt-6 max-w-2xl whitespace-pre-wrap text-lg font-semibold leading-8 text-slate-700">
                 {siteConfig.welcome_message}
               </p>
             )}

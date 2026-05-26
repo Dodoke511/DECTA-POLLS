@@ -32,7 +32,7 @@ export function PublicElectionShell({
         } as React.CSSProperties}
       >
         <PublicElectionHeader />
-        <main className="flex-1">
+        <main className="flex-1 pt-20">
           {children}
         </main>
         <PublicElectionFooter />

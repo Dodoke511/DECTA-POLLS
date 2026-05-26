@@ -68,6 +68,10 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
         const [documents, setDocuments] = useState<DocumentConfig[]>([]);
         const [draggedSectionIdx, setDraggedSectionIdx] = useState<number | null>(null);
         const [draggedFieldInfo, setDraggedFieldInfo] = useState<{ secIdx: number, fieldIdx: number } | null>(null);
+        const [showNamePartDropdown, setShowNamePartDropdown] = useState(false);
+        const [activeSectionFieldPickerIdx, setActiveSectionFieldPickerIdx] = useState<number | null>(null);
+        const [activeMappingDropdownSlot, setActiveMappingDropdownSlot] = useState<string | null>(null);
+        const [activeSectionStylePickerIdx, setActiveSectionStylePickerIdx] = useState<number | null>(null);
 
         useEffect(() => {
             const loadConfig = async () => {
@@ -354,16 +358,41 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                                             })}
                                             
                                             <div className="flex-1 min-w-[200px] relative">
-                                                <select
-                                                    className="w-full h-full bg-[#110D1E] border border-white/5 rounded-lg text-[12px] text-white/50 p-2 outline-none appearance-none hover:bg-white/5 hover:border-white/20 transition-all cursor-pointer italic"
-                                                    value=""
-                                                    onChange={e => addNamePart(e.target.value)}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowNamePartDropdown(v => !v)}
+                                                    className="w-full h-full flex items-center justify-between bg-[#110D1E] border border-white/5 rounded-lg text-[12px] text-white/50 px-3 py-2.5 hover:bg-white/5 hover:border-white/20 transition-all cursor-pointer italic"
                                                 >
-                                                    <option value="">+ Add Name Part...</option>
-                                                    {textFields.filter(f => !parts.includes(f.id)).map(f => (
-                                                        <option key={f.id} value={f.id} className="bg-[#110D1E] text-white not-italic">{f.label}</option>
-                                                    ))}
-                                                </select>
+                                                    <span>+ Add Name Part...</span>
+                                                    <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+                                                </button>
+                                                
+                                                {showNamePartDropdown && (
+                                                    <>
+                                                        {/* Click-outside backdrop to close */}
+                                                        <div className="fixed inset-0 z-40" onClick={() => setShowNamePartDropdown(false)} />
+                                                        
+                                                        <div className="absolute z-50 top-full left-0 w-full mt-1.5 py-1.5 bg-[#100821]/98 border border-white/10 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl max-h-56 overflow-y-auto decta-scrollbar animate-in fade-in slide-in-from-top-1 duration-150">
+                                                            {textFields.filter(f => !parts.includes(f.id)).length === 0 ? (
+                                                                <div className="px-3 py-2 text-[11px] text-white/30 italic">No fields available</div>
+                                                            ) : (
+                                                                textFields.filter(f => !parts.includes(f.id)).map(f => (
+                                                                    <button
+                                                                        key={f.id}
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            addNamePart(f.id);
+                                                                            setShowNamePartDropdown(false);
+                                                                        }}
+                                                                        className="w-full text-left px-3 py-2 text-[12px] text-white/70 hover:bg-[#5B4FD9]/15 hover:text-white transition-all not-italic"
+                                                                    >
+                                                                        {f.label}
+                                                                    </button>
+                                                                ))
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
 
@@ -386,24 +415,60 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                                     </div>
                                 )
                             }
+                            const selectedFieldId = (config.header_field_map as any)[slot.id] || "";
+                            const selectedFieldLabel = textFields.find(f => f.id === selectedFieldId)?.label || "-- None (Hide) --";
+                            const isDropdownOpen = activeMappingDropdownSlot === slot.id;
+
                             return (
-                                <div key={slot.id} className="p-4 rounded-xl border border-white/10 bg-white/5 space-y-2">
+                                <div key={slot.id} className="p-4 rounded-xl border border-white/10 bg-white/5 space-y-2 relative">
                                     <p className="text-[12px] font-bold text-white/80">{slot.label} Mapping</p>
-                                    <select
-                                        value={(config.header_field_map as any)[slot.id] || ""}
-                                        onChange={e => setConfig({
-                                            ...config,
-                                            header_field_map: { ...config.header_field_map, [slot.id]: e.target.value || undefined }
-                                        })}
-                                        className="w-full bg-[#110D1E] border border-white/10 rounded-lg text-[12px] text-white/90 p-2 outline-none appearance-none hover:border-white/20 transition-all cursor-pointer"
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveMappingDropdownSlot(isDropdownOpen ? null : slot.id)}
+                                        className="w-full flex items-center justify-between bg-[#110D1E] border border-white/10 rounded-lg text-[12px] text-white/90 p-2 hover:border-white/20 transition-all cursor-pointer"
                                     >
-                                        <option value="" className="bg-[#110D1E] text-white/50">-- None (Hide) --</option>
-                                        {textFields.map(f => (
-                                            <option key={f.id} value={f.id} className="bg-[#110D1E] text-white">
-                                                {f.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        <span className={selectedFieldId ? "text-white/90" : "text-white/40"}>{selectedFieldLabel}</span>
+                                        <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+                                    </button>
+
+                                    {isDropdownOpen && (
+                                        <>
+                                            {/* Click-outside backdrop to close */}
+                                            <div className="fixed inset-0 z-40" onClick={() => setActiveMappingDropdownSlot(null)} />
+                                            
+                                            <div className="absolute z-50 top-full left-4 right-4 mt-1.5 py-1.5 bg-[#100821]/98 border border-white/10 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl max-h-56 overflow-y-auto decta-scrollbar animate-in fade-in slide-in-from-top-1 duration-150">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setConfig({
+                                                            ...config,
+                                                            header_field_map: { ...config.header_field_map, [slot.id]: undefined }
+                                                        });
+                                                        setActiveMappingDropdownSlot(null);
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 text-[12px] text-white/40 hover:bg-[#5B4FD9]/15 hover:text-white transition-all font-medium"
+                                                >
+                                                    -- None (Hide) --
+                                                </button>
+                                                {textFields.map(f => (
+                                                    <button
+                                                        key={f.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setConfig({
+                                                                ...config,
+                                                                header_field_map: { ...config.header_field_map, [slot.id]: f.id }
+                                                            });
+                                                            setActiveMappingDropdownSlot(null);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-[12px] text-white/70 hover:bg-[#5B4FD9]/15 hover:text-white transition-all"
+                                                    >
+                                                        {f.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             )
                         })}
@@ -458,15 +523,47 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                                         placeholder="Section Title..."
                                     />
 
-                                    <select
-                                        value={sec.display_style}
-                                        onChange={e => updateSection(secIdx, { display_style: e.target.value as any })}
-                                        className="bg-[#110D1E] border border-white/10 rounded-lg text-[11px] text-white/70 px-2 py-1 outline-none appearance-none cursor-pointer hover:border-white/20"
-                                    >
-                                        <option value="rows" className="bg-[#110D1E] text-white">Table Rows</option>
-                                        <option value="prose" className="bg-[#110D1E] text-white">Paragraph Text</option>
-                                        <option value="tags" className="bg-[#110D1E] text-white">Badge Tags</option>
-                                    </select>
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveSectionStylePickerIdx(activeSectionStylePickerIdx === secIdx ? null : secIdx)}
+                                            className="flex items-center justify-between gap-1.5 bg-[#110D1E] border border-white/10 rounded-lg text-[11px] text-white/75 px-3 py-1.5 hover:border-white/20 transition-all cursor-pointer min-w-[125px]"
+                                        >
+                                            <span>
+                                                {sec.display_style === 'rows' && 'Table Rows'}
+                                                {sec.display_style === 'prose' && 'Paragraph Text'}
+                                                {sec.display_style === 'tags' && 'Badge Tags'}
+                                            </span>
+                                            <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+                                        </button>
+                                        
+                                        {activeSectionStylePickerIdx === secIdx && (
+                                            <>
+                                                {/* Click-outside backdrop to close */}
+                                                <div className="fixed inset-0 z-40" onClick={() => setActiveSectionStylePickerIdx(null)} />
+                                                
+                                                <div className="absolute z-50 top-full right-0 mt-1.5 py-1 bg-[#100821]/98 border border-white/10 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl min-w-[140px] animate-in fade-in slide-in-from-top-1 duration-150">
+                                                    {[
+                                                        { value: 'rows', label: 'Table Rows' },
+                                                        { value: 'prose', label: 'Paragraph Text' },
+                                                        { value: 'tags', label: 'Badge Tags' }
+                                                    ].map(opt => (
+                                                        <button
+                                                            key={opt.value}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                updateSection(secIdx, { display_style: opt.value as any });
+                                                                setActiveSectionStylePickerIdx(null);
+                                                            }}
+                                                            className={`w-full text-left px-3 py-2 text-[11px] transition-all ${sec.display_style === opt.value ? 'bg-[#5B4FD9]/20 text-white font-bold' : 'text-white/70 hover:bg-[#5B4FD9]/15 hover:text-white'}`}
+                                                        >
+                                                            {opt.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
 
                                     <button onClick={() => updateSection(secIdx, { is_visible: !sec.is_visible })} className={`p-1.5 rounded-md ${sec.is_visible ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'}`}>
                                         {sec.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -531,21 +628,42 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                                     )}
 
                                     {/* Field Picker */}
-                                    <div className="pt-2">
-                                        <select
-                                            className="w-full bg-[#110D1E] border border-white/10 rounded-xl text-[12px] text-white/60 p-2.5 outline-none hover:bg-white/5 hover:border-white/20 transition-all cursor-pointer appearance-none"
-                                            value=""
-                                            onChange={(e) => addFieldToSection(secIdx, e.target.value)}
+                                    <div className="pt-2 relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveSectionFieldPickerIdx(activeSectionFieldPickerIdx === secIdx ? null : secIdx)}
+                                            className="w-full flex items-center justify-between bg-[#110D1E] border border-white/10 rounded-xl text-[12px] text-white/60 p-2.5 hover:bg-white/5 hover:border-white/20 transition-all cursor-pointer"
                                         >
-                                            <option value="" disabled className="bg-[#110D1E] text-white/40">
-                                                + Assign Field To Section...
-                                            </option>
-                                            {unassignedFields.map(f => (
-                                                <option key={f.id} value={f.id} className="bg-[#110D1E] text-white">
-                                                    {f.label}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            <span>+ Assign Field To Section...</span>
+                                            <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+                                        </button>
+                                        
+                                        {activeSectionFieldPickerIdx === secIdx && (
+                                            <>
+                                                {/* Click-outside backdrop to close */}
+                                                <div className="fixed inset-0 z-40" onClick={() => setActiveSectionFieldPickerIdx(null)} />
+                                                
+                                                <div className="absolute z-50 top-full left-0 w-full mt-1.5 py-1.5 bg-[#100821]/98 border border-white/10 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl max-h-56 overflow-y-auto decta-scrollbar animate-in fade-in slide-in-from-top-1 duration-150">
+                                                    {unassignedFields.length === 0 ? (
+                                                        <div className="px-3 py-2 text-[11px] text-white/30 italic">No fields available</div>
+                                                    ) : (
+                                                        unassignedFields.map(f => (
+                                                            <button
+                                                                key={f.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    addFieldToSection(secIdx, f.id);
+                                                                    setActiveSectionFieldPickerIdx(null);
+                                                                }}
+                                                                className="w-full text-left px-3 py-2 text-[12px] text-white/70 hover:bg-[#5B4FD9]/15 hover:text-white transition-all"
+                                                            >
+                                                                {f.label}
+                                                            </button>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
