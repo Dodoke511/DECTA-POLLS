@@ -49,7 +49,7 @@ export default function RegisterAdmin({ plan, onBack, onContinue }: RegisterAdmi
       const json = await res.json();
       if (res.ok) {
         if (json.existsNonAdmin) {
-          setEmailError('Email is already registered as a  or candidate');
+          setEmailError('Email is already registered as a voter or candidate');
           setShowEmailError(true);
           setTimeout(() => setShowEmailError(false), 4000);
           return;

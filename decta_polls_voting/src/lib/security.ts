@@ -241,6 +241,21 @@ export async function isLoginBlocked(identifier: string, supabaseClient: any) {
     return { blocked: true, lockedUntil: lockDate.toISOString(), attemptCount: data.attempt_count };
   }
 
+  // Lock has expired — clear the expired lock in the DB so subsequent logic
+  // treats this identifier as fresh. This avoids confusion where `locked_until`
+  // remains set and causes inconsistent increment/reset behavior.
+  try {
+    const { error: clearError } = await supabaseClient
+      .from('login_attempts')
+      .update({ locked_until: null, attempt_count: 0 })
+      .eq('identifier', normalizedIdentifier);
+    if (clearError && !isMissingLoginAttemptsTableError(clearError)) {
+      console.warn('[security] Failed to clear expired lock for', normalizedIdentifier, clearError);
+    }
+  } catch (err) {
+    console.warn('[security] Error clearing expired lock:', err);
+  }
+
   return { blocked: false, lockedUntil: null, attemptCount: 0 };
 }
 
@@ -263,18 +278,31 @@ export async function recordFailedLoginAttempt(identifier: string, maxAttempts: 
     throw error;
   }
 
+  const effectiveMaxAttempts = Number(maxAttempts) > 0 ? Number(maxAttempts) : DEFAULT_SECURITY_SETTINGS.max_login_attempts;
+  const effectiveLockoutSeconds = Number(lockoutSeconds) > 0 ? Number(lockoutSeconds) : DEFAULT_SECURITY_SETTINGS.lockout_seconds;
+
   let attemptCount = 1;
   let lockedUntil: string | null = null;
 
-  if (data && data.locked_until && new Date(data.locked_until).getTime() > now.getTime()) {
-    attemptCount = Number(data.attempt_count || 0) + 1;
-  } else if (data) {
-    attemptCount = Number(data.attempt_count || 0) + 1;
+  if (data) {
+    const previousAttempts = Number(data.attempt_count || 0);
+    const lockUntilDate = data.locked_until ? new Date(data.locked_until) : null;
+    const lockStillActive = lockUntilDate ? lockUntilDate.getTime() > now.getTime() : false;
+
+    if (lockStillActive) {
+      attemptCount = previousAttempts + 1;
+    } else if (data.locked_until) {
+      // Cooldown expired: start fresh after the lockout window.
+      attemptCount = 1;
+    } else {
+      attemptCount = previousAttempts + 1;
+    }
   }
 
-  if (attemptCount >= maxAttempts) {
-    const expiresAt = new Date(now.getTime() + lockoutSeconds * 1000);
+  if (attemptCount >= effectiveMaxAttempts) {
+    const expiresAt = new Date(now.getTime() + effectiveLockoutSeconds * 1000);
     lockedUntil = expiresAt.toISOString();
+    attemptCount = 0; // reset count when cooldown is triggered
   }
 
   const { error: upsertError } = await supabaseClient.from('login_attempts').upsert({
