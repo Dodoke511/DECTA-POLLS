@@ -144,6 +144,12 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
     };
   }, [cooldownSecondsLeft]);
 
+  useEffect(() => {
+    if (cooldownSecondsLeft === 0 && error.toLowerCase().includes('too many failed login attempts')) {
+      setError('');
+    }
+  }, [cooldownSecondsLeft, error]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
