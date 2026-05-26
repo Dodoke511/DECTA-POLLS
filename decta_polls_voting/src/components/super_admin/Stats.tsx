@@ -28,7 +28,7 @@ export function CompletedElectionsPeriodFilter({
   disabled?: boolean;
 }) {
   return (
-    <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
+    <div className="mt-auto flex w-full gap-1 pt-3">
       {PERIOD_OPTIONS.map((option) => {
         const active = value === option.value;
         return (
@@ -37,7 +37,7 @@ export function CompletedElectionsPeriodFilter({
             type="button"
             disabled={disabled}
             onClick={() => onChange(option.value)}
-            className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`flex-1 rounded-full px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
               active
                 ? "super-admin-nav-item-active"
                 : "super-admin-button text-white/70 hover:text-white"
@@ -60,18 +60,22 @@ export function CompletedElectionsAsOfLine({
   asOf?: string | null;
   period?: CompletedElectionPeriod;
 }) {
+  if (!asOf) return null;
+
   const line = (() => {
-    const d = asOf ? new Date(asOf) : new Date();
+    const d = new Date(asOf);
     const time = d.toLocaleTimeString(undefined, {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
     });
-    const dateLabel = asOf
-      ? d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
-      : "Today";
+    const dateLabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
     return `Completed Elections · ${PERIOD_LABELS[period]} · ${dateLabel} at ${time}`;
   })();
 
-  return <p className={className}>{line}</p>;
+  return (
+    <p className={className} suppressHydrationWarning>
+      {line}
+    </p>
+  );
 }

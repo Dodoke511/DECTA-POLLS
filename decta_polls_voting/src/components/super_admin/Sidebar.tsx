@@ -58,8 +58,8 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
   };
 
   return (
-    <aside className="super-admin-sidebar flex w-full shrink-0 flex-col rounded-3xl border md:w-[220px] lg:w-[260px] md:rounded-r-none py-6 md:py-8 pl-4 md:pl-5 pr-3 md:pr-4">
-      <div className="mb-8 md:mb-10 px-2 text-center">
+    <aside className="super-admin-sidebar flex w-full shrink-0 flex-row md:flex-col rounded-3xl border md:w-[220px] lg:w-[260px] md:rounded-r-none py-3 md:py-8 px-4 md:pl-5 md:pr-4 items-center md:items-stretch justify-between md:justify-start gap-4 md:gap-0">
+      <div className="hidden md:block mb-8 md:mb-10 px-2 text-center">
         <p className="plan-title-gradient" style={{
           margin: 0,
           fontFamily: "var(--font-montserrat), Montserrat, sans-serif",
@@ -82,24 +82,24 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
         </p>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 md:gap-2.5" role="navigation" aria-label="Main Navigation">
+      <div className="flex flex-row md:flex-col flex-1 md:flex-1 gap-2 md:gap-2.5 justify-start items-center md:items-stretch" role="navigation" aria-label="Main Navigation">
         <Link
           href={getLoaderUrl("/users/super_admin/Dashboard")}
-          className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/super_admin/Dashboard")} ${getItemStyle("/users/super_admin/Dashboard")}`}
+          className={`flex w-auto md:w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-2.5 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/super_admin/Dashboard")} ${getItemStyle("/users/super_admin/Dashboard")}`}
         >
           <IconDashboard className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
           <span className="hidden sm:inline">Dashboard</span>
         </Link>
         <Link
           href={getLoaderUrl("/users/super_admin/tenants-monitoring")}
-          className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/super_admin/tenants-monitoring")} ${getItemStyle("/users/super_admin/tenants-monitoring")}`}
+          className={`flex w-auto md:w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-2.5 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/super_admin/tenants-monitoring")} ${getItemStyle("/users/super_admin/tenants-monitoring")}`}
         >
           <IconTenants className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
           <span className="hidden sm:inline">Tenants</span>
         </Link>
         <Link
           href={getLoaderUrl("/users/super_admin/system-monitoring")}
-          className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/super_admin/system-monitoring")} ${getItemStyle("/users/super_admin/system-monitoring")}`}
+          className={`flex w-auto md:w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-2.5 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/super_admin/system-monitoring")} ${getItemStyle("/users/super_admin/system-monitoring")}`}
         >
           <IconSettings className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
           <span className="hidden sm:inline">Settings</span>
@@ -112,7 +112,7 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
           handleLogout();
         }}
         disabled={isLoggingOut}
-        className="super-admin-logout-button mt-4 md:mt-6 flex items-center justify-center gap-2 rounded-lg border px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-medium text-white/65 transition hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        className="super-admin-logout-button mt-0 md:mt-6 flex items-center justify-center gap-2 rounded-lg border px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm font-medium text-white/65 transition hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <IconSignOut className="h-4 w-4 md:h-5 md:w-5" />
         <span className="hidden sm:inline">{isLoggingOut ? 'Signing Out...' : 'Sign Out'}</span>

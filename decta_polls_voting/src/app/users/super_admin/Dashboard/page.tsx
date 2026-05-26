@@ -248,42 +248,46 @@ export default function SuperAdminDashboardPage() {
       <div className="flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6 overflow-hidden">
         <SuperAdminSidebar activePath="/users/super_admin/Dashboard" />
 
-        <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none">
-          <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Dashboard</h1>
+        <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border py-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:py-8 overflow-y-auto no-scrollbar md:rounded-l-none">
+          <div className="px-6 md:px-8">
+            <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Dashboard</h1>
 
-          <div className="flex w-full max-w-none flex-col gap-6">
-            <section className="super-admin-card stat-card box-border w-full max-w-none rounded-[22px] border px-3 py-4 shadow-inner md:px-5 md:py-5">
-              <div className="dashboard-overview-row">
-                {/* Compact subscription rate */}
-                <div className="dashboard-overview-subscription flex flex-col items-center justify-center md:items-start">
-                  <h2 className="mb-2 w-full text-center text-[11px] font-semibold uppercase tracking-wide text-white/70 md:text-left">
+            <div className="flex w-full flex-col gap-6">
+              <div className="flex flex-col lg:flex-row gap-6 items-stretch w-full">
+                
+                {/* Left side: Subscription Rate Donut Chart Container */}
+                <section className="super-admin-card stat-card box-border flex-1 rounded-[22px] border p-5 shadow-inner md:p-6 flex flex-col justify-center items-center min-w-0">
+                  <h2 className="mb-4 w-full text-center text-xs font-bold uppercase tracking-wider text-white/70">
                     Subscription Rate
                   </h2>
-                  <div className="flex items-center gap-4">
-                    <PieChart
-                      series={[
-                        {
-                          data: pieData,
-                          innerRadius: "46%",
-                          outerRadius: "92%",
-                          paddingAngle: pieData.length > 1 ? 6 : 0,
-                          cornerRadius: 10,
-                        },
-                      ]}
-                      width={180}
-                      height={180}
-                      hideLegend
-                      sx={{
-                        "& .MuiPieArc-root": {
-                          stroke: "none !important",
-                          strokeWidth: 0,
-                          filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.35))",
-                        },
-                      }}
-                    />
-                    <ul className="flex flex-col gap-2">
+                  <div className="flex flex-row items-center gap-4 sm:gap-6 justify-center w-full">
+                    {/* Fixed-size wrapper to prevent MUI Charts layout bugs */}
+                    <div className="w-[160px] h-[160px] shrink-0 flex items-center justify-center">
+                      <PieChart
+                        series={[
+                          {
+                            data: pieData,
+                            innerRadius: "46%",
+                            outerRadius: "92%",
+                            paddingAngle: pieData.length > 1 ? 6 : 0,
+                            cornerRadius: 10,
+                          },
+                        ]}
+                        width={160}
+                        height={160}
+                        hideLegend
+                        sx={{
+                          "& .MuiPieArc-root": {
+                            stroke: "none !important",
+                            strokeWidth: 0,
+                            filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.35))",
+                          },
+                        }}
+                      />
+                    </div>
+                    <ul className="flex flex-col gap-2.5">
                       {(["ENTERPRISE", "STANDARD", "BASIC"] as SubscriptionTier[]).map((tier) => (
-                        <li key={tier} className="flex items-center gap-1.5 text-xs leading-tight text-white/80">
+                        <li key={tier} className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-white/80">
                           <span
                             className="h-2.5 w-2.5 shrink-0 rounded-full"
                             style={{ background: PIE_COLORS[tier], boxShadow: `0 0 8px ${PIE_COLORS[tier]}99` }}
@@ -298,27 +302,31 @@ export default function SuperAdminDashboardPage() {
                       ))}
                     </ul>
                   </div>
-                </div>
+                </section>
 
-                <div className="dashboard-overview-stats min-h-[188px] flex-col md:flex-row">
-                  <article className="flex min-h-[188px] min-w-0 flex-1 flex-col rounded-[16px] border border-white/[0.08] bg-white/[0.02] px-4 py-4 md:px-5">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(93,68,248,0.15)] text-[#f1f0f3]">
+                {/* Right side: 3 Stat Cards Stacked Vertically */}
+                <div className="flex flex-col gap-4 w-full lg:w-[320px] lg:min-w-[320px] shrink-0 justify-center">
+                  
+                  {/* Card 1: Completed Elections */}
+                  <article className="flex flex-col gap-3 w-full rounded-[16px] border border-white/[0.08] bg-white/[0.02] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:bg-white/[0.04] transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(93,68,248,0.15)] border border-[rgba(93,68,248,0.25)] text-[#f1f0f3]">
                         <IconBallot className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xl font-bold tabular-nums text-white md:text-2xl">
+                        <p className="text-2xl font-bold tracking-tight text-white">
                           {statsLoading || completedElectionsLoading
                             ? "—"
                             : formatCount(stats?.completedElections ?? 0)}
                         </p>
                         <CompletedElectionsAsOfLine
-                          className="mt-1 text-[10px] leading-snug text-white/45"
+                          className="mt-0.5 text-xs text-white/50"
                           asOf={stats?.statsAsOf}
                           period={stats?.completedElectionsPeriod ?? electionPeriod}
                         />
                       </div>
                     </div>
+                    <div className="border-t border-white/[0.06] my-1" />
                     <CompletedElectionsPeriodFilter
                       value={electionPeriod}
                       onChange={handleElectionPeriodChange}
@@ -326,58 +334,66 @@ export default function SuperAdminDashboardPage() {
                     />
                   </article>
 
-                  <article className="flex min-w-0 flex-1 items-start gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.02] px-4 py-4 md:px-5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(150,134,248,0.2)] text-[#f1f0f3]">
-                      <IconUsers className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xl font-bold tabular-nums text-white md:text-2xl">
-                        {statsLoading ? "—" : formatCount(stats?.totalTenants ?? 0)}
-                      </p>
-                      <p className="mt-1 text-[10px] text-white/45">Total Registered Tenants</p>
+                  {/* Card 2: Total Registered Tenants */}
+                  <article className="flex flex-col justify-center w-full rounded-[16px] border border-white/[0.08] bg-white/[0.02] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:bg-white/[0.04] transition-all min-h-[88px]">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(150,134,248,0.15)] border border-[rgba(150,134,248,0.25)] text-[#f1f0f3]">
+                        <IconUsers className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-2xl font-bold tracking-tight text-white">
+                          {statsLoading ? "—" : formatCount(stats?.totalTenants ?? 0)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-white/50">Total Registered Tenants</p>
+                      </div>
                     </div>
                   </article>
 
-                  <article className="flex min-w-0 flex-1 items-start gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.02] px-4 py-4 md:px-5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(150,134,248,0.2)] text-[#f1f0f3]">
-                      <IconPendingApproval className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xl font-bold tabular-nums text-white md:text-2xl">
-                        {statsLoading ? "—" : formatCount(stats?.pendingTenantApprovals ?? 0)}
-                      </p>
-                      <p className="mt-1 text-[10px] text-white/45">Pending Tenant Approvals</p>
+                  {/* Card 3: Pending Tenant Approvals */}
+                  <article className="flex flex-col justify-center w-full rounded-[16px] border border-white/[0.08] bg-white/[0.02] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:bg-white/[0.04] transition-all min-h-[88px]">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(150,134,248,0.15)] border border-[rgba(150,134,248,0.25)] text-[#f1f0f3]">
+                        <IconPendingApproval className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-2xl font-bold tracking-tight text-white">
+                          {statsLoading ? "—" : formatCount(stats?.pendingTenantApprovals ?? 0)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-white/50">Pending Tenant Approvals</p>
+                      </div>
                     </div>
                   </article>
+
                 </div>
-              </div>
-            </section>
 
-            <section className="w-full">
-              <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Leading Active Tenants</h2>
-              <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px]">
-                <table className="w-full border-collapse text-left text-sm">
+              </div>
+
+              {/* Leading Active Tenants Table Section placed correctly as a full-width sibling in the layout flow */}
+              <section className="mt-6 w-full">
+                <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Leading Active Tenants</h2>
+                <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px]" style={{ minWidth: "100%" }}>
+                  <table className="w-full min-w-[1000px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                      <th className="px-5 py-4">Organization name</th>
-                      <th className="px-5 py-4">Email</th>
-                      <th className="px-5 py-4">Type</th>
-                      <th className="px-5 py-4">Subscription</th>
-                      <th className="px-5 py-4 text-center">Status</th>
+                      <th className="px-6 py-4">Organization name</th>
+                      <th className="px-6 py-4">Email</th>
+                      <th className="px-6 py-4">Type</th>
+                      <th className="px-6 py-4">Subscription</th>
+                      <th className="px-6 py-4 text-center">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td className="px-5 py-6 text-white/60" colSpan={5}>Loading...</td></tr>
+                      <tr><td className="px-6 py-6 text-white/60" colSpan={5}>Loading...</td></tr>
                     ) : leadingTenants.map((row) => (
                       <tr key={row.id} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
-                        <td className="px-5 py-4 font-medium text-white/85">{row.organization}</td>
-                        <td className="px-5 py-4 text-white/55">{row.email}</td>
-                        <td className="px-5 py-4 text-white/60">{row.type}</td>
-                        <td className="px-5 py-4">
+                        <td className="px-6 py-4 font-medium text-white/85">{row.organization}</td>
+                        <td className="px-6 py-4 text-white/55">{row.email}</td>
+                        <td className="px-6 py-4 text-white/60">{row.type}</td>
+                        <td className="px-6 py-4">
                           <span className="inline-flex rounded-full border border-[#5D44F8] bg-[#50C878]/[0.18] px-3 py-1 text-xs font-medium text-[#50C878]/[0.85]">{row.subscription}</span>
                         </td>
-                        <td className="px-5 py-4 text-center">
+                        <td className="px-6 py-4 text-center">
                           <span className={`inline-flex rounded-full border ${row.status === "PENDING" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : row.status === "REJECTED" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : "border-[#5D44F8] bg-[#50C878]/[0.18] text-[#50C878]"} px-3 py-1 text-xs font-medium`}>
                             {row.status}
                           </span>
@@ -386,15 +402,17 @@ export default function SuperAdminDashboardPage() {
                     ))}
                     {(!loading && leadingTenants.length === 0) && (
                       <tr>
-                        <td className="px-5 py-6 text-white/60" colSpan={5}>
+                        <td className="px-6 py-6 text-white/60" colSpan={5}>
                           {error ? `Error: ${error}` : "No tenants found."}
                         </td>
                       </tr>
                     )}
                   </tbody>
-                </table>
-              </div>
-            </section>
+                  </table>
+                </div>
+              </section>
+
+            </div>
           </div>
         </main>
       </div>
