@@ -22,6 +22,7 @@ export default function NotificationBell({ electionId }: NotificationBellProps) 
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch notifications
   const fetchNotifications = async () => {
@@ -37,6 +38,15 @@ export default function NotificationBell({ electionId }: NotificationBellProps) 
         : '/api/notifications';
 
       const response = await fetch(url, { headers });
+
+      if (response.status === 401 || response.status === 403) {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        return;
+      }
+
       if (response.ok) {
         const data = await response.json();
         if (data.notifications) {
@@ -52,8 +62,12 @@ export default function NotificationBell({ electionId }: NotificationBellProps) 
     fetchNotifications();
 
     // Poll every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    intervalRef.current = setInterval(fetchNotifications, 30000);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, []);
 
   // Handle clicking outside to close

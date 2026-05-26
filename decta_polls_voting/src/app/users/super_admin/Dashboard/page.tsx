@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { SuperAdminHeader } from "@/components/super_admin/Header";
 import { SuperAdminSidebar } from "@/components/super_admin/Sidebar";
@@ -8,18 +8,23 @@ import { PieChart } from '@mui/x-charts/PieChart';
 import {
   IconBallot,
   IconUsers,
-  IconPercent,
+  IconPendingApproval,
 } from "@/components/super_admin/Icons";
-import { BallotCastAsOfLine } from "@/components/super_admin/Stats";
+import {
+  CompletedElectionsAsOfLine,
+  CompletedElectionsPeriodFilter,
+  type CompletedElectionPeriod,
+} from "@/components/super_admin/Stats";
 import { useRouter } from "next/navigation";
 import type { SubscriptionTier } from "@/lib/subscription-limits";
 
 type DashboardStats = {
   subscriptionBreakdown: Record<SubscriptionTier, number>;
   totalTenants: number;
-  activeTenantRate: number;
-  totalBallotsCast: number;
-  ballotsAsOf: string;
+  pendingTenantApprovals: number;
+  completedElections: number;
+  completedElectionsPeriod: CompletedElectionPeriod;
+  statsAsOf: string;
 };
 
 const PIE_COLORS: Record<SubscriptionTier, string> = {
@@ -111,7 +116,18 @@ export default function SuperAdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [electionPeriod, setElectionPeriod] = useState<CompletedElectionPeriod>("month");
+  const [completedElectionsLoading, setCompletedElectionsLoading] = useState(false);
   const router = useRouter();
+
+  const fetchDashboardStats = useCallback(async (period: CompletedElectionPeriod) => {
+    const res = await fetch(`/api/super_admin/dashboard_stats?period=${period}`);
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || "Failed to fetch dashboard stats");
+    }
+    return json as DashboardStats;
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -126,18 +142,16 @@ export default function SuperAdminDashboardPage() {
       }
 
       try {
-        const [statsRes, tenantsRes] = await Promise.all([
-          fetch("/api/super_admin/dashboard_stats"),
+        const [statsJson, tenantsRes] = await Promise.all([
+          fetchDashboardStats("month"),
           fetch("/api/get_tenants?limit=10&activeOnly=true&sortBy=elections"),
         ]);
 
-        const statsJson = await statsRes.json();
         const json = await tenantsRes.json();
 
-        if (!statsRes.ok) throw new Error(statsJson.error || "Failed to fetch dashboard stats");
         if (!tenantsRes.ok) throw new Error(json.error || "Failed to fetch tenants");
 
-        setStats(statsJson as DashboardStats);
+        setStats(statsJson);
         setStatsLoading(false);
 
         const tenants = await Promise.all(
@@ -179,7 +193,30 @@ export default function SuperAdminDashboardPage() {
     }
 
     fetchData();
-  }, [router]);
+  }, [router, fetchDashboardStats]);
+
+  const handleElectionPeriodChange = async (period: CompletedElectionPeriod) => {
+    setElectionPeriod(period);
+    setCompletedElectionsLoading(true);
+
+    try {
+      const statsJson = await fetchDashboardStats(period);
+      setStats((prev) =>
+        prev
+          ? {
+              ...prev,
+              completedElections: statsJson.completedElections,
+              completedElectionsPeriod: statsJson.completedElectionsPeriod,
+              statsAsOf: statsJson.statsAsOf,
+            }
+          : statsJson
+      );
+    } catch {
+      // Keep previous count if refresh fails
+    } finally {
+      setCompletedElectionsLoading(false);
+    }
+  };
 
   const pieData = (() => {
     if (!stats) return [];
@@ -214,80 +251,109 @@ export default function SuperAdminDashboardPage() {
         <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none">
           <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Dashboard</h1>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)]">
-            <section className="super-admin-card stat-card rounded-[22px] border px-2 py-1.5 shadow-inner">
-              <h2 className="mb-0 text-sm font-semibold text-white/90">Subscription Rate</h2>
-              <div className="flex flex-col items-center justify-center gap-4 py-2 sm:flex-row sm:items-center sm:gap-6">
-                <div className="flex shrink-0 items-center justify-center">
-                  <PieChart
-                    series={[
-                      {
-                        data: pieData,
-                        innerRadius: '46%',
-                        outerRadius: '92%',
-                        paddingAngle: pieData.length > 1 ? 6 : 0,
-                        cornerRadius: 10,
-                      },
-                    ]}
-                    width={216}
-                    height={216}
-                    hideLegend
-                    sx={{
-                      '& .MuiPieArc-root': {
-                        stroke: 'none !important',
-                        strokeWidth: 0,
-                        filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.35))',
-                      },
-                    }}
-                  />
+          <div className="flex w-full max-w-none flex-col gap-6">
+            <section className="super-admin-card stat-card box-border w-full max-w-none rounded-[22px] border px-3 py-4 shadow-inner md:px-5 md:py-5">
+              <div className="dashboard-overview-row">
+                {/* Compact subscription rate */}
+                <div className="dashboard-overview-subscription flex flex-col items-center justify-center md:items-start">
+                  <h2 className="mb-2 w-full text-center text-[11px] font-semibold uppercase tracking-wide text-white/70 md:text-left">
+                    Subscription Rate
+                  </h2>
+                  <div className="flex items-center gap-4">
+                    <PieChart
+                      series={[
+                        {
+                          data: pieData,
+                          innerRadius: "46%",
+                          outerRadius: "92%",
+                          paddingAngle: pieData.length > 1 ? 6 : 0,
+                          cornerRadius: 10,
+                        },
+                      ]}
+                      width={180}
+                      height={180}
+                      hideLegend
+                      sx={{
+                        "& .MuiPieArc-root": {
+                          stroke: "none !important",
+                          strokeWidth: 0,
+                          filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.35))",
+                        },
+                      }}
+                    />
+                    <ul className="flex flex-col gap-2">
+                      {(["ENTERPRISE", "STANDARD", "BASIC"] as SubscriptionTier[]).map((tier) => (
+                        <li key={tier} className="flex items-center gap-1.5 text-xs leading-tight text-white/80">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ background: PIE_COLORS[tier], boxShadow: `0 0 8px ${PIE_COLORS[tier]}99` }}
+                          />
+                          <span className="whitespace-nowrap">
+                            {PIE_LABELS[tier]}
+                            {stats && !statsLoading && (
+                              <span className="text-white/45"> ({stats.subscriptionBreakdown[tier]})</span>
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <ul className="flex flex-wrap justify-center gap-2 sm:flex-col sm:gap-2 sm:pl-1">
-                  {(["ENTERPRISE", "STANDARD", "BASIC"] as SubscriptionTier[]).map((tier) => (
-                    <li key={tier} className="flex items-center gap-1.5 text-xs text-white/80">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ background: PIE_COLORS[tier], boxShadow: `0 0 8px ${PIE_COLORS[tier]}99` }}
-                      />
-                      {PIE_LABELS[tier]}
-                      {stats && !statsLoading && (
-                        <span className="text-white/45">({stats.subscriptionBreakdown[tier]})</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+
+                <div className="dashboard-overview-stats min-h-[188px] flex-col md:flex-row">
+                  <article className="flex min-h-[188px] min-w-0 flex-1 flex-col rounded-[16px] border border-white/[0.08] bg-white/[0.02] px-4 py-4 md:px-5">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(93,68,248,0.15)] text-[#f1f0f3]">
+                        <IconBallot className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xl font-bold tabular-nums text-white md:text-2xl">
+                          {statsLoading || completedElectionsLoading
+                            ? "—"
+                            : formatCount(stats?.completedElections ?? 0)}
+                        </p>
+                        <CompletedElectionsAsOfLine
+                          className="mt-1 text-[10px] leading-snug text-white/45"
+                          asOf={stats?.statsAsOf}
+                          period={stats?.completedElectionsPeriod ?? electionPeriod}
+                        />
+                      </div>
+                    </div>
+                    <CompletedElectionsPeriodFilter
+                      value={electionPeriod}
+                      onChange={handleElectionPeriodChange}
+                      disabled={statsLoading || completedElectionsLoading}
+                    />
+                  </article>
+
+                  <article className="flex min-w-0 flex-1 items-start gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.02] px-4 py-4 md:px-5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(150,134,248,0.2)] text-[#f1f0f3]">
+                      <IconUsers className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xl font-bold tabular-nums text-white md:text-2xl">
+                        {statsLoading ? "—" : formatCount(stats?.totalTenants ?? 0)}
+                      </p>
+                      <p className="mt-1 text-[10px] text-white/45">Total Registered Tenants</p>
+                    </div>
+                  </article>
+
+                  <article className="flex min-w-0 flex-1 items-start gap-3 rounded-[16px] border border-white/[0.08] bg-white/[0.02] px-4 py-4 md:px-5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[rgba(150,134,248,0.2)] text-[#f1f0f3]">
+                      <IconPendingApproval className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xl font-bold tabular-nums text-white md:text-2xl">
+                        {statsLoading ? "—" : formatCount(stats?.pendingTenantApprovals ?? 0)}
+                      </p>
+                      <p className="mt-1 text-[10px] text-white/45">Pending Tenant Approvals</p>
+                    </div>
+                  </article>
+                </div>
               </div>
             </section>
 
-            <div className="flex flex-col gap-4">
-              <article className="super-admin-card stat-card flex items-start gap-4 rounded-[22px] border px-5 py-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(93,68,248,0.15)] text-[#f1f0f3]"><IconBallot className="h-6 w-6" /></div>
-                <div className="min-w-0">
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">
-                    {statsLoading ? "—" : formatCount(stats?.totalBallotsCast ?? 0)}
-                  </p>
-                  <BallotCastAsOfLine className="mt-1 text-xs text-white/45" asOf={stats?.ballotsAsOf} />
-                </div>
-              </article>
-              <article className="super-admin-card stat-card flex items-start gap-4 rounded-[22px] border px-5 py-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(150,134,248,0.2)] text-[#f1f0f3]"><IconUsers className="h-6 w-6" /></div>
-                <div>
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">
-                    {statsLoading ? "—" : formatCount(stats?.totalTenants ?? 0)}
-                  </p>
-                  <p className="mt-1 text-xs text-white/45">Total Registered Tenants</p>
-                </div>
-              </article>
-              <article className="super-admin-card stat-card flex items-start gap-4 rounded-[22px] border px-5 py-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(20,184,166,0.18)] text-[#5eead4]"><IconPercent className="h-6 w-6" /></div>
-                <div>
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">
-                    {statsLoading ? "—" : `${(stats?.activeTenantRate ?? 0).toFixed(2)}%`}
-                  </p>
-                  <p className="mt-1 text-xs text-white/45">Rate of Active Tenants</p>
-                </div>
-              </article>
-            </div>
-            <section className="mt-10 lg:col-span-2 w-full">
+            <section className="w-full">
               <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Leading Active Tenants</h2>
               <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px]">
                 <table className="w-full border-collapse text-left text-sm">
