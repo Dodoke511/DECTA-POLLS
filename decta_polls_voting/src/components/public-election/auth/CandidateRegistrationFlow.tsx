@@ -274,9 +274,40 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
           <div className="grid grid-cols-2 gap-4">
 
             {/* Password Field */}
-            <div className="group flex items-center gap-1.5">
+            <div className="group flex items-center gap-2">
 
-              {/* Input — shrinks left on hover to reveal icons on the right */}
+              {/* ! help button — visible on the left side of the password field */}
+              <div className="relative flex-shrink-0 group">
+                <button
+                  type="button"
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--tenant-primary)] text-white font-bold hover:opacity-90 transition flex-shrink-0"
+                >
+                  !
+                </button>
+
+                <div className="absolute bottom-full left-0 mb-2 z-50 w-[240px] rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-md p-4 shadow-xl pointer-events-none opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+                  <p className="font-semibold mb-2 text-xs text-slate-700">Password Requirements</p>
+                  <ul className="space-y-1 text-xs">
+                    <li className={passwordPolicy.checks.length ? 'text-emerald-600' : 'text-red-500'}>
+                      • At least {securitySettings.min_password_length} characters
+                    </li>
+                    <li className={passwordPolicy.checks.uppercase ? 'text-emerald-600' : 'text-red-500'}>
+                      • One uppercase letter (A–Z)
+                    </li>
+                    <li className={passwordPolicy.checks.lowercase ? 'text-emerald-600' : 'text-red-500'}>
+                      • One lowercase letter (a–z)
+                    </li>
+                    <li className={passwordPolicy.checks.number ? 'text-emerald-600' : 'text-red-500'}>
+                      • One number (0–9)
+                    </li>
+                    <li className={passwordPolicy.checks.special ? 'text-emerald-600' : 'text-red-500'}>
+                      • One special character ({securitySettings.allowed_special_chars})
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Input — shrinks left on hover to reveal only the eye icon on the right */}
               <input
                 required
                 type={showPassword ? 'text' : 'password'}
@@ -286,42 +317,8 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
                 onChange={e => setFormData({ ...formData, password: e.target.value })}
               />
 
-              {/* Icons container — slides in from the right */}
-              <div className="flex items-center gap-1 overflow-hidden max-w-0 group-hover:max-w-[56px] transition-all duration-300 ease-in-out flex-shrink-0">
-
-                {/* ! help button — CSS group-hover tooltip using standard Tailwind group */}
-                <div className="relative flex-shrink-0 group">
-                  <button
-                    type="button"
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--tenant-primary)] text-white font-bold hover:opacity-90 transition flex-shrink-0"
-                  >
-                    !
-                  </button>
-
-                  {/* Tooltip — pure CSS hover on standard group wrapper */}
-                  <div className="absolute bottom-full right-0 mb-2 z-50 w-[240px] rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-md p-4 shadow-xl pointer-events-none opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
-                    <p className="font-semibold mb-2 text-xs text-slate-700">Password Requirements</p>
-                    <ul className="space-y-1 text-xs">
-                      <li className={passwordPolicy.checks.length ? 'text-emerald-600' : 'text-red-500'}>
-                        • At least {securitySettings.min_password_length} characters
-                      </li>
-                      <li className={passwordPolicy.checks.uppercase ? 'text-emerald-600' : 'text-red-500'}>
-                        • One uppercase letter (A–Z)
-                      </li>
-                      <li className={passwordPolicy.checks.lowercase ? 'text-emerald-600' : 'text-red-500'}>
-                        • One lowercase letter (a–z)
-                      </li>
-                      <li className={passwordPolicy.checks.number ? 'text-emerald-600' : 'text-red-500'}>
-                        • One number (0–9)
-                      </li>
-                      <li className={passwordPolicy.checks.special ? 'text-emerald-600' : 'text-red-500'}>
-                        • One special character ({securitySettings.allowed_special_chars})
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Eye toggle */}
+              {/* Eye toggle only — slides in from the right */}
+              <div className="flex items-center overflow-hidden max-w-0 group-hover:max-w-[40px] transition-all duration-300 ease-in-out flex-shrink-0">
                 <button
                   type="button"
                   onMouseDown={() => setShowPassword(true)}
@@ -331,7 +328,6 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
                 >
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
-
               </div>
             </div>
 
