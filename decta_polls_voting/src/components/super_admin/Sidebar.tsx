@@ -36,7 +36,7 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     sessionStorage.removeItem('adminToken');
-    router.push('/loader?destination=/');
+    router.push('/loader?destination=' + encodeURIComponent('/') + '&duration=700');
   };
 
   const getItemStyle = (path: string) => {
@@ -51,6 +51,10 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
   const getUrlWithToken = (path: string) => {
     if (!token) return path;
     return `${path}?role=super_admin&random=${token}`;
+  };
+
+  const getLoaderUrl = (path: string) => {
+    return `/loader?destination=${encodeURIComponent(getUrlWithToken(path))}&duration=700`;
   };
 
   return (
@@ -80,21 +84,21 @@ export function SuperAdminSidebar({ activePath }: SidebarProps) {
 
       <div className="flex flex-1 flex-col gap-2 md:gap-2.5" role="navigation" aria-label="Main Navigation">
         <Link
-          href={getUrlWithToken("/users/super_admin/Dashboard")}
+          href={getLoaderUrl("/users/super_admin/Dashboard")}
           className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/super_admin/Dashboard")} ${getItemStyle("/users/super_admin/Dashboard")}`}
         >
           <IconDashboard className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
           <span className="hidden sm:inline">Dashboard</span>
         </Link>
         <Link
-          href={getUrlWithToken("/users/super_admin/tenants-monitoring")}
+          href={getLoaderUrl("/users/super_admin/tenants-monitoring")}
           className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/super_admin/tenants-monitoring")} ${getItemStyle("/users/super_admin/tenants-monitoring")}`}
         >
           <IconTenants className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
           <span className="hidden sm:inline">Tenants</span>
         </Link>
         <Link
-          href={getUrlWithToken("/users/super_admin/system-monitoring")}
+          href={getLoaderUrl("/users/super_admin/system-monitoring")}
           className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle("/users/super_admin/system-monitoring")} ${getItemStyle("/users/super_admin/system-monitoring")}`}
         >
           <IconSettings className="h-4 w-4 md:h-5 md:w-5 shrink-0" />

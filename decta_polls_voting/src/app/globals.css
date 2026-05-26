@@ -4120,12 +4120,20 @@ input.public-election-auth-input[type="text"],
 input.public-election-auth-input[type="password"],
 input.public-election-auth-input:hover,
 input.public-election-auth-input:focus,
-input.public-election-auth-input:active {
+input.public-election-auth-input:active,
+input.candidate-reg-input,
+input.candidate-reg-input[type="text"],
+input.candidate-reg-input[type="password"],
+input.candidate-reg-input[type="date"],
+input.candidate-reg-input:hover,
+input.candidate-reg-input:focus,
+input.candidate-reg-input:active {
   color: #0f172a !important;
   -webkit-text-fill-color: #0f172a !important;
 }
 
-input.public-election-auth-input::placeholder {
+input.public-election-auth-input::placeholder,
+input.candidate-reg-input::placeholder {
   color: #94a3b8 !important;
   -webkit-text-fill-color: #94a3b8 !important;
 }
@@ -4145,4 +4153,30 @@ input.public-election-auth-input:-webkit-autofill:active {
 .super-admin-button input[type="text"]:hover,
 .super-admin-button input[type="text"]:focus {
   color: #f1f0f3 !important;
+}
+
+/* Premium 3-color brand gradient button with enhanced readability */
+.btn-brand-gradient {
+  background: linear-gradient(rgba(15, 23, 42, 0.15), rgba(15, 23, 42, 0.22)), 
+              linear-gradient(to right, var(--tenant-primary), var(--tenant-third), var(--tenant-secondary)) !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 3px rgba(15, 23, 42, 0.35), 0 1px 2px rgba(15, 23, 42, 0.45) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-brand-gradient:hover {
+  background: linear-gradient(rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.14)), 
+              linear-gradient(to right, var(--tenant-primary), var(--tenant-third), var(--tenant-secondary)) !important;
+  opacity: 0.96;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25) !important;
+  transform: translateY(-0.5px);
+}
+
+.btn-brand-gradient:active {
+  background: linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.35)), 
+              linear-gradient(to right, var(--tenant-primary), var(--tenant-third), var(--tenant-secondary)) !important;
+  transform: translateY(0);
+  opacity: 1;
 }

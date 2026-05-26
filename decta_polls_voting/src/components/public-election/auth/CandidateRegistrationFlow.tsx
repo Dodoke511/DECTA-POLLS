@@ -206,6 +206,18 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
         </div>
 
         <form onSubmit={handleFormSubmit} className="space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar pr-2">
+          {/* Scope a style override to bypass the global input hover text color bug */}
+          <style>{`
+            input.candidate-reg-input:hover,
+            input.candidate-reg-input:focus,
+            input.candidate-reg-input:active,
+            input[type="text"].candidate-reg-input:hover,
+            input[type="text"].candidate-reg-input:focus,
+            input[type="text"].candidate-reg-input:active {
+              color: #0f172a !important;
+              -webkit-text-fill-color: #0f172a !important;
+            }
+          `}</style>
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-medium">
               {error}
@@ -217,20 +229,20 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
             <input
               required
               placeholder="First Name"
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all candidate-reg-input"
               value={formData.firstName}
               onChange={e => setFormData({ ...formData, firstName: e.target.value })}
             />
             <input
               placeholder="Middle Name"
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all candidate-reg-input"
               value={formData.middleName}
               onChange={e => setFormData({ ...formData, middleName: e.target.value })}
             />
             <input
               required
               placeholder="Last Name"
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all candidate-reg-input"
               value={formData.lastName}
               onChange={e => setFormData({ ...formData, lastName: e.target.value })}
             />
@@ -243,7 +255,7 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
               <input
                 required
                 type="date"
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all candidate-reg-input"
                 value={formData.birthDate}
                 onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
               />
@@ -253,7 +265,7 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
               <input
                 required
                 placeholder="e.g. 09123456789"
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all candidate-reg-input"
                 value={formData.contact}
                 onChange={e => setFormData({ ...formData, contact: e.target.value })}
               />
@@ -265,7 +277,7 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
             required
             type="email"
             placeholder="Email Address"
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all candidate-reg-input"
             value={formData.email}
             onChange={e => setFormData({ ...formData, email: e.target.value })}
           />
@@ -355,7 +367,7 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
           <button
             type="submit"
             disabled={formLoading}
-            className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center gap-2"
+            className="w-full bg-[var(--tenant-primary)] hover:bg-[var(--tenant-primary)]/90 text-slate-950 font-bold py-3.5 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center gap-2"
           >
             {formLoading ? (
               <>
@@ -398,7 +410,19 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
       </div>
 
       <div className="flex flex-col items-center text-center py-4 gap-3">
-        <div className="w-14 h-14 rounded-2xl bg-[var(--tenant-primary-light,#ede9ff)] flex items-center justify-center">
+        {/* Scope a style override to bypass the global input hover text color bug inside OTP screen */}
+        <style>{`
+          input.candidate-reg-input:hover,
+          input.candidate-reg-input:focus,
+          input.candidate-reg-input:active,
+          input[type="text"].candidate-reg-input:hover,
+          input[type="text"].candidate-reg-input:focus,
+          input[type="text"].candidate-reg-input:active {
+            color: #0f172a !important;
+            -webkit-text-fill-color: #0f172a !important;
+          }
+        `}</style>
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--tenant-primary)]/10 via-[var(--tenant-third)]/15 to-[var(--tenant-secondary)]/20 flex items-center justify-center border border-[var(--tenant-secondary)]/25">
           <MailCheck className="w-7 h-7 text-[var(--tenant-primary)]" />
         </div>
         <p className="text-slate-500 text-sm leading-relaxed">
@@ -422,7 +446,7 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
         value={otp}
         onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
         placeholder="• • • • • •"
-        className="w-full text-center tracking-[0.6em] text-3xl font-bold rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-4 text-slate-900 outline-none focus:border-[var(--tenant-primary)] transition-all placeholder:tracking-[0.4em] placeholder:text-slate-300"
+        className="w-full text-center tracking-[0.6em] text-3xl font-bold rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-4 text-slate-900 outline-none focus:border-[var(--tenant-primary)] transition-all placeholder:tracking-[0.4em] placeholder:text-slate-300 candidate-reg-input"
       />
 
       <div className="text-center text-sm">
@@ -448,7 +472,7 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
         disabled={otp.length !== 6 || isVerifyingOtp || timeLeft === 0}
         className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
           otp.length === 6 && !isVerifyingOtp && timeLeft > 0
-            ? 'bg-[var(--tenant-primary)] text-white hover:opacity-90 shadow-md hover:shadow-lg'
+            ? 'bg-[var(--tenant-primary)] hover:bg-[var(--tenant-primary)]/90 text-slate-950 shadow-md hover:shadow-lg'
             : 'bg-slate-100 text-slate-400 cursor-not-allowed'
         }`}
       >

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp,
   Loader2, Pencil, X,
@@ -115,35 +116,58 @@ function OptionsEditor({ options, onChange }: { options: string[]; onChange: (o:
 // ── Type picker panel ─────────────────────────────────────────────────────────
 function TypePickerPanel({ onSelect, onClose }: { onSelect: (t: FieldType) => void; onClose: () => void }) {
   const groups = ['Basic', 'Choice', 'Advanced', 'Layout'] as const;
-  return (
-    <div className="absolute z-30 bottom-full left-0 mb-2 w-72 rounded-2xl border border-white/10 bg-[#140B2D]/95 shadow-2xl p-4 backdrop-blur-xl">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Choose Field Type</span>
-        <button onClick={onClose} className="text-white/25 hover:text-white/60 transition-colors"><X className="w-3.5 h-3.5" /></button>
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  const content = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      {/* Backdrop overlay trigger for closing */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      
+      {/* Dialog container */}
+      <div className="relative z-10 max-h-[min(85vh,32rem)] w-[min(32rem,100%)] overflow-y-auto no-scrollbar rounded-[24px] border border-white/12 bg-[#100821]/98 p-5 shadow-[0_25px_70px_rgba(0,0,0,0.65)] backdrop-blur-xl animate-in zoom-in-95 duration-200">
+        <div className="mb-4 flex items-center justify-between gap-3 border-b border-white/6 pb-3">
+          <span className="text-[11px] font-bold uppercase tracking-widest text-white/45">Choose Field Type</span>
+          <button type="button" onClick={onClose} aria-label="Close field type picker" className="rounded-lg p-1.5 text-white/30 transition-all hover:bg-white/6 hover:text-white/70">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {groups.map(g => {
+            const items = FIELD_TYPE_META.filter(m => m.group === g);
+            if (!items.length) return null;
+            return (
+              <div key={g} className="mb-4 last:mb-0">
+                <p className="mb-2 text-[9.5px] font-bold uppercase tracking-widest text-[#8B7CFF]/60">{g}</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {items.map(m => {
+                    const Icon = ICONS[m.type];
+                    return (
+                      <button key={m.type} type="button" onClick={() => { onSelect(m.type); onClose(); }}
+                        className="group flex min-h-12 items-center gap-2.5 rounded-xl border border-white/7 bg-white/[0.04] px-3 py-2.5 text-left transition-all hover:border-[#8B7CFF]/45 hover:bg-[#5B4FD9]/18 focus:outline-none focus:ring-2 focus:ring-[#8B7CFF]/35">
+                        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[#A78BFA]/12 text-[#A78BFA] transition-colors group-hover:bg-[#A78BFA]/20 group-hover:text-white">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 text-[11px] font-medium leading-tight text-white/68 group-hover:text-white/90">{m.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      {groups.map(g => {
-        const items = FIELD_TYPE_META.filter(m => m.group === g);
-        if (!items.length) return null;
-        return (
-          <div key={g} className="mb-3 last:mb-0">
-            <p className="text-[9px] text-white/25 uppercase tracking-widest mb-1.5">{g}</p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {items.map(m => {
-                const Icon = ICONS[m.type];
-                return (
-                  <button key={m.type} onClick={() => { onSelect(m.type); onClose(); }}
-                    className="flex items-center gap-2 px-2.5 py-2 rounded-xl bg-white/3 border border-white/5 hover:bg-[#5B4FD9]/15 hover:border-[#5B4FD9]/30 transition-all text-left">
-                    <Icon className="w-3.5 h-3.5 text-[#A78BFA] flex-shrink-0" />
-                    <span className="text-[11px] text-white/65">{m.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
+
+  return createPortal(content, document.body);
 }
 
 // ── Field card (build mode) ──────────────────────────────────────────────────

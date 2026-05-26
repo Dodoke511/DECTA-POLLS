@@ -7,10 +7,10 @@ export function PublicElectionFooter() {
   const { tenant } = useElectionPublic();
 
   return (
-    <footer className="border-t border-slate-100 bg-white py-4">
+    <footer className="relative z-10 border-t border-slate-100 bg-white py-4">
       <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3">
         <p className="text-slate-400 text-sm">
-          &copy; {new Date().getFullYear()} {tenant.name}. All rights reserved.
+          &copy; {new Date().getFullYear()} {tenant.organization || tenant.name}. All rights reserved.
         </p>
         <p className="text-slate-400 text-xs flex items-center gap-1.5">
           Powered by <span className="font-bold text-slate-500 tracking-widest uppercase">Decta Polls</span>

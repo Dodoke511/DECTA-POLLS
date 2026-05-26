@@ -5,12 +5,14 @@ import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { createClient } from '@supabase/supabase-js';
 import { Loader2, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from '@/components/public-election/PublicElectionBackground';
 
 export default function CandidacyFormPage() {
-  const { userContext, tenant, election } = useElectionPublic();
+  const { userContext, tenant, election, siteConfig } = useElectionPublic();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editMode = searchParams.get('editMode');
+  const backgroundImage = getPublicElectionBackgroundImage(siteConfig, election);
 
   const [loading, setLoading] = useState(true);
   const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
@@ -350,15 +352,23 @@ export default function CandidacyFormPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-16 px-6">
-      <div className="mb-12 border-b border-slate-100 pb-8">
-        <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Candidacy Application</h1>
-        <p className="text-slate-500 text-lg">
-          Please complete all required fields. Your application will be reviewed according to the election rules.
-        </p>
-      </div>
+    <div className="relative min-h-screen overflow-hidden py-16 px-6">
+      <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
+      <div className="pointer-events-none absolute left-[-8rem] top-20 z-0 h-80 w-80 rounded-full bg-[var(--tenant-primary)]/10 blur-3xl animate-pulse" />
+      <div className="pointer-events-none absolute bottom-0 right-[-7rem] z-0 h-96 w-96 rounded-full bg-[var(--tenant-secondary)]/15 blur-3xl animate-pulse" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/35 blur-3xl" />
 
-      <div className="bg-white rounded-[32px] p-8 md:p-12 border border-slate-200 shadow-xl">
+      <div className="relative z-10 max-w-4xl mx-auto">
+        <div className="mb-12 border-b border-white/20 pb-8">
+          <h1 className="text-4xl font-black text-slate-950 mb-2 tracking-tight">Candidacy Application</h1>
+          <p className="text-slate-700 text-lg font-semibold">
+            Please complete all required fields. Your application will be reviewed according to the election rules.
+          </p>
+        </div>
+
+        <div className="relative overflow-hidden rounded-[30px] border border-white/65 bg-white/75 p-8 md:p-12 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl">
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,var(--tenant-primary)_0%,var(--tenant-third)_50%,var(--tenant-secondary)_100%)] opacity-[0.05]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
         {error && (
           <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 font-medium">
             {error}
@@ -398,7 +408,7 @@ export default function CandidacyFormPage() {
 
             return (
               <div key={field.id} className="space-y-2">
-                <label className="block text-sm font-bold text-slate-900">
+                <label className="block text-sm font-bold text-slate-950">
                   {field.label} {field.required && <span className="text-red-500">*</span>}
                 </label>
 
@@ -407,7 +417,7 @@ export default function CandidacyFormPage() {
                     type="text"
                     required={field.required}
                     placeholder={field.validationRules?.placeholder || ''}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all shadow-sm backdrop-blur-xl"
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
@@ -419,7 +429,7 @@ export default function CandidacyFormPage() {
                     required={field.required}
                     placeholder={field.validationRules?.placeholder || ''}
                     rows={4}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all shadow-sm backdrop-blur-xl"
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
@@ -433,7 +443,7 @@ export default function CandidacyFormPage() {
                     required={field.required}
                     min={field.validationRules?.min}
                     max={field.validationRules?.max}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all shadow-sm backdrop-blur-xl"
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
@@ -446,7 +456,7 @@ export default function CandidacyFormPage() {
                     type="email"
                     required={field.required}
                     placeholder={field.validationRules?.placeholder || ''}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all shadow-sm backdrop-blur-xl"
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
@@ -458,7 +468,7 @@ export default function CandidacyFormPage() {
                     type="tel"
                     required={field.required}
                     placeholder={field.validationRules?.placeholder || ''}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all shadow-sm backdrop-blur-xl"
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
@@ -469,7 +479,7 @@ export default function CandidacyFormPage() {
                   <input
                     type="date"
                     required={field.required}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all [color-scheme:light]"
+                    className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all shadow-sm backdrop-blur-xl [color-scheme:light]"
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
@@ -481,7 +491,7 @@ export default function CandidacyFormPage() {
                     type="url"
                     required={field.required}
                     placeholder={field.validationRules?.placeholder || ''}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all shadow-sm backdrop-blur-xl"
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
@@ -491,7 +501,7 @@ export default function CandidacyFormPage() {
                 {field.fieldType === 'position_selector' && (
                   <select
                     required={field.required}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all shadow-sm backdrop-blur-xl"
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
@@ -503,10 +513,10 @@ export default function CandidacyFormPage() {
                   </select>
                 )}
 
-                {['dropdown', 'radio', 'checkbox'].includes(field.fieldType) && (
+                {['dropdown', 'radio'].includes(field.fieldType) && (
                   <select
                     required={field.required}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+                    className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all shadow-sm backdrop-blur-xl"
                     style={{ color: '#0f172a' }}
                     value={formData[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
@@ -518,12 +528,28 @@ export default function CandidacyFormPage() {
                   </select>
                 )}
 
+                {field.fieldType === 'checkbox' && (
+                  <div className="flex items-start gap-3 pt-1">
+                    <input
+                      type="checkbox"
+                      id={field.id}
+                      required={field.required}
+                      checked={formData[field.id] === true || formData[field.id] === 'true'}
+                      onChange={(e) => handleInputChange(field.id, e.target.checked)}
+                      className="w-5 h-5 rounded border border-white/70 bg-white/40 text-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none cursor-pointer transition-all shadow-sm accent-[var(--tenant-primary)] mt-0.5"
+                    />
+                    <label htmlFor={field.id} className="text-sm font-semibold text-slate-800 cursor-pointer select-none">
+                      {field.validationRules?.placeholder || 'I agree to follow the policies'}
+                    </label>
+                  </div>
+                )}
+
                 {field.fieldType === 'file_upload' && (
                   <input
                     type="file"
                     required={field.required}
                     accept={field.validationRules?.allowedTypes ? `.${field.validationRules.allowedTypes.replace(/,/g, ',.')}` : undefined}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 !text-slate-900 font-semibold file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-[var(--tenant-primary)] file:text-white hover:file:bg-opacity-90"
+                    className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold shadow-sm backdrop-blur-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-[var(--tenant-primary)] file:text-slate-950 hover:file:opacity-90"
                     style={{ color: '#0f172a' }}
                     onChange={(e) => handleInputChange(field.id, e.target.files?.[0])}
                   />
@@ -531,10 +557,10 @@ export default function CandidacyFormPage() {
 
                 {/* Display Rule / Help text */}
                 {(field.validationRules?.helpText || relatedRule) && (
-                  <p className="text-xs text-slate-500 font-medium mt-1">
+                  <p className="text-xs text-slate-500 font-semibold mt-1">
                     {field.validationRules?.helpText}
                     {relatedRule && (
-                      <span className="block mt-1 text-amber-600 bg-amber-50 inline-block px-2 py-1 rounded">
+                      <span className="block mt-1 text-amber-700 bg-amber-50/70 inline-block px-2 py-1 rounded border border-amber-200">
                         ⚠️ Rule: {relatedRule.label}
                       </span>
                     )}
@@ -544,11 +570,11 @@ export default function CandidacyFormPage() {
             );
           })}
 
-          <div className="pt-8 mt-8 border-t border-slate-100 flex justify-end">
+          <div className="pt-8 mt-8 border-t border-white/20 flex justify-end">
             <button
               type="submit"
               disabled={submitting}
-              className="bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              className="bg-[var(--tenant-primary)] hover:bg-[var(--tenant-primary)]/90 text-slate-950 font-bold py-4 px-8 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
             >
               {submitting ? (
                 <>
@@ -566,5 +592,6 @@ export default function CandidacyFormPage() {
         </form>
       </div>
     </div>
+  </div>
   );
 }

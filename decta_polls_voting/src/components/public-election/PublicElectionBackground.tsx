@@ -20,17 +20,17 @@ export function getPublicElectionBackgroundImage(
 export function PublicElectionBackgroundLayer({ imageUrl }: { imageUrl?: string | null }) {
   if (!imageUrl) {
     return (
-      <div className="absolute inset-0 z-0 bg-white" />
+      <div className="fixed inset-0 z-0 bg-white" />
     );
   }
 
   return (
     <>
       <div
-        className="absolute inset-0 z-0 bg-cover bg-center"
+        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${imageUrl})` }}
       />
-      <div className="absolute inset-0 z-0 bg-white/45" />
+      <div className="fixed inset-0 z-0 bg-white/65" />
     </>
   );
 }
