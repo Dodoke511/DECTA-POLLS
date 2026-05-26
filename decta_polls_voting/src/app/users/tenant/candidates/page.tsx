@@ -215,13 +215,13 @@ export default function TenantCandidatesPage() {
   });
 
   // Phase-dependent flags
-  const isFilingPhase = currentPhaseType === 'filing';
+  const isFilingPhase = currentPhaseType === 'filing' && tenantSubscription !== 'BASIC';
   const isScreeningPhase = currentPhaseType === 'screening';
-  const isAppealPhase = currentPhaseType === 'appeal';
-  const isReadOnly = currentPhaseType === 'voting' || currentPhaseType === 'results';
-  const isTransitionPending = phaseStatus === 'for_transition';
+  const isAppealPhase = currentPhaseType === 'appeal' && tenantSubscription !== 'BASIC';
+  const isReadOnly = (currentPhaseType === 'voting' || currentPhaseType === 'results') && tenantSubscription !== 'BASIC';
+  const isTransitionPending = phaseStatus === 'for_transition' && tenantSubscription !== 'BASIC';
 
-  const canModifyStatus = (!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly && !isFilingPhase;
+  const canModifyStatus = tenantSubscription === 'BASIC' || ((!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly && !isFilingPhase);
 
   // Allow tenant admins to act on candidates returned to PENDING_VERIFICATION
   // by the appeal workflow even during the appeal phase. This keeps the

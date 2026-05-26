@@ -8,7 +8,7 @@ import { PipelineBuilder } from '@/components/tenant_admin/election_workflow/Pip
 import { ElectionInterfaceTab } from '@/components/tenant_admin/election_workflow/ElectionInterfaceTab';
 import { AppealsModule as AppealsListingModule } from '@/components/tenant_admin/election_workflow/modules/AppealsListingModule';
 import { PermissionProvider } from '@/components/providers/PermissionProvider';
-import { canUseInterfaceBuilder, normalizeSubscription, type SubscriptionTier } from '@/lib/subscription-limits';
+import { canUseAppeals, canUseInterfaceBuilder, normalizeSubscription, type SubscriptionTier } from '@/lib/subscription-limits';
 
 export default function ElectionWorkflowPage() {
   const router = useRouter();
@@ -55,7 +55,11 @@ export default function ElectionWorkflowPage() {
           const normalizedSub = normalizeSubscription(fetchedSub);
           setSubscription(normalizedSub);
           console.log(normalizedSub);
-          if (!canUseInterfaceBuilder(normalizedSub)) setActiveTab('workflow');
+          if (tab === 'interface' && !canUseInterfaceBuilder(normalizedSub)) {
+            setActiveTab('workflow');
+          } else if (tab === 'appeals' && !canUseAppeals(normalizedSub)) {
+            setActiveTab('workflow');
+          }
         }
       } catch (err) {
         console.error('Status fetch error:', err);
@@ -82,8 +86,10 @@ export default function ElectionWorkflowPage() {
   }
 
   const canUseInterface = canUseInterfaceBuilder(subscription);
+  const canAppeals = canUseAppeals(subscription);
   const handleTabChange = (tab: 'workflow' | 'appeals' | 'interface') => {
     if (tab === 'interface' && !canUseInterface) return;
+    if (tab === 'appeals' && !canAppeals) return;
     setActiveTab(tab);
   };
 
@@ -96,7 +102,13 @@ export default function ElectionWorkflowPage() {
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#6648EB] rounded-full blur-[160px] opacity-[0.07] pointer-events-none" />
 
         <WorkflowHeader electionTitle={electionTitle} banner={banner} electionId={electionId} />
-        <WorkflowTabs activeTab={activeTab} onTabChange={handleTabChange} isAppealsVisible={status === 'ACTIVE'} canUseInterface={canUseInterface} />
+        <WorkflowTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          isAppealsVisible={status === 'ACTIVE' && canAppeals}
+          canUseInterface={canUseInterface}
+          isInterfaceVisible={canAppeals}
+        />
 
         <main className="flex-1 overflow-y-auto no-scrollbar px-6 pb-12">
           {activeTab === 'workflow' && (
@@ -105,7 +117,7 @@ export default function ElectionWorkflowPage() {
           {activeTab === 'interface' && canUseInterface && (
             <ElectionInterfaceTab electionId={electionId} />
           )}
-          {activeTab === 'appeals' && (
+          {activeTab === 'appeals' && canAppeals && (
             <AppealsListingModule electionId={electionId} />
           )}
         </main>

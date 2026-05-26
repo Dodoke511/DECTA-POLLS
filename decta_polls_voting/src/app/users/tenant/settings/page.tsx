@@ -340,6 +340,7 @@ export default function TenantSettingsPage() {
                       brandingColorSecondary={brandingColorSecondary} setBrandingColorSecondary={setBrandingColorSecondary}
                       brandingColorThird={brandingColorThird} setBrandingColorThird={setBrandingColorThird}
                       activeTriggers={activeTriggers} setActiveTriggers={setActiveTriggers}
+                      subscriptionPlan={subscriptionPlan}
                     />
                     <div className="mt-8 flex justify-end border-t border-white/[0.10] pt-6">
                       <button

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
+import { canUseAppeals, normalizeSubscription } from '@/lib/subscription-limits';
 import {
   isPhaseActive,
   isPhaseReachable,
@@ -169,8 +170,17 @@ export default function CandidateDashboardPage() {
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab') as TabId | null;
-    setActiveTab(requestedTab && VALID_TABS.includes(requestedTab) ? requestedTab : 'candidacy');
-  }, [searchParams]);
+    const subscriptionTier = normalizeSubscription(tenant.subscription as string | null);
+    const appealsAllowed = canUseAppeals(subscriptionTier);
+
+    let finalTab: TabId = requestedTab && VALID_TABS.includes(requestedTab) ? requestedTab : 'candidacy';
+    if (finalTab === 'appeals' && !appealsAllowed) {
+      finalTab = 'candidacy';
+    } else if (finalTab === 'candidates' && subscriptionTier !== 'ENTERPRISE') {
+      finalTab = 'candidacy';
+    }
+    setActiveTab(finalTab);
+  }, [searchParams, tenant.subscription]);
 
   // ── Guard & initial load ───────────────────────────────────────────────────
 
@@ -569,6 +579,10 @@ export default function CandidateDashboardPage() {
         {(() => {
           if (!candidate) return null;
           if (hasPendingAppeal) return null;
+
+          const subscriptionTier = normalizeSubscription(tenant.subscription as string | null);
+          const appealsAllowed = canUseAppeals(subscriptionTier);
+          if (!appealsAllowed) return null;
 
           const s = candidate.status;
           if (s === 'PENDING_VERIFICATION' || s === 'DRAFT' || s === 'DISQUALIFIED') return null;

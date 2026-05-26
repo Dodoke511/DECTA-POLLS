@@ -9,6 +9,7 @@ import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { createClient } from '@supabase/supabase-js';
 import { isPhaseActive } from '@/lib/public-election/phase-utils';
 import NotificationBell from '../notifications/NotificationBell';
+import { canUseAppeals, normalizeSubscription } from '@/lib/subscription-limits';
 
 export function PublicElectionHeader() {
   const { tenant, election, siteConfig, userContext, basePath, phases } = useElectionPublic();
@@ -35,6 +36,11 @@ export function PublicElectionHeader() {
 
   const logoSrc = siteConfig?.logo_url_override || tenant.logo_url;
   const title = siteConfig?.public_title || election.title;
+  const subscriptionTier = normalizeSubscription(tenant.subscription as string | null);
+  const appealsAllowed = canUseAppeals(subscriptionTier);
+
+  // Voter nav — BASIC: Home, Candidates, Vote, Results
+  // STANDARD/ENTERPRISE: same (voters don't have an appeals page)
   const voterNavItems = [
     {
       label: 'Home',
@@ -57,6 +63,11 @@ export function PublicElectionHeader() {
       icon: BarChart3,
     },
   ];
+
+  // Candidate nav filtered by subscription tier:
+  // BASIC:      Home, Candidacy, Vote Now, Results
+  // STANDARD:   Home, Candidacy, Appeals, Vote Now, Results
+  // ENTERPRISE: Home, Candidacy, Appeals, Candidates, Vote Now, Results
   const candidateNavItems = [
     {
       label: 'Home Page',
@@ -68,16 +79,16 @@ export function PublicElectionHeader() {
       href: `${basePath}/candidate-dashboard?tab=candidacy`,
       icon: FileText,
     },
-    {
+    ...(appealsAllowed ? [{
       label: 'Appeals Page',
       href: `${basePath}/candidate-dashboard?tab=appeals`,
       icon: Scale,
-    },
-    {
+    }] : []),
+    ...(subscriptionTier === 'ENTERPRISE' ? [{
       label: 'Candidates Page',
       href: `${basePath}/candidates`,
       icon: UsersRound,
-    },
+    }] : []),
     {
       label: 'Vote Now',
       href: `${basePath}/vote`,
