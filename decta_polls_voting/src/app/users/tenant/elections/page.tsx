@@ -133,16 +133,11 @@ export default function TenantElectionsPage() {
 
 
   const activeElections = elections.filter(e => ['DRAFT', 'PUBLISHED', 'ACTIVE'].includes(e.status));
-  const completedElections = elections.filter(e => e.status === 'COMPLETED');
+  const completedElections = elections.filter(e => ['COMPLETED', 'FAILED'].includes(e.status));
 
   // Helper functions for subscription limits
   const getActiveElectionsLimit = () => {
-    switch (subscription) {
-      case 'BASIC': return 1;
-      case 'STANDARD': return 3;
-      case 'ENTERPRISE': return 5;
-      default: return 1;
-    }
+    return 1; // Strict 1 active election limit across all tiers
   };
 
   const getTotalElectionsLimit = () => {
@@ -462,19 +457,58 @@ export default function TenantElectionsPage() {
                   {completedElections.map((election) => (
                     <div key={election.id} className="flex flex-col gap-4">
                       <div
-                        onClick={() => handleElectionCreated(election.id, token, election.title, election.banner)}
+                        onClick={() => {
+                          const tok = sessionStorage.getItem('tenantToken');
+                          router.push(`/users/tenant/elections/${election.id}/results?role=tenant&random=${tok}`);
+                        }}
                         className="aspect-square w-full rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all group shadow-2xl backdrop-blur-md cursor-pointer relative overflow-hidden"
                       >
                         {election.banner ? (
                           <img src={election.banner} alt={election.title} className="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
                         ) : (
                           <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                            <span className="text-white/10 text-xs font-bold uppercase tracking-widest">Completed</span>
+                            <span className="text-white/10 text-xs font-bold uppercase tracking-widest">{election.status}</span>
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
-                        <div className="absolute bottom-4 left-4">
-                          <span className="bg-white/10 text-white/50 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md border border-white/10">Finished</span>
+                        
+                        {/* Quick Actions (Go to Site / Copy) for Past Elections */}
+                        <div className="absolute top-4 right-4 flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`/${tenantSlug}/${election.slug}`, '_blank');
+                            }}
+                            className="grid h-9 w-9 place-items-center rounded-lg border border-white/25 bg-white/15 text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/25 hover:shadow-[0_12px_30px_rgba(93,68,248,0.28)]"
+                            title="Go to public site"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(election.slug, election.id);
+                            }}
+                            className="relative grid h-9 w-9 place-items-center rounded-lg border border-white/20 bg-black/30 text-white/90 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/20 hover:text-white"
+                            title="Copy public link"
+                          >
+                            {copiedId === election.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <LinkIcon className="w-3.5 h-3.5" />}
+                            {copiedId === election.id && (
+                              <span className="absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-emerald-500 text-white text-[10px] font-bold rounded shadow-lg whitespace-nowrap">
+                                Copied!
+                              </span>
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="absolute bottom-4 left-4 z-10">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md border ${
+                            election.status === 'COMPLETED' 
+                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                              : 'bg-red-500/20 text-red-400 border-red-500/30'
+                          }`}>
+                            {election.status === 'COMPLETED' ? 'Completed' : 'Failed'}
+                          </span>
                         </div>
                       </div>
                       <span className="text-xl font-bold text-white/40">{election.title}</span>

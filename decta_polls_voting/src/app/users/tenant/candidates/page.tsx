@@ -221,7 +221,7 @@ export default function TenantCandidatesPage() {
   const isReadOnly = currentPhaseType === 'voting' || currentPhaseType === 'results';
   const isTransitionPending = phaseStatus === 'for_transition';
 
-  const canModifyStatus = (!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly;
+  const canModifyStatus = (!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly && !isFilingPhase;
 
   // Allow tenant admins to act on candidates returned to PENDING_VERIFICATION
   // by the appeal workflow even during the appeal phase. This keeps the
@@ -586,6 +586,7 @@ export default function TenantCandidatesPage() {
         onRejectTrigger={setRejectTarget}
         subscription={tenantSubscription}
         isScreeningEnabled={isScreeningEnabled}
+        currentPhaseType={currentPhaseType}
       />
     </div>
   );

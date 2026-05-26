@@ -3822,6 +3822,67 @@ input[type="date"] {
   position: relative;
 }
 
+/* Dashboard overview — full-width row */
+.dashboard-overview-row {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+@media (min-width: 768px) {
+  .dashboard-overview-row {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-overview-row {
+    flex-direction: column;
+  }
+}
+
+.dashboard-overview-subscription {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 360px;
+}
+
+@media (min-width: 768px) {
+  .dashboard-overview-subscription {
+    width: 320px;
+    min-width: 320px;
+  }
+}
+
+/* Dashboard overview — stats row fills remaining width */
+.dashboard-overview-stats {
+  display: flex;
+  flex: 1 1 0%;
+  width: 100%;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.dashboard-overview-stats > article {
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .dashboard-overview-stats {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-overview-stats {
+    flex-direction: column;
+  }
+}
+
 .super-admin-card.stat-card::before {
   content: '';
   position: absolute;

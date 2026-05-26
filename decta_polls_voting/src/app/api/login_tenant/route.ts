@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import {
+  clearLoginAttempts,
+  isLoginBlocked,
+  loadGlobalSettingsFromDb,
+  recordFailedLoginAttempt,
+  registerSingleDeviceSession,
+} from '@/lib/security';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for login_tenant route when login_attempts uses RLS.');
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -10,6 +20,22 @@ export async function POST(request: Request) {
     const { email: rawEmail, password } = await request.json();
     const email = rawEmail.trim().toLowerCase();
     try {
+        const settings = await loadGlobalSettingsFromDb(supabase);
+        const securitySettings = settings.security;
+
+        const blockedState = await isLoginBlocked(email, supabase);
+        if (blockedState.blocked) {
+            const retryAfterSeconds = blockedState.lockedUntil
+                ? Math.max(0, Math.ceil((new Date(blockedState.lockedUntil).getTime() - Date.now()) / 1000))
+                : 0;
+
+            return NextResponse.json({
+                error: `Too many failed login attempts. Try again after ${retryAfterSeconds} seconds.`,
+                lockedUntil: blockedState.lockedUntil,
+                retryAfterSeconds,
+            }, { status: 429 });
+        }
+
         // First check if we have an existing session
         const { data: { session } } = await supabase.auth.getSession();
 
@@ -24,7 +50,15 @@ export async function POST(request: Request) {
         });
 
         if (error) {
-            throw error;
+            const failure = await recordFailedLoginAttempt(email, securitySettings.max_login_attempts, securitySettings.lockout_seconds, supabase);
+            const retryAfterSeconds = failure.lockedUntil
+                ? Math.max(0, Math.ceil((new Date(failure.lockedUntil).getTime() - Date.now()) / 1000))
+                : 0;
+            return NextResponse.json({
+                error: failure.blocked ? `Too many failed login attempts. Try again later.` : 'Invalid email or password',
+                lockedUntil: failure.lockedUntil,
+                retryAfterSeconds,
+            }, { status: failure.blocked ? 429 : 401 });
         }
 
         // Retrieve the tenant from the 'tenant users' table using the authenticated user id.
@@ -55,6 +89,21 @@ export async function POST(request: Request) {
             return NextResponse.json({ 
                 error: `Your tenant account is ${tenantStatus}. Please contact support.` 
             }, { status: 403 });
+        }
+
+        await clearLoginAttempts(email, supabase);
+        const sessionExpiration = new Date(Date.now() + securitySettings.session_timeout * 60 * 1000).toISOString();
+        const sessionRegistration = await registerSingleDeviceSession(
+            data.user.id,
+            data.session?.access_token || '',
+            'tenant-login',
+            sessionExpiration,
+            supabase
+        );
+
+        if (!sessionRegistration.success) {
+            await supabase.auth.signOut();
+            return NextResponse.json({ error: sessionRegistration.reason || 'An active session already exists for this account.' }, { status: 409 });
         }
 
         return NextResponse.json({

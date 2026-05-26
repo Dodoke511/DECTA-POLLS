@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { Session, createClient } from '@supabase/supabase-js';
+import { DEFAULT_SECURITY_SETTINGS, validatePassword } from '@/lib/security';
 
 interface Props {
   onBack: () => void;
@@ -65,6 +66,14 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
   const [returningVoterMode, setReturningVoterMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cooldownSecondsLeft, setCooldownSecondsLeft] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [securitySettings, setSecuritySettings] = useState(DEFAULT_SECURITY_SETTINGS);
+
+  const newPasswordPolicy = useMemo(
+    () => validatePassword(newPassword, securitySettings),
+    [newPassword, securitySettings]
+  );
 
   const getErrorMessage = (err: unknown) => err instanceof Error ? err.message : 'Something went wrong';
 
@@ -91,6 +100,56 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
     }
   };
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/super_admin/settings');
+        if (!res.ok) return;
+        const { settings } = await res.json();
+        if (settings?.security) {
+          setSecuritySettings({ ...DEFAULT_SECURITY_SETTINGS, ...settings.security });
+        }
+      } catch (err) {
+        console.warn('[ElectionLoginFlow] failed to load security settings', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  useEffect(() => {
+    if (cooldownRef.current) {
+      clearInterval(cooldownRef.current);
+      cooldownRef.current = null;
+    }
+    if (cooldownSecondsLeft > 0) {
+      cooldownRef.current = setInterval(() => {
+        setCooldownSecondsLeft((previous) => {
+          if (previous <= 1) {
+            if (cooldownRef.current) {
+              clearInterval(cooldownRef.current);
+              cooldownRef.current = null;
+            }
+            return 0;
+          }
+          return previous - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (cooldownRef.current) {
+        clearInterval(cooldownRef.current);
+        cooldownRef.current = null;
+      }
+    };
+  }, [cooldownSecondsLeft]);
+
+  useEffect(() => {
+    if (cooldownSecondsLeft === 0 && error.toLowerCase().includes('too many failed login attempts')) {
+      setError('');
+    }
+  }, [cooldownSecondsLeft, error]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -111,7 +170,20 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
         throw new Error(`Server error (${res.status}): Expected JSON but received HTML. The API route might not be registered. Try restarting the dev server.`);
       }
 
-      if (!res.ok) throw new Error(data.error || 'Login failed');
+      if (!res.ok) {
+        if (typeof data.retryAfterSeconds === 'number' && data.retryAfterSeconds > 0) {
+          setCooldownSecondsLeft(data.retryAfterSeconds);
+        } else if (data.lockedUntil) {
+          const retryAfterSeconds = Math.max(
+            0,
+            Math.ceil((new Date(data.lockedUntil).getTime() - Date.now()) / 1000)
+          );
+          if (retryAfterSeconds > 0) setCooldownSecondsLeft(retryAfterSeconds);
+        }
+        throw new Error(data.error || 'Login failed');
+      }
+
+      setCooldownSecondsLeft(0);
 
       if (data.requiresPasswordChange) {
         setPendingSession(data.session);
@@ -150,6 +222,10 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
 
       if (newPassword === '12345') {
         throw new Error('Choose a new password different from the temporary password.');
+      }
+
+      if (!newPasswordPolicy.valid) {
+        throw new Error(newPasswordPolicy.errors[0] || 'Please choose a stronger password.');
       }
 
       const supabase = getSupabaseClient();
@@ -241,17 +317,39 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
           </>
         ) : (
           <>
-            <PasswordField
-              placeholder="New Password"
-              minLength={6}
-              value={newPassword}
-              onChange={setNewPassword}
-              visible={showNewPassword}
-              onToggleVisible={() => setShowNewPassword(value => !value)}
-            />
+            <div className="group relative">
+              <PasswordField
+                placeholder="New Password"
+                minLength={securitySettings.min_password_length}
+                value={newPassword}
+                onChange={setNewPassword}
+                visible={showNewPassword}
+                onToggleVisible={() => setShowNewPassword(value => !value)}
+              />
+              <div className="absolute bottom-full left-0 mb-2 z-50 w-[240px] rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-md p-4 shadow-xl pointer-events-none opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+                <p className="font-semibold mb-2 text-xs text-slate-700">Password Requirements</p>
+                <ul className="space-y-1 text-xs">
+                  <li className={newPasswordPolicy.checks.length ? 'text-emerald-600' : 'text-red-500'}>
+                    • At least {securitySettings.min_password_length} characters
+                  </li>
+                  <li className={newPasswordPolicy.checks.uppercase ? 'text-emerald-600' : 'text-red-500'}>
+                    • One uppercase letter (A–Z)
+                  </li>
+                  <li className={newPasswordPolicy.checks.lowercase ? 'text-emerald-600' : 'text-red-500'}>
+                    • One lowercase letter (a–z)
+                  </li>
+                  <li className={newPasswordPolicy.checks.number ? 'text-emerald-600' : 'text-red-500'}>
+                    • One number (0–9)
+                  </li>
+                  <li className={newPasswordPolicy.checks.special ? 'text-emerald-600' : 'text-red-500'}>
+                    • One special character ({securitySettings.allowed_special_chars})
+                  </li>
+                </ul>
+              </div>
+            </div>
             <PasswordField
               placeholder="Confirm New Password"
-              minLength={6}
+              minLength={securitySettings.min_password_length}
               value={confirmPassword}
               onChange={setConfirmPassword}
               visible={showConfirmPassword}
@@ -260,9 +358,19 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
           </>
         )}
 
-        <button type="submit" disabled={loading} className="w-full bg-[var(--tenant-primary)] hover:bg-[var(--tenant-primary)]/90 text-slate-950 font-bold py-3 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center gap-2">
+        <button
+          type="submit"
+          disabled={loading || cooldownSecondsLeft > 0}
+          className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center disabled:cursor-not-allowed disabled:opacity-60"
+        >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : requiresPasswordChange ? 'Change Password and Continue' : 'Log In securely'}
         </button>
+
+        {cooldownSecondsLeft > 0 && (
+          <div className="text-sm text-center text-slate-500">
+            Too many failed login attempts. Please try again in {cooldownSecondsLeft} second{cooldownSecondsLeft === 1 ? '' : 's'}.
+          </div>
+        )}
 
         {role === 'Voter' && !requiresPasswordChange && (
           <div className="pt-1 text-center text-sm text-slate-500">

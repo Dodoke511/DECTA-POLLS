@@ -37,10 +37,12 @@ export async function GET(request: Request) {
         id,
         status,
         filedDate,
-        election:electionID!inner ( id, title, tenantID ),
+        political_party,
+        election:electionID!inner ( id, title, tenantID, status ),
         user:userID!inner ( id, first_name, surname, email )
       `)
       .eq('election.tenantID', tenantId)
+      .eq('election.status', 'ACTIVE')
       .order('filedDate', { ascending: false });
 
     if (fetchError) {

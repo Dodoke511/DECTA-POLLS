@@ -10,8 +10,10 @@ export function GlobalConfiguration() {
     security: {
       session_timeout: "60",
       min_password_length: "12",
+      max_password_length: "64",
+      allowed_special_chars: "!@#$%^&*()",
       max_login_attempts: "5",
-      action_lockout_hours: "1",
+      lockout_seconds: "30",
       enable_password_expiry: true
     },
     retention: {
@@ -124,11 +126,33 @@ export function GlobalConfiguration() {
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-semibold text-white/70">Session Timeout (minutes)</label>
+              <label className="mb-2 block text-sm font-semibold text-white/70">Maximum Password Length</label>
               <input
                 type="text"
-                value={settings.security?.session_timeout || ""}
-                onChange={e => updateNested('security', 'session_timeout', e.target.value)}
+                value={settings.security?.max_password_length || ""}
+                onChange={e => updateNested('security', 'max_password_length', e.target.value)}
+                className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
+                style={{ color: '#f1f0f3' }}
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-white/70">Allowed Special Characters</label>
+              <input
+                type="text"
+                value={settings.security?.allowed_special_chars || ""}
+                onChange={e => updateNested('security', 'allowed_special_chars', e.target.value)}
+                className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
+                style={{ color: '#f1f0f3' }}
+                placeholder="!@#$%^&*()"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-white/70">Login Cooldown (seconds)</label>
+              <input
+                type="text"
+                value={settings.security?.lockout_seconds || ""}
+                onChange={e => updateNested('security', 'lockout_seconds', e.target.value)}
                 className="w-full h-11 rounded-xl border border-white/[0.15] bg-white/[0.05] px-4 text-sm placeholder-white/20 focus:border-white/30 focus:outline-none transition-colors"
                 style={{ color: '#f1f0f3' }}
               />

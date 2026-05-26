@@ -8,6 +8,7 @@ import { BarChart3, CheckSquare, FileText, Home, Loader2, LogOut, Scale, UsersRo
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { createClient } from '@supabase/supabase-js';
 import { isPhaseActive } from '@/lib/public-election/phase-utils';
+import NotificationBell from '../notifications/NotificationBell';
 
 export function PublicElectionHeader() {
   const { tenant, election, siteConfig, userContext, basePath, phases } = useElectionPublic();
@@ -185,6 +186,10 @@ export function PublicElectionHeader() {
                 {userContext.isCandidate && (
                   renderIconNav(candidateNavItems, 'Candidate navigation')
                 )}
+
+                <div className="mx-1 shrink-0">
+                  <NotificationBell electionId={election.id} />
+                </div>
 
                 <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2 py-2 shadow-sm backdrop-blur-md">
                   <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white">

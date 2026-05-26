@@ -145,7 +145,7 @@ export async function GET(
       enable_profile_pages: false,
     };
 
-    const [{ data: fields }, { data: sectionsData }, { data: documents }, { data: approvedCandidates }, { data: voteTallies }] =
+    const [{ data: fields }, { data: sectionsData }, { data: documents }, { data: approvedCandidates }, { data: voteTallies }, { data: positions }] =
       await Promise.all([
         supabase
           .from('form field')
@@ -164,14 +164,18 @@ export async function GET(
           .order('order_index', { ascending: true }),
         supabase
           .from('candidate')
-          .select('id, status, filedDate, userID')
+          .select('id, status, filedDate, userID, political_party')
           .eq('electionID', electionId)
           .eq('status', 'APPROVED')
           .order('filedDate', { ascending: true }),
         supabase
           .from('vote_tallies')
           .select('candidate_id, vote_count')
-          .eq('election_id', electionId)
+          .eq('election_id', electionId),
+        supabase
+          .from('positions')
+          .select('id, title, order_index')
+          .eq('electionID', electionId)
       ]);
 
     const candidates = approvedCandidates || [];
@@ -241,6 +245,8 @@ export async function GET(
       positionField?.id,
     ].filter(Boolean));
 
+    const positionTitleToIndex = new Map((positions || []).map(p => [(p.title || '').toLowerCase().trim(), p.order_index ?? 9999]));
+
     const publicCandidates = candidates.map(candidate => {
       const user = userById.get(candidate.userID);
       const response = responseByUserId.get(candidate.userID);
@@ -251,12 +257,17 @@ export async function GET(
         ? fileFields.map(field => values.get(field.id) || '').find(value => value && isImageUrl(value)) || null
         : null;
 
+      const positionName = positionField ? values.get(positionField.id) || null : null;
+      const positionOrderIndex = positionName ? positionTitleToIndex.get(positionName.toLowerCase().trim()) ?? 9999 : 9999;
+
       return {
         id: candidate.id,
         filedDate: candidate.filedDate,
         name: configuredName || fallbackName,
         voteCount: tallyByCandidateId.get(candidate.id) || 0,
-        position: positionField ? values.get(positionField.id) || null : null,
+        position: positionName,
+        _positionOrderIndex: positionOrderIndex,
+        political_party: candidate.political_party || 'INDEPENDENT',
         photoUrl,
         header: {
           department: headerMap.department ? values.get(headerMap.department) || null : null,
@@ -322,6 +333,15 @@ export async function GET(
       };
     });
 
+    publicCandidates.sort((a, b) => {
+      if (a._positionOrderIndex !== b._positionOrderIndex) {
+        return a._positionOrderIndex - b._positionOrderIndex;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    const finalCandidates = publicCandidates.map(({ _positionOrderIndex, ...rest }) => rest);
+
     return NextResponse.json({
       config: {
         layout_style: listingConfig.layout_style,
@@ -331,7 +351,7 @@ export async function GET(
       },
       sections: visibleSections,
       documents: visibleDocuments,
-      candidates: publicCandidates,
+      candidates: finalCandidates,
       isConfigured: Boolean(config),
     });
   } catch (err: unknown) {

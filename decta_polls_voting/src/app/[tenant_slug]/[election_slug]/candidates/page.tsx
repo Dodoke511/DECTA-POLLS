@@ -31,6 +31,7 @@ interface PublishedCandidate {
   filedDate?: string | null;
   name: string;
   position?: string | null;
+  political_party?: string | null;
   photoUrl?: string | null;
   header: {
     department?: string | null;

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { RiImageAddLine, RiFileUploadLine, RiCheckLine } from "react-icons/ri";
+import { DEFAULT_SECURITY_SETTINGS, getPasswordStrength, validatePassword } from '@/lib/security';
 
 // Added interface to handle the navigation back to plans
 interface RegisterOrganizationProps {
@@ -26,6 +27,8 @@ export default function RegisterOrganization({ plan, onBack, onContinue }: Regis
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordHelpVisible, setPasswordHelpVisible] = useState(false);
+  const [securitySettings, setSecuritySettings] = useState(DEFAULT_SECURITY_SETTINGS);
 
   const isFormValid =
     organizationName &&
@@ -55,19 +58,45 @@ export default function RegisterOrganization({ plan, onBack, onContinue }: Regis
     setVerificationFile(file);
   };
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/super_admin/settings');
+        const json = await response.json();
+        if (response.ok && json.settings?.security) {
+          setSecuritySettings((prev) => ({
+            ...prev,
+            ...json.settings.security,
+          }));
+        }
+      } catch (err) {
+        console.warn('[RegisterOrganization] Failed to load security settings.', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const passwordPolicy = useMemo(() => validatePassword(password, securitySettings), [password, securitySettings]);
+  const strength = useMemo(() => getPasswordStrength(password, securitySettings), [password, securitySettings]);
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
+
+    if (!passwordPolicy.valid) {
+      setError(passwordPolicy.errors[0] || 'Please enter a valid password.');
+      return;
+    }
+
     if (!isFormValid) {
       setError('Please fill in all the required fields with the appropriate information');
       return;
     }
-    else {
-      setError('');
-    }
+
+    setError('');
 
     const payload = {
       organizationName,
@@ -276,59 +305,103 @@ export default function RegisterOrganization({ plan, onBack, onContinue }: Regis
 
               {/* Password and Confirm Password - Side by Side */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="relative">
-                  <input
-                    required
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password"
-                    className="w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 pr-12 text-white outline-none transition focus:border-[#5D44F8] font-source-sans"
-                  />
-                  <button
-                    type="button"
-                    onMouseDown={() => setShowPassword(true)}
-                    onMouseUp={() => setShowPassword(false)}
-                    onMouseLeave={() => setShowPassword(false)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors p-1"
-                  >
-                    {showPassword ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.99902 3L20.999 21M9.8433 9.91364C9.32066 10.4536 8.99902 11.1892 8.99902 12C8.99902 13.6569 10.3422 15 11.999 15C12.8215 15 13.5667 14.669 14.1086 14.133M6.49902 6.64715C4.59972 7.90034 3.15305 9.78394 2.45703 12C3.73128 16.0571 7.52159 19 11.9992 19C13.9881 19 15.8414 18.4194 17.3988 17.4184M10.999 5.04939C11.328 5.01673 11.6617 5 11.9992 5C16.4769 5 20.2672 7.94291 21.5414 12C21.2607 12.894 20.8577 13.7338 20.3522 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M2.458 12C3.732 7.943 7.523 5 12 5C16.478 5 20.268 7.943 21.542 12C20.268 16.057 16.478 19 12 19C7.523 19 3.732 16.057 2.458 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </button>
+                {/* Password Field Wrapper*/}
+                <div>
+                  <div className="relative flex items-center">
+                    <input
+                      required
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Password"
+                      className="w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 pr-20 text-white outline-none transition focus:border-[#5D44F8] font-source-sans"
+                    />
+
+                    {/* Eye icon — rightmost */}
+                    <button
+                      type="button"
+                      onMouseDown={() => setShowPassword(true)}
+                      onMouseUp={() => setShowPassword(false)}
+                      onMouseLeave={() => setShowPassword(false)}
+                      className="absolute right-3 flex items-center justify-center text-white/40 hover:text-white/60 transition-colors"
+                    >
+                      {showPassword ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                          <path d="M2.99902 3L20.999 21M9.8433 9.91364C9.32066 10.4536 8.99902 11.1892 8.99902 12C8.99902 13.6569 10.3422 15 11.999 15C12.8215 15 13.5667 14.669 14.1086 14.133M6.49902 6.64715C4.59972 7.90034 3.15305 9.78394 2.45703 12C3.73128 16.0571 7.52159 19 11.9992 19C13.9881 19 15.8414 18.4194 17.3988 17.4184M10.999 5.04939C11.328 5.01673 11.6617 5 11.9992 5C16.4769 5 20.2672 7.94291 21.5414 12C21.2607 12.894 20.8577 13.7338 20.3522 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                          <path d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M2.458 12C3.732 7.943 7.523 5 12 5C16.478 5 20.268 7.943 21.542 12C20.268 16.057 16.478 19 12 19C7.523 19 3.732 16.057 2.458 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </button>
+
+                    {/* ! help button — left of eye */}
+                    <div className="absolute right-10 flex items-center">
+                      <button
+                        type="button"
+                        onMouseEnter={() => setPasswordHelpVisible(true)}
+                        onMouseLeave={() => setPasswordHelpVisible(false)}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-[11px] font-bold text-white/70 hover:bg-white/25 transition-colors"
+                      >
+                        !
+                      </button>
+
+                      {/* Tooltip — floats ABOVE, overlay */}
+                      <div
+                        className={`absolute bottom-full right-0 mb-3 z-50 w-[280px] rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm shadow-2xl backdrop-blur-xl transition-all duration-200 ${
+                          passwordHelpVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-1 pointer-events-none'
+                        }`}
+                      >
+                        <p className="font-semibold text-white mb-2 text-xs">Password Requirements</p>
+                        <ul className="space-y-1 text-xs">
+                          <li className={passwordPolicy.checks.length ? 'text-emerald-300' : 'text-red-300'}>• At least {securitySettings.min_password_length} characters long</li>
+                          <li className={passwordPolicy.checks.uppercase ? 'text-emerald-300' : 'text-red-300'}>• At least One uppercase letter (A–Z)</li>
+                          <li className={passwordPolicy.checks.lowercase ? 'text-emerald-300' : 'text-red-300'}>• At least One lowercase letter (a–z)</li>
+                          <li className={passwordPolicy.checks.number ? 'text-emerald-300' : 'text-red-300'}>• At least One number (0–9)</li>
+                          <li className={passwordPolicy.checks.special ? 'text-emerald-300' : 'text-red-300'}>• At least One special character ({securitySettings.allowed_special_chars})</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Password strength bar - Kept clean outside the absolute alignment context */}
+                  <div className="mt-2">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full transition-all duration-300" style={{ width: `${strength.score}%`, background: strength.color }} />
+                    </div>
+                    <p className="mt-1 text-xs text-white/50">
+                      Strength: <span className="font-semibold" style={{ color: strength.color }}>{strength.label}</span>
+                    </p>
+                  </div>
                 </div>
 
-                <div className="relative">
+                {/* Confirm Password Field */}
+                <div className="relative flex items-center h-fit">
                   <input
                     required
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm Password"
-                    className="w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 pr-12 text-white outline-none transition focus:border-[#5D44F8] font-source-sans"
+                    className="w-full rounded-lg border border-white/30 bg-white/10 px-4 py-3 pr-10 text-white outline-none transition focus:border-[#5D44F8] font-source-sans"
                   />
                   <button
                     type="button"
                     onMouseDown={() => setShowConfirmPassword(true)}
                     onMouseUp={() => setShowConfirmPassword(false)}
                     onMouseLeave={() => setShowConfirmPassword(false)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors p-1"
+                    className="absolute right-3 flex items-center justify-center text-white/40 hover:text-white/60 transition-colors"
                   >
                     {showConfirmPassword ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.99902 3L20.999 21M9.8433 9.91364C9.32066 10.4536 8.99902 11.1892 8.99902 12C8.99902 13.6569 10.3422 15 11.999 15C12.8215 15 13.5667 14.669 14.1086 14.133M6.49902 6.64715C4.59972 7.90034 3.15305 9.78394 2.45703 12C3.73128 16.0571 7.52159 19 11.9992 19C13.9881 19 15.8414 18.4194 17.3988 17.4184M10.999 5.04939C11.328 5.01673 11.6617 5 11.9992 5C16.4769 5 20.2672 7.94291 21.5414 12C21.2607 12.894 20.8577 13.7338 20.3522 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M2.99902 3L20.999 21M9.8433 9.91364C9.32066 10.4536 8.99902 11.1892 8.99902 12C8.99902 13.6569 10.3422 15 11.999 15C12.8215 15 13.5667 14.669 14.1086 14.133M6.49902 6.64715C4.59972 7.90034 3.15305 9.78394 2.45703 12C3.73128 16.0571 7.52159 19 11.9992 19C13.9881 19 15.8414 18.4194 17.3988 17.4184M10.999 5.04939C11.328 5.01673 11.6617 5 11.9992 5C16.4769 5 20.2672 7.94291 21.5414 12C21.2607 12.894 20.8577 13.7338 20.3522 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M2.458 12C3.732 7.943 7.523 5 12 5C16.478 5 20.268 7.943 21.542 12C20.268 16.057 16.478 19 12 19C7.523 19 3.732 16.057 2.458 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2.458 12C3.732 7.943 7.523 5 12 5C16.478 5 20.268 7.943 21.542 12C20.268 16.057 16.478 19 12 19C7.523 19 3.732 16.057 2.458 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     )}
                   </button>

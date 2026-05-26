@@ -83,6 +83,7 @@ export async function GET(
         id,
         userID,
         status,
+        political_party,
         user:userID!inner ( id, first_name, surname )
       `)
       .eq('electionID', election.id)
@@ -153,7 +154,7 @@ export async function GET(
       return {
         id: c.id,
         name,
-        party_name: undefined,
+        party_name: c.political_party || 'INDEPENDENT',
         photo_url: photoUrl
       };
     });

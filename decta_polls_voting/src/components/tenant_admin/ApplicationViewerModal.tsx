@@ -12,10 +12,11 @@ interface ApplicationViewerModalProps {
   onRejectTrigger?: (candidate: any) => void;
   subscription: string;
   isScreeningEnabled: boolean;
+  currentPhaseType?: string | null;
 }
 
 export function ApplicationViewerModal({
-  isOpen, onClose, candidate, electionId, onStatusUpdate, onRejectTrigger, subscription, isScreeningEnabled
+  isOpen, onClose, candidate, electionId, onStatusUpdate, onRejectTrigger, subscription, isScreeningEnabled, currentPhaseType
 }: ApplicationViewerModalProps) {
   const [loading, setLoading] = useState(true);
   const [formFields, setFormFields] = useState<any[]>([]);
@@ -101,6 +102,8 @@ export function ApplicationViewerModal({
 
   if (!isOpen) return null;
 
+  const isScreeningOrAppeals = currentPhaseType === 'screening' || currentPhaseType === 'appeals';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
@@ -110,6 +113,13 @@ export function ApplicationViewerModal({
           <div>
             <h2 className="text-xl font-bold text-white">Application Review</h2>
             <p className="text-sm text-white/50">{candidate?.user?.first_name} {candidate?.user?.surname}</p>
+            {candidate?.political_party && (
+              <div className="mt-1">
+                <span className="text-xs text-[var(--tenant-primary)] font-semibold border border-[var(--tenant-primary)]/20 bg-[var(--tenant-primary)]/10 px-2 py-0.5 rounded-full inline-block">
+                  {candidate.political_party}
+                </span>
+              </div>
+            )}
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/60 hover:text-white">
             <X className="w-5 h-5" />
@@ -126,7 +136,7 @@ export function ApplicationViewerModal({
           ) : (
             <>
               {/* Screening Alerts */}
-              {failedRules.length > 0 && (
+              {isScreeningOrAppeals && failedRules.length > 0 && (
                 <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
                   <div className="flex items-center gap-3 mb-2">
                     <ShieldAlert className="w-5 h-5 text-red-400" />
@@ -167,12 +177,13 @@ export function ApplicationViewerModal({
                 {formFields.map(field => {
                   const valObj = responseValues.find(v => v.fieldID === field.id);
                   const isFailed = failedRules.some(r => r.logic?.fieldId === field.id);
+                  const showFailedHighlight = isScreeningOrAppeals && isFailed;
                   
                   return (
-                    <div key={field.id} className={`p-4 rounded-xl border ${isFailed ? 'bg-red-500/5 border-red-500/20' : 'bg-white/5 border-white/10'}`}>
+                    <div key={field.id} className={`p-4 rounded-xl border ${showFailedHighlight ? 'bg-red-500/5 border-red-500/20' : 'bg-white/5 border-white/10'}`}>
                       <label className="block text-sm font-bold text-white/70 mb-2 flex items-center justify-between">
                         {field.label}
-                        {isFailed && <span className="text-red-400 text-xs px-2 py-0.5 bg-red-500/10 rounded-full">Failed Requirement</span>}
+                        {showFailedHighlight && <span className="text-red-400 text-xs px-2 py-0.5 bg-red-500/10 rounded-full">Failed Requirement</span>}
                       </label>
                       
                       {field.fieldType === 'file_upload' ? (
