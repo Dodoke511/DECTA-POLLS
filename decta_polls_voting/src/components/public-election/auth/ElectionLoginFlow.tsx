@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { Session, createClient } from '@supabase/supabase-js';
@@ -66,6 +66,8 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
   const [returningVoterMode, setReturningVoterMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cooldownSecondsLeft, setCooldownSecondsLeft] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [securitySettings, setSecuritySettings] = useState(DEFAULT_SECURITY_SETTINGS);
 
   const newPasswordPolicy = useMemo(
@@ -114,6 +116,34 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
     fetchSettings();
   }, []);
 
+  useEffect(() => {
+    if (cooldownRef.current) {
+      clearInterval(cooldownRef.current);
+      cooldownRef.current = null;
+    }
+    if (cooldownSecondsLeft > 0) {
+      cooldownRef.current = setInterval(() => {
+        setCooldownSecondsLeft((previous) => {
+          if (previous <= 1) {
+            if (cooldownRef.current) {
+              clearInterval(cooldownRef.current);
+              cooldownRef.current = null;
+            }
+            return 0;
+          }
+          return previous - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (cooldownRef.current) {
+        clearInterval(cooldownRef.current);
+        cooldownRef.current = null;
+      }
+    };
+  }, [cooldownSecondsLeft]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -134,7 +164,20 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
         throw new Error(`Server error (${res.status}): Expected JSON but received HTML. The API route might not be registered. Try restarting the dev server.`);
       }
 
-      if (!res.ok) throw new Error(data.error || 'Login failed');
+      if (!res.ok) {
+        if (typeof data.retryAfterSeconds === 'number' && data.retryAfterSeconds > 0) {
+          setCooldownSecondsLeft(data.retryAfterSeconds);
+        } else if (data.lockedUntil) {
+          const retryAfterSeconds = Math.max(
+            0,
+            Math.ceil((new Date(data.lockedUntil).getTime() - Date.now()) / 1000)
+          );
+          if (retryAfterSeconds > 0) setCooldownSecondsLeft(retryAfterSeconds);
+        }
+        throw new Error(data.error || 'Login failed');
+      }
+
+      setCooldownSecondsLeft(0);
 
       if (data.requiresPasswordChange) {
         setPendingSession(data.session);
@@ -309,9 +352,19 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
           </>
         )}
 
-        <button type="submit" disabled={loading} className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center">
+        <button
+          type="submit"
+          disabled={loading || cooldownSecondsLeft > 0}
+          className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center disabled:cursor-not-allowed disabled:opacity-60"
+        >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : requiresPasswordChange ? 'Change Password and Continue' : 'Log In securely'}
         </button>
+
+        {cooldownSecondsLeft > 0 && (
+          <div className="text-sm text-center text-slate-500">
+            Too many failed login attempts. Please try again in {cooldownSecondsLeft} second{cooldownSecondsLeft === 1 ? '' : 's'}.
+          </div>
+        )}
 
         {role === 'Voter' && !requiresPasswordChange && (
           <div className="pt-1 text-center text-sm text-slate-500">

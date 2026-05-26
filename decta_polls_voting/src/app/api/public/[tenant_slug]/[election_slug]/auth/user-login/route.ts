@@ -33,9 +33,13 @@ export async function POST(
     const securitySettings = settings.security;
     const blockedState = await isLoginBlocked(email, supabaseService);
     if (blockedState.blocked) {
+      const retryAfterSeconds = blockedState.lockedUntil
+        ? Math.max(0, Math.ceil((new Date(blockedState.lockedUntil).getTime() - Date.now()) / 1000))
+        : 0;
       return NextResponse.json({
-        error: `Too many failed login attempts. Try again after ${blockedState.lockedUntil}.`,
+        error: `Too many failed login attempts. Try again after ${retryAfterSeconds} seconds.`,
         lockedUntil: blockedState.lockedUntil,
+        retryAfterSeconds,
       }, { status: 429 });
     }
 
@@ -70,9 +74,13 @@ export async function POST(
 
     if (authError || !authData.user) {
       const failure = await recordFailedLoginAttempt(email, securitySettings.max_login_attempts, securitySettings.lockout_seconds, supabaseService);
+      const retryAfterSeconds = failure.lockedUntil
+        ? Math.max(0, Math.ceil((new Date(failure.lockedUntil).getTime() - Date.now()) / 1000))
+        : 0;
       return NextResponse.json({
-        error: failure.blocked ? `Too many failed login attempts. Try again after ${failure.lockedUntil}.` : 'Invalid email or password',
+        error: failure.blocked ? `Too many failed login attempts. Try again after ${retryAfterSeconds} seconds.` : 'Invalid email or password',
         lockedUntil: failure.lockedUntil,
+        retryAfterSeconds,
       }, { status: failure.blocked ? 429 : 401 });
     }
 
