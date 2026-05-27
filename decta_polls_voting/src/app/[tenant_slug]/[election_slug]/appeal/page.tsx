@@ -518,12 +518,12 @@ export default function AppealPage() {
                         }`}>
                         {appeal.status}
                       </span>
-                      {(appeal.status === 'approved' || appeal.status === 'rejected') && appeal.decisionReason && (
+                      {(appeal.status === 'approved' || appeal.status === 'rejected') && (
                         <button
                           onClick={() => setSelectedDecisionAppeal(appeal)}
-                          className="text-sm font-bold text-[var(--tenant-primary)] hover:opacity-70 transition-opacity opacity-0 sm:opacity-0 group-hover:opacity-100 underline whitespace-nowrap"
+                          className="text-sm font-bold text-[var(--tenant-primary)] hover:opacity-70 transition-opacity underline"
                         >
-                          View Details
+                          View Response
                         </button>
                       )}
                     </div>
