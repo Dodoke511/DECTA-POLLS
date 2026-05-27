@@ -229,26 +229,76 @@ export async function POST(request: Request) {
         },
       });
 
-      if (authError || !authUser.user) {
-        errors.push({
-          email: voter.email,
-          error: authError?.message || "Failed to create auth user",
-        });
-        continue;
+      let authUserId: string | null = authUser?.user?.id ?? null;
+
+      // If createUser failed, check if it's because the email already exists
+      // in Supabase Auth globally (e.g., from a previous failed upload or another tenant).
+      // In that case, find the existing auth user's UUID and reuse it.
+      if (authError || !authUserId) {
+        const isAlreadyRegistered =
+          authError?.message?.toLowerCase().includes("already") ||
+          authError?.message?.toLowerCase().includes("registered") ||
+          authError?.status === 422;
+
+        if (isAlreadyRegistered) {
+          // Paginate through auth users to find the matching email
+          let foundId: string | null = null;
+          let page = 1;
+          const perPage = 1000;
+
+          while (!foundId) {
+            const { data: listData, error: listError } =
+              await supabase.auth.admin.listUsers({ page, perPage });
+
+            if (listError || !listData?.users?.length) break;
+
+            const match = listData.users.find(
+              (u) => u.email?.toLowerCase() === voter.email
+            );
+
+            if (match) {
+              foundId = match.id;
+              break;
+            }
+
+            // No more pages
+            if (listData.users.length < perPage) break;
+            page++;
+          }
+
+          if (foundId) {
+            authUserId = foundId;
+          } else {
+            errors.push({
+              email: voter.email,
+              error: authError?.message || "Failed to create or locate auth user",
+            });
+            continue;
+          }
+        } else {
+          errors.push({
+            email: voter.email,
+            error: authError?.message || "Failed to create auth user",
+          });
+          continue;
+        }
       }
 
       const { data: inserted, error: insertError } = await supabase
         .from("tenant users")
         .insert({
           ...voter,
-          id: authUser.user.id,
+          id: authUserId,
           user_type: "Voter",
         })
         .select()
         .single();
 
       if (insertError) {
-        await supabase.auth.admin.deleteUser(authUser.user.id);
+        // Only delete the auth user if WE just created it (not a pre-existing one)
+        if (authUser?.user?.id && authUser.user.id === authUserId) {
+          await supabase.auth.admin.deleteUser(authUserId);
+        }
         errors.push({
           email: voter.email,
           error: insertError.message,

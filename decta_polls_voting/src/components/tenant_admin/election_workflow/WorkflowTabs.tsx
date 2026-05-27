@@ -5,14 +5,25 @@ interface WorkflowTabsProps {
   onTabChange?: (tab: 'workflow' | 'appeals' | 'interface') => void;
   isAppealsVisible?: boolean;
   canUseInterface?: boolean;
+  isInterfaceVisible?: boolean;
 }
 
-export function WorkflowTabs({ activeTab = 'workflow', onTabChange, isAppealsVisible = false, canUseInterface = true }: WorkflowTabsProps) {
+export function WorkflowTabs({
+  activeTab = 'workflow',
+  onTabChange,
+  isAppealsVisible = false,
+  canUseInterface = true,
+  isInterfaceVisible = true,
+}: WorkflowTabsProps) {
   const tabs = [
     { id: 'workflow' as const, label: 'Workflow' },
     { id: 'appeals' as const, label: 'Appeals' },
     { id: 'interface' as const, label: canUseInterface ? 'Interface' : 'Interface Locked', disabled: !canUseInterface },
-  ].filter(tab => tab.id !== 'appeals' || isAppealsVisible);
+  ].filter(tab => {
+    if (tab.id === 'appeals') return isAppealsVisible;
+    if (tab.id === 'interface') return isInterfaceVisible;
+    return true;
+  });
 
   return (
     <div className="flex justify-center bg-[#140B2D]/80 backdrop-blur-md pt-2 border-b border-white/10">

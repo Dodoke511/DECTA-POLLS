@@ -31,10 +31,15 @@ export async function POST(request: Request) {
     );
 
     // To perform an upsert, we need the tenantId if it's a new record.
-    // We'll fetch it once.
+    // We'll fetch it using the admin client to bypass RLS restrictions on metadata lookup.
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     let tenantId;
     if (tenantUserId) {
-      const { data: tenantUser } = await supabase
+      const { data: tenantUser } = await supabaseAdmin
         .from('tenant users')
         .select('tenantID')
         .eq('id', tenantUserId)
@@ -44,7 +49,7 @@ export async function POST(request: Request) {
 
     if (!tenantId) {
       // Fallback: get from election table
-      const { data: election } = await supabase
+      const { data: election } = await supabaseAdmin
         .from('election')
         .select('tenantID')
         .eq('id', electionId)

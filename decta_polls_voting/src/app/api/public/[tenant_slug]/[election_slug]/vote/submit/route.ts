@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getElectionUserContext } from '@/lib/public-election/session';
 import { isPhaseActive } from '@/lib/public-election/phase-utils';
+import { triggerNotification } from '@/lib/server/notifications';
 
 export async function POST(
   request: Request,
@@ -97,6 +98,11 @@ export async function POST(
 
       return NextResponse.json({ error: 'Failed to process vote submission' }, { status: 500 });
     }
+
+    // Trigger notification asynchronously
+    triggerNotification('Vote Cast', tenant.id, election.id, {
+      voterId: userContext.userId
+    }).catch(err => console.error('[Vote Submit API] Notification trigger error:', err));
 
     return NextResponse.json({ success: true, message: 'Vote submitted successfully' });
 

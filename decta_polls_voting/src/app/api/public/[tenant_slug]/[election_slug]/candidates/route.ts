@@ -145,7 +145,7 @@ export async function GET(
       enable_profile_pages: false,
     };
 
-    const [{ data: fields }, { data: sectionsData }, { data: documents }, { data: approvedCandidates }, { data: voteTallies }] =
+    const [{ data: fields }, { data: sectionsData }, { data: documents }, { data: approvedCandidates }, { data: voteTallies }, { data: positions }] =
       await Promise.all([
         supabase
           .from('form field')
@@ -164,14 +164,18 @@ export async function GET(
           .order('order_index', { ascending: true }),
         supabase
           .from('candidate')
-          .select('id, status, filedDate, userID')
+          .select('id, status, filedDate, userID, political_party')
           .eq('electionID', electionId)
           .eq('status', 'APPROVED')
           .order('filedDate', { ascending: true }),
         supabase
           .from('vote_tallies')
           .select('candidate_id, vote_count')
-          .eq('election_id', electionId)
+          .eq('election_id', electionId),
+        supabase
+          .from('positions')
+          .select('id, title, order_index')
+          .eq('electionID', electionId)
       ]);
 
     const candidates = approvedCandidates || [];
@@ -241,6 +245,8 @@ export async function GET(
       positionField?.id,
     ].filter(Boolean));
 
+    const positionTitleToIndex = new Map((positions || []).map(p => [(p.title || '').toLowerCase().trim(), p.order_index ?? 9999]));
+
     const publicCandidates = candidates.map(candidate => {
       const user = userById.get(candidate.userID);
       const response = responseByUserId.get(candidate.userID);
@@ -251,12 +257,17 @@ export async function GET(
         ? fileFields.map(field => values.get(field.id) || '').find(value => value && isImageUrl(value)) || null
         : null;
 
+      const positionName = positionField ? values.get(positionField.id) || null : null;
+      const positionOrderIndex = positionName ? positionTitleToIndex.get(positionName.toLowerCase().trim()) ?? 9999 : 9999;
+
       return {
         id: candidate.id,
         filedDate: candidate.filedDate,
         name: configuredName || fallbackName,
         voteCount: tallyByCandidateId.get(candidate.id) || 0,
-        position: positionField ? values.get(positionField.id) || null : null,
+        position: positionName,
+        _positionOrderIndex: positionOrderIndex,
+        political_party: candidate.political_party || 'INDEPENDENT',
         photoUrl,
         header: {
           department: headerMap.department ? values.get(headerMap.department) || null : null,
@@ -269,25 +280,42 @@ export async function GET(
           label: section.label,
           displayStyle: section.display_style || 'rows',
           fields: section.listing_section_fields
-            .map((sectionField: ListingSectionField) => ({
-              label: sectionField.display_label || fieldById.get(sectionField.field_id)?.label || 'Field',
-              value: values.get(sectionField.field_id) || '',
-            }))
-            .filter((field: PublicField) => field.value),
+            .map((sectionField: ListingSectionField) => {
+              const field = fieldById.get(sectionField.field_id);
+              return {
+                label: sectionField.display_label || field?.label || 'Field',
+                value: values.get(sectionField.field_id) || '',
+                fieldType: field?.fieldType || '',
+              };
+            })
+            .filter((field: any) => field.value && field.fieldType !== 'checkbox')
+            .map((field: any) => ({
+              label: field.label,
+              value: field.value,
+            })),
           })),
           {
             id: 'all-candidate-details',
             label: 'Additional Details',
             displayStyle: 'rows',
-            fields: (fields || [])
-              .filter(field => field.fieldType !== 'file_upload')
-              .filter(field => !configuredSectionFieldIds.has(field.id))
-              .filter(field => !headerFieldIds.has(field.id))
-              .map(field => ({
-                label: field.label || 'Field',
-                value: values.get(field.id) || '',
-              }))
-              .filter(field => field.value),
+            fields: (() => {
+              const seen = new Set<string>();
+              return (fields || [])
+                .filter(field => field.fieldType !== 'file_upload' && field.fieldType !== 'checkbox')
+                .filter(field => !configuredSectionFieldIds.has(field.id))
+                .filter(field => !headerFieldIds.has(field.id))
+                .map(field => ({
+                  label: field.label || 'Field',
+                  value: values.get(field.id) || '',
+                }))
+                .filter(field => field.value)
+                .filter(item => {
+                  const key = `${item.label.trim().toLowerCase()}:${item.value.trim().toLowerCase()}`;
+                  if (seen.has(key)) return false;
+                  seen.add(key);
+                  return true;
+                });
+            })(),
           },
         ].filter(section => section.fields.length > 0),
         documents: [
@@ -305,6 +333,15 @@ export async function GET(
       };
     });
 
+    publicCandidates.sort((a, b) => {
+      if (a._positionOrderIndex !== b._positionOrderIndex) {
+        return a._positionOrderIndex - b._positionOrderIndex;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    const finalCandidates = publicCandidates.map(({ _positionOrderIndex, ...rest }) => rest);
+
     return NextResponse.json({
       config: {
         layout_style: listingConfig.layout_style,
@@ -314,7 +351,7 @@ export async function GET(
       },
       sections: visibleSections,
       documents: visibleDocuments,
-      candidates: publicCandidates,
+      candidates: finalCandidates,
       isConfigured: Boolean(config),
     });
   } catch (err: unknown) {

@@ -19,6 +19,7 @@ export interface AccountSettingProps {
     setBrandingColorSecondary: React.Dispatch<React.SetStateAction<string>>;
     setBrandingColorThird: React.Dispatch<React.SetStateAction<string>>;
     setActiveTriggers: React.Dispatch<React.SetStateAction<string[]>>;
+    subscriptionPlan?: string | null;
 }
 
 export function AccountSetting({
@@ -36,8 +37,10 @@ export function AccountSetting({
     setBrandingColorPrimary,
     setBrandingColorSecondary,
     setBrandingColorThird,
-    setActiveTriggers
+    setActiveTriggers,
+    subscriptionPlan
 }: AccountSettingProps) {
+    const isBasic = subscriptionPlan === 'BASIC';
     const toggleTrigger = (trigger: string) => {
         if (activeTriggers.includes(trigger)) {
             setActiveTriggers(activeTriggers.filter((t) => t !== trigger));
@@ -136,15 +139,23 @@ export function AccountSetting({
 
                     {/* Branding Color */}
                     <div className="flex flex-col gap-3">
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-[#D0C8FF]">
-                            Branding Color
-                        </label>
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex items-center gap-2">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-[#D0C8FF]">
+                                Branding Color
+                            </label>
+                            {isBasic && (
+                                <span className="text-[9px] font-bold bg-white/10 text-white/50 border border-white/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                                    Locked (Standard/Enterprise only)
+                                </span>
+                            )}
+                        </div>
+                        <div className={`flex flex-wrap gap-3 ${isBasic ? 'opacity-40 cursor-not-allowed pointer-events-none' : ''}`}>
                             <div className="group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
                                 <input
                                     type="color"
+                                    disabled={isBasic}
                                     value={brandingColorPrimary.startsWith('#') ? brandingColorPrimary : `#${brandingColorPrimary}`}
-                                    onChange={(e) => setBrandingColorPrimary(e.target.value)}
+                                    onChange={(e) => !isBasic && setBrandingColorPrimary(e.target.value)}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <div
@@ -158,8 +169,9 @@ export function AccountSetting({
                             <div className="group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
                                 <input
                                     type="color"
+                                    disabled={isBasic}
                                     value={brandingColorSecondary.startsWith('#') ? brandingColorSecondary : `#${brandingColorSecondary}`}
-                                    onChange={(e) => setBrandingColorSecondary(e.target.value)}
+                                    onChange={(e) => !isBasic && setBrandingColorSecondary(e.target.value)}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <div
@@ -173,8 +185,9 @@ export function AccountSetting({
                             <div className="group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
                                 <input
                                     type="color"
+                                    disabled={isBasic}
                                     value={brandingColorThird.startsWith('#') ? brandingColorThird : `#${brandingColorThird}`}
-                                    onChange={(e) => setBrandingColorThird(e.target.value)}
+                                    onChange={(e) => !isBasic && setBrandingColorThird(e.target.value)}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <div

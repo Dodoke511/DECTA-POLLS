@@ -1,30 +1,47 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { TenantAdminHeader } from "@/components/tenant_admin/Header";
 import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { useRouter } from "next/navigation";
 import {
   UserCheck, UserX, Clock, Search, Filter, CheckCircle2, XCircle,
-  FileText, Eye, ExternalLink, Loader2, ChevronDown, Info
+  FileText, Eye, ExternalLink, Loader2, Info
 } from "lucide-react";
 import { PhaseGuardBanner } from "@/components/tenant_admin/PhaseGuardBanner";
 import { PhaseStatusBadge } from "@/components/tenant_admin/PhaseStatusBadge";
 import { PhaseStatus } from "@/lib/workflow/PhaseResolverService";
-import { resolvePhaseStatusClient } from "@/lib/workflow/phase-guards";
-import { isPhaseAllowed } from "@/lib/workflow/phase-guards";
 import { ApplicationViewerModal } from "@/components/tenant_admin/ApplicationViewerModal";
 import { Undo2, AlertCircle, FileEdit } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 
+type TenantCandidate = {
+  id: string;
+  status?: string;
+  position?: string;
+  filedDate?: string;
+  electionID?: string;
+  user?: {
+    id?: string;
+    first_name?: string;
+    surname?: string;
+    email?: string;
+  };
+  election?: {
+    title?: string;
+  };
+};
+
+type TenantElection = {
+  id: string;
+  status?: string;
+};
+
 export default function TenantCandidatesPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [candidates, setCandidates] = useState<any[]>([]);
+  const [candidates, setCandidates] = useState<TenantCandidate[]>([]);
   const [filter, setFilter] = useState<'ALL' | 'PENDING_VERIFICATION' | 'APPROVED' | 'REJECTED'>('ALL');
   const [searchQuery, setSearchQuery] = useState("");
-  const [tenantId, setTenantId] = useState("");
-  const [token, setToken] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Phase-aware state
@@ -33,13 +50,13 @@ export default function TenantCandidatesPage() {
   const [electionId, setElectionId] = useState<string | null>(null);
 
   // Viewer, Subscription, and Screening state
-  const [viewerCandidate, setViewerCandidate] = useState<any>(null);
+  const [viewerCandidate, setViewerCandidate] = useState<TenantCandidate | null>(null);
   const [tenantSubscription, setTenantSubscription] = useState('BASIC');
   const [isScreeningEnabled, setIsScreeningEnabled] = useState(false);
   const [undoStack, setUndoStack] = useState<{ candidateId: string; oldStatus: string; timerId: NodeJS.Timeout }[]>([]);
 
   // Reject modal state
-  const [rejectTarget, setRejectTarget] = useState<any | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<TenantCandidate | null>(null);
   const [rejectAction, setRejectAction] = useState<'retain' | 'remove'>('retain');
   const [isRejecting, setIsRejecting] = useState(false);
 
@@ -55,14 +72,10 @@ export default function TenantCandidatesPage() {
     }
 
     const storedUserId = sessionStorage.getItem('tenantUserId') || '';
-    setTenantId(storedUserId);
-    setToken(storedToken || '');
 
     if (storedUserId) {
       fetchCandidates(storedUserId);
       fetchPhaseData(storedUserId);
-    } else {
-      setLoading(false);
     }
   }, [router]);
 
@@ -78,8 +91,6 @@ export default function TenantCandidatesPage() {
       }
     } catch (err) {
       console.error("Failed to fetch candidates:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -87,8 +98,8 @@ export default function TenantCandidatesPage() {
     try {
       const electionsRes = await authFetch(`/api/get_tenant_elections?tenantId=${tenantUserId}`);
       const electionsData = await electionsRes.json();
-      const elections = electionsData?.elections ?? [];
-      const active = elections.find((e: any) => e.status === 'ACTIVE') || null;
+      const elections: TenantElection[] = electionsData?.elections ?? [];
+      const active = elections.find((e) => e.status === 'ACTIVE') || null;
 
       if (!active) return;
       setElectionId(active.id);
@@ -204,13 +215,13 @@ export default function TenantCandidatesPage() {
   });
 
   // Phase-dependent flags
-  const isFilingPhase = currentPhaseType === 'filing';
+  const isFilingPhase = currentPhaseType === 'filing' && tenantSubscription !== 'BASIC';
   const isScreeningPhase = currentPhaseType === 'screening';
-  const isAppealPhase = currentPhaseType === 'appeal';
-  const isReadOnly = currentPhaseType === 'voting' || currentPhaseType === 'results';
-  const isTransitionPending = phaseStatus === 'for_transition';
+  const isAppealPhase = currentPhaseType === 'appeal' && tenantSubscription !== 'BASIC';
+  const isReadOnly = (currentPhaseType === 'voting' || currentPhaseType === 'results') && tenantSubscription !== 'BASIC';
+  const isTransitionPending = phaseStatus === 'for_transition' && tenantSubscription !== 'BASIC';
 
-  const canModifyStatus = (!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly;
+  const canModifyStatus = tenantSubscription === 'BASIC' || ((!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly && !isFilingPhase);
 
   // Allow tenant admins to act on candidates returned to PENDING_VERIFICATION
   // by the appeal workflow even during the appeal phase. This keeps the
@@ -221,15 +232,6 @@ export default function TenantCandidatesPage() {
   const phaseLabel = currentPhaseType
     ? currentPhaseType.charAt(0).toUpperCase() + currentPhaseType.slice(1)
     : null;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#03070f] flex flex-col items-center justify-center text-white gap-4">
-        <div className="w-12 h-12 border-4 border-[var(--tenant-primary)] border-t-transparent rounded-full animate-spin" />
-        <p className="text-white/40 font-medium tracking-widest uppercase text-xs">Synchronizing Records...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen flex-col text-[#f1f0f3]" style={{ background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)" }}>
@@ -584,6 +586,7 @@ export default function TenantCandidatesPage() {
         onRejectTrigger={setRejectTarget}
         subscription={tenantSubscription}
         isScreeningEnabled={isScreeningEnabled}
+        currentPhaseType={currentPhaseType}
       />
     </div>
   );

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { 
   BarChart3, Settings2, Eye, Lock, Download, ShieldCheck, 
-  Clock, Check, Loader2, Users, Zap, AlertCircle, Rocket
+  Clock, Check, Loader2, Users, Zap, AlertCircle, Rocket, ChevronDown
 } from 'lucide-react';
 import { ResultsConfig, PublishMode, ResultsVisibility, DownloadFormat, DownloadVisibility } from '@/lib/types/results';
 import { TenantRole } from '../PhaseCard';
@@ -26,6 +26,8 @@ export const ResultsModule = forwardRef<{ save: () => Promise<boolean> }, Result
   ({ electionId, subscription, roles, roleAssigned, onRoleChange }, ref) => {
     const [loading, setLoading] = useState(true);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+    const [activeFormatDropdown, setActiveFormatDropdown] = useState(false);
+    const [activeVisibilityDropdown, setActiveVisibilityDropdown] = useState(false);
     const [config, setConfig] = useState<ResultsConfig>({
       election_id: electionId,
       tenant_id: '',
@@ -292,28 +294,87 @@ export const ResultsModule = forwardRef<{ save: () => Promise<boolean> }, Result
 
               {config.enable_results_download && (
                 <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-300">
-                  <div>
+                  <div className="relative">
                     <label className="text-[10px] text-white/30 uppercase block mb-2">Format</label>
-                    <select
-                      value={config.download_format}
-                      onChange={(e) => updateConfig({ download_format: e.target.value as DownloadFormat })}
-                      className="w-full bg-white/5 border border-white/10 text-white/70 rounded-lg px-3 py-2 text-[12px] focus:outline-none"
+                    <button
+                      type="button"
+                      onClick={() => setActiveFormatDropdown(v => !v)}
+                      className="w-full flex items-center justify-between bg-white/5 border border-white/10 text-white/70 rounded-lg px-3 py-2 text-[12px] hover:border-white/20 transition-all cursor-pointer"
                     >
-                      <option value="pdf">PDF</option>
-                      <option value="csv">CSV</option>
-                      <option value="both">Both</option>
-                    </select>
+                      <span>
+                        {config.download_format === 'pdf' && 'PDF'}
+                        {config.download_format === 'csv' && 'CSV'}
+                        {config.download_format === 'both' && 'Both'}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+                    </button>
+                    
+                    {activeFormatDropdown && (
+                      <>
+                        {/* Click-outside backdrop to close */}
+                        <div className="fixed inset-0 z-40" onClick={() => setActiveFormatDropdown(false)} />
+                        
+                        <div className="absolute z-50 top-full left-0 w-full mt-1.5 py-1 bg-[#100821]/98 border border-white/10 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl min-w-[120px] animate-in fade-in slide-in-from-top-1 duration-150">
+                          {[
+                            { value: 'pdf', label: 'PDF' },
+                            { value: 'csv', label: 'CSV' },
+                            { value: 'both', label: 'Both' }
+                          ].map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => {
+                                updateConfig({ download_format: opt.value as DownloadFormat });
+                                setActiveFormatDropdown(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-[12px] transition-all ${config.download_format === opt.value ? 'bg-[#5B4FD9]/20 text-white font-bold' : 'text-white/70 hover:bg-[#5B4FD9]/15 hover:text-white'}`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div>
+                  <div className="relative">
                     <label className="text-[10px] text-white/30 uppercase block mb-2">Visible To</label>
-                    <select
-                      value={config.download_visibility}
-                      onChange={(e) => updateConfig({ download_visibility: e.target.value as DownloadVisibility })}
-                      className="w-full bg-white/5 border border-white/10 text-white/70 rounded-lg px-3 py-2 text-[12px] focus:outline-none"
+                    <button
+                      type="button"
+                      onClick={() => setActiveVisibilityDropdown(v => !v)}
+                      className="w-full flex items-center justify-between bg-white/5 border border-white/10 text-white/70 rounded-lg px-3 py-2 text-[12px] hover:border-white/20 transition-all cursor-pointer"
                     >
-                      <option value="public">Public</option>
-                      <option value="admin">Admins only</option>
-                    </select>
+                      <span>
+                        {config.download_visibility === 'public' && 'Public'}
+                        {config.download_visibility === 'admin' && 'Admins only'}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+                    </button>
+                    
+                    {activeVisibilityDropdown && (
+                      <>
+                        {/* Click-outside backdrop to close */}
+                        <div className="fixed inset-0 z-40" onClick={() => setActiveVisibilityDropdown(false)} />
+                        
+                        <div className="absolute z-50 top-full left-0 w-full mt-1.5 py-1 bg-[#100821]/98 border border-white/10 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl min-w-[130px] animate-in fade-in slide-in-from-top-1 duration-150">
+                          {[
+                            { value: 'public', label: 'Public' },
+                            { value: 'admin', label: 'Admins only' }
+                          ].map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => {
+                                updateConfig({ download_visibility: opt.value as DownloadVisibility });
+                                setActiveVisibilityDropdown(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-[12px] transition-all ${config.download_visibility === opt.value ? 'bg-[#5B4FD9]/20 text-white font-bold' : 'text-white/70 hover:bg-[#5B4FD9]/15 hover:text-white'}`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

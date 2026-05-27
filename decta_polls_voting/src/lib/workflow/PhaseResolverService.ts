@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { PhaseConfig } from '../types/phase';
+import { triggerNotification } from '../server/notifications';
 
 export type PhaseStatus = 'upcoming' | 'active' | 'completed' | 'for_transition';
 
@@ -225,8 +226,24 @@ export class PhaseResolverService {
   async onPhaseStarted(phase: RuntimePhase): Promise<void> {
      console.log(`[Runtime Orchestrator] Phase Started: ${phase.phase_type}`);
 
-     if (phase.phase_type === 'results') {
-       try {
+     try {
+       // Fetch the election to get tenantID
+       const { data: election, error: electionErr } = await this.supabase
+         .from('election')
+         .select('tenantID')
+         .eq('id', phase.electionID)
+         .single();
+
+       if (electionErr || !election) {
+         console.error('[PhaseResolverService] Error fetching election for tenantID:', electionErr);
+         return;
+       }
+
+       if (phase.phase_type === 'voting') {
+         await triggerNotification('Election Start', election.tenantID, phase.electionID);
+       }
+
+       if (phase.phase_type === 'results') {
          // Fetch the results config for this election
          const { data: config, error: configErr } = await this.supabase
            .from('results_config')
@@ -242,18 +259,6 @@ export class PhaseResolverService {
          // If publish mode is 'immediate', compute results and mark as published
          if (config && config.publish_mode === 'immediate') {
            console.log(`[PhaseResolverService] Immediate publish mode detected. Computing results for election ${phase.electionID}`);
-
-           // Fetch the election to get tenantID
-           const { data: election, error: electionErr } = await this.supabase
-             .from('election')
-             .select('tenantID')
-             .eq('id', phase.electionID)
-             .single();
-
-           if (electionErr || !election) {
-             console.error('[PhaseResolverService] Error fetching election for tenantID:', electionErr);
-             return;
-           }
 
            const { error: rpcError } = await this.supabase.rpc('compute_election_results', {
              p_election_id: phase.electionID,
@@ -274,16 +279,32 @@ export class PhaseResolverService {
              console.error('[PhaseResolverService] Error updating results config published_at:', updateError);
            } else {
              console.log(`[PhaseResolverService] Results computed and published successfully for election ${phase.electionID}`);
+             await triggerNotification('Results Published', election.tenantID, phase.electionID);
            }
          }
-       } catch (err) {
-         console.error('[PhaseResolverService] Exception in onPhaseStarted results handling:', err);
        }
+     } catch (err) {
+       console.error('[PhaseResolverService] Exception in onPhaseStarted handling:', err);
      }
   }
 
   async onPhaseCompleted(phase: RuntimePhase): Promise<void> {
-     // TODO: Finalize metrics, archive records, clean up phase data
      console.log(`[Runtime Orchestrator] Phase Completed: ${phase.phase_type}`);
+
+     if (phase.phase_type === 'voting') {
+       try {
+         const { data: election } = await this.supabase
+           .from('election')
+           .select('tenantID')
+           .eq('id', phase.electionID)
+           .single();
+
+         if (election) {
+           await triggerNotification('Election End', election.tenantID, phase.electionID);
+         }
+       } catch (err) {
+         console.error('[PhaseResolverService] Exception in onPhaseCompleted voting end handling:', err);
+       }
+     }
   }
 }

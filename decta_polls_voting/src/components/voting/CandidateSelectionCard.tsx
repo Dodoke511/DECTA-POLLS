@@ -60,7 +60,7 @@ export function CandidateSelectionCard({
             {name}
           </h3>
           {partyName && (
-            <p className="mt-0.5 text-xs font-bold uppercase tracking-widest text-slate-400 truncate">
+            <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-widest truncate ${partyName === 'INDEPENDENT' ? 'text-slate-400' : 'text-[var(--tenant-primary)] opacity-80'}`}>
               {partyName}
             </p>
           )}

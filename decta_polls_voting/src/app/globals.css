@@ -3849,6 +3849,18 @@ input[type="date"] {
   }
 }
 
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 /* Sidebar navigation items glassmorphism */
 .super-admin-nav-item {
   background: rgba(255, 255, 255, 0.05);
@@ -3978,18 +3990,55 @@ input[type="date"] {
 
 /* Table glassmorphism */
 .super-admin-table {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  width: 100%;
+  max-width: 100%;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.028)),
+    rgba(39, 26, 77, 0.46);
+  backdrop-filter: blur(14px) saturate(135%);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 0 4px 2px rgba(255, 255, 255, 0.2);
+    0 18px 50px rgba(0, 0, 0, 0.22),
+    0 0 34px rgba(93, 68, 248, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 22px rgba(255, 255, 255, 0.06);
   position: relative;
   overflow: hidden;
+  isolation: isolate;
+}
+
+.super-admin-table::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(208, 200, 255, 0.16), transparent 34%),
+    radial-gradient(circle at 92% 18%, rgba(93, 68, 248, 0.14), transparent 42%);
+  pointer-events: none;
+}
+
+.super-admin-table-scroll {
+  width: 100%;
+  border-radius: inherit;
+}
+
+.super-admin-table-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.super-admin-table-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.super-admin-table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(208, 200, 255, 0.35);
+  border-radius: 999px;
+  border: 2px solid rgba(39, 26, 77, 0.82);
 }
 
 /* Responsive adjustments for super admin components */
@@ -4059,12 +4108,20 @@ input.public-election-auth-input[type="text"],
 input.public-election-auth-input[type="password"],
 input.public-election-auth-input:hover,
 input.public-election-auth-input:focus,
-input.public-election-auth-input:active {
+input.public-election-auth-input:active,
+input.candidate-reg-input,
+input.candidate-reg-input[type="text"],
+input.candidate-reg-input[type="password"],
+input.candidate-reg-input[type="date"],
+input.candidate-reg-input:hover,
+input.candidate-reg-input:focus,
+input.candidate-reg-input:active {
   color: #0f172a !important;
   -webkit-text-fill-color: #0f172a !important;
 }
 
-input.public-election-auth-input::placeholder {
+input.public-election-auth-input::placeholder,
+input.candidate-reg-input::placeholder {
   color: #94a3b8 !important;
   -webkit-text-fill-color: #94a3b8 !important;
 }
@@ -4084,4 +4141,30 @@ input.public-election-auth-input:-webkit-autofill:active {
 .super-admin-button input[type="text"]:hover,
 .super-admin-button input[type="text"]:focus {
   color: #f1f0f3 !important;
+}
+
+/* Premium 3-color brand gradient button with enhanced readability */
+.btn-brand-gradient {
+  background: linear-gradient(rgba(15, 23, 42, 0.15), rgba(15, 23, 42, 0.22)), 
+              linear-gradient(to right, var(--tenant-primary), var(--tenant-third), var(--tenant-secondary)) !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 3px rgba(15, 23, 42, 0.35), 0 1px 2px rgba(15, 23, 42, 0.45) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-brand-gradient:hover {
+  background: linear-gradient(rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.14)), 
+              linear-gradient(to right, var(--tenant-primary), var(--tenant-third), var(--tenant-secondary)) !important;
+  opacity: 0.96;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25) !important;
+  transform: translateY(-0.5px);
+}
+
+.btn-brand-gradient:active {
+  background: linear-gradient(rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.35)), 
+              linear-gradient(to right, var(--tenant-primary), var(--tenant-third), var(--tenant-secondary)) !important;
+  transform: translateY(0);
+  opacity: 1;
 }

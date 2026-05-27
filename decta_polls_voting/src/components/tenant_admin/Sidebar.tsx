@@ -12,6 +12,50 @@ interface SidebarProps {
   isRestricted?: boolean;
 }
 
+type TenantNavLinkProps = {
+  href: string;
+  children: React.ReactNode;
+  path: string;
+  isRestricted: boolean;
+  getItemStyle: (path: string) => string;
+  getTextStyle: (path: string) => string;
+  getLoaderUrl: (path: string) => string;
+};
+
+function TenantNavLink({
+  href,
+  children,
+  path,
+  isRestricted,
+  getItemStyle,
+  getTextStyle,
+  getLoaderUrl,
+}: TenantNavLinkProps) {
+  const isLocked = isRestricted && path !== "/users/tenant/dashboard";
+
+  if (isLocked) {
+    return (
+      <div className="relative flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium opacity-40 cursor-not-allowed bg-black/20 border border-white/5">
+        {children}
+        <div className="absolute right-3">
+          <svg className="w-3 h-3 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={getLoaderUrl(href)}
+      className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle(path)} ${getItemStyle(path)}`}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function TenantAdminSidebar({ activePath, isRestricted = false }: SidebarProps) {
   const router = useRouter();
   const [token, setToken] = React.useState<string | null>(null);
@@ -28,7 +72,7 @@ export function TenantAdminSidebar({ activePath, isRestricted = false }: Sidebar
     // Clear permission cookies
     document.cookie = `${PERMISSIONS_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     document.cookie = `${ROLE_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-    router.push('/loader?destination=/auth/login_form');
+    router.push('/loader?destination=' + encodeURIComponent('/auth/login_form') + '&duration=700');
   };
 
   const getItemStyle = (path: string) => {
@@ -45,69 +89,40 @@ export function TenantAdminSidebar({ activePath, isRestricted = false }: Sidebar
     return `${path}?role=tenant&random=${token}`;
   };
 
+  const getLoaderUrl = (path: string) => {
+    return `/loader?destination=${encodeURIComponent(getUrlWithToken(path))}&duration=700`;
+  };
+
   return (
     <PermissionProvider>
       <SidebarInner
-        activePath={activePath}
-        token={token}
         isLoggingOut={isLoggingOut}
         isRestricted={isRestricted}
         handleLogout={handleLogout}
         getItemStyle={getItemStyle}
         getTextStyle={getTextStyle}
-        getUrlWithToken={getUrlWithToken}
+        getLoaderUrl={getLoaderUrl}
       />
     </PermissionProvider>
   );
 }
 
 function SidebarInner({
-  activePath,
-  token,
   isLoggingOut,
   isRestricted,
   handleLogout,
   getItemStyle,
   getTextStyle,
-  getUrlWithToken,
+  getLoaderUrl,
 }: {
-  activePath: string;
-  token: string | null;
   isLoggingOut: boolean;
   isRestricted: boolean;
   handleLogout: () => void;
   getItemStyle: (path: string) => string;
   getTextStyle: (path: string) => string;
-  getUrlWithToken: (path: string) => string;
+  getLoaderUrl: (path: string) => string;
 }) {
   const { canAccess, isLoaded } = usePermissions();
-
-  const RestrictedLink = ({ href, children, path }: { href: string; children: React.ReactNode; path: string }) => {
-    // Dashboard is always accessible, others are locked if restricted
-    const isLocked = isRestricted && path !== "/users/tenant/dashboard";
-    
-    if (isLocked) {
-      return (
-        <div className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium opacity-40 cursor-not-allowed bg-black/20 border border-white/5`}>
-          {children}
-          <div className="absolute right-3">
-             <svg className="w-3 h-3 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-             </svg>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <Link
-        href={getUrlWithToken(href)}
-        className={`flex w-full items-center justify-center gap-2 md:gap-3 rounded-lg px-3 md:px-4 py-3 md:py-3.5 text-xs md:text-sm font-medium transition ${getTextStyle(path)} ${getItemStyle(path)}`}
-      >
-        {children}
-      </Link>
-    );
-  };
 
   return (
     <aside className="super-admin-sidebar flex w-full shrink-0 flex-col rounded-3xl border md:w-[220px] lg:w-[260px] md:rounded-r-none py-6 md:py-8 pl-4 md:pl-5 pr-3 md:pr-4">
@@ -136,41 +151,41 @@ function SidebarInner({
 
       <div className="flex flex-1 flex-col gap-2 md:gap-2.5" role="navigation" aria-label="Main Navigation">
         {/* Dashboard — always visible */}
-        <RestrictedLink href="/users/tenant/dashboard" path="/users/tenant/dashboard">
+        <TenantNavLink href="/users/tenant/dashboard" path="/users/tenant/dashboard" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
           <IconDashboard className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
           <span className="hidden sm:inline">Dashboard</span>
-        </RestrictedLink>
+        </TenantNavLink>
 
         {/* Elections */}
         {(!isLoaded || canAccess("/users/tenant/elections")) && (
-          <RestrictedLink href="/users/tenant/elections" path="/users/tenant/elections">
+          <TenantNavLink href="/users/tenant/elections" path="/users/tenant/elections" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
             <IconElections className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
             <span className="hidden sm:inline">Elections</span>
-          </RestrictedLink>
+          </TenantNavLink>
         )}
 
         {/* Candidates */}
         {(!isLoaded || canAccess("/users/tenant/candidates")) && (
-          <RestrictedLink href="/users/tenant/candidates" path="/users/tenant/candidates">
+          <TenantNavLink href="/users/tenant/candidates" path="/users/tenant/candidates" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
             <IconCandidates className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
             <span className="hidden sm:inline">Candidates</span>
-          </RestrictedLink>
+          </TenantNavLink>
         )}
 
         {/* Voters */}
         {(!isLoaded || canAccess("/users/tenant/voters")) && (
-          <RestrictedLink href="/users/tenant/voters" path="/users/tenant/voters">
+          <TenantNavLink href="/users/tenant/voters" path="/users/tenant/voters" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
             <IconVoters className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
             <span className="hidden sm:inline">Voters</span>
-          </RestrictedLink>
+          </TenantNavLink>
         )}
 
         {/* Settings */}
         {(!isLoaded || canAccess("/users/tenant/settings")) && (
-          <RestrictedLink href="/users/tenant/settings" path="/users/tenant/settings">
+          <TenantNavLink href="/users/tenant/settings" path="/users/tenant/settings" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
             <IconSettings className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
             <span className="hidden sm:inline">Settings</span>
-          </RestrictedLink>
+          </TenantNavLink>
         )}
       </div>
 

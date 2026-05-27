@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { SuperAdminHeader } from "@/components/super_admin/Header";
 import { SuperAdminSidebar } from "@/components/super_admin/Sidebar";
@@ -8,18 +8,23 @@ import { PieChart } from '@mui/x-charts/PieChart';
 import {
   IconBallot,
   IconUsers,
-  IconPercent,
+  IconPendingApproval,
 } from "@/components/super_admin/Icons";
-import { BallotCastAsOfLine } from "@/components/super_admin/Stats";
+import {
+  CompletedElectionsAsOfLine,
+  CompletedElectionsPeriodFilter,
+  type CompletedElectionPeriod,
+} from "@/components/super_admin/Stats";
 import { useRouter } from "next/navigation";
 import type { SubscriptionTier } from "@/lib/subscription-limits";
 
 type DashboardStats = {
   subscriptionBreakdown: Record<SubscriptionTier, number>;
   totalTenants: number;
-  activeTenantRate: number;
-  totalBallotsCast: number;
-  ballotsAsOf: string;
+  pendingTenantApprovals: number;
+  completedElections: number;
+  completedElectionsPeriod: CompletedElectionPeriod;
+  statsAsOf: string;
 };
 
 const PIE_COLORS: Record<SubscriptionTier, string> = {
@@ -111,7 +116,18 @@ export default function SuperAdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [electionPeriod, setElectionPeriod] = useState<CompletedElectionPeriod>("month");
+  const [completedElectionsLoading, setCompletedElectionsLoading] = useState(false);
   const router = useRouter();
+
+  const fetchDashboardStats = useCallback(async (period: CompletedElectionPeriod) => {
+    const res = await fetch(`/api/super_admin/dashboard_stats?period=${period}`);
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || "Failed to fetch dashboard stats");
+    }
+    return json as DashboardStats;
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -126,18 +142,16 @@ export default function SuperAdminDashboardPage() {
       }
 
       try {
-        const [statsRes, tenantsRes] = await Promise.all([
-          fetch("/api/super_admin/dashboard_stats"),
+        const [statsJson, tenantsRes] = await Promise.all([
+          fetchDashboardStats("month"),
           fetch("/api/get_tenants?limit=10&activeOnly=true&sortBy=elections"),
         ]);
 
-        const statsJson = await statsRes.json();
         const json = await tenantsRes.json();
 
-        if (!statsRes.ok) throw new Error(statsJson.error || "Failed to fetch dashboard stats");
         if (!tenantsRes.ok) throw new Error(json.error || "Failed to fetch tenants");
 
-        setStats(statsJson as DashboardStats);
+        setStats(statsJson);
         setStatsLoading(false);
 
         const tenants = await Promise.all(
@@ -179,7 +193,30 @@ export default function SuperAdminDashboardPage() {
     }
 
     fetchData();
-  }, [router]);
+  }, [router, fetchDashboardStats]);
+
+  const handleElectionPeriodChange = async (period: CompletedElectionPeriod) => {
+    setElectionPeriod(period);
+    setCompletedElectionsLoading(true);
+
+    try {
+      const statsJson = await fetchDashboardStats(period);
+      setStats((prev) =>
+        prev
+          ? {
+              ...prev,
+              completedElections: statsJson.completedElections,
+              completedElectionsPeriod: statsJson.completedElectionsPeriod,
+              statsAsOf: statsJson.statsAsOf,
+            }
+          : statsJson
+      );
+    } catch {
+      // Keep previous count if refresh fails
+    } finally {
+      setCompletedElectionsLoading(false);
+    }
+  };
 
   const pieData = (() => {
     if (!stats) return [];
@@ -211,107 +248,152 @@ export default function SuperAdminDashboardPage() {
       <div className="flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6 overflow-hidden">
         <SuperAdminSidebar activePath="/users/super_admin/Dashboard" />
 
-        <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none">
-          <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Dashboard</h1>
+        <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border py-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:py-8 overflow-y-auto no-scrollbar md:rounded-l-none">
+          <div className="px-6 md:px-8">
+            <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Dashboard</h1>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)]">
-            <section className="super-admin-card stat-card rounded-[22px] border px-2 py-1.5 shadow-inner">
-              <h2 className="mb-0 text-sm font-semibold text-white/90">Subscription Rate</h2>
-              <div className="flex flex-col items-center justify-center gap-4 py-2 sm:flex-row sm:items-center sm:gap-6">
-                <div className="flex shrink-0 items-center justify-center">
-                  <PieChart
-                    series={[
-                      {
-                        data: pieData,
-                        innerRadius: '46%',
-                        outerRadius: '92%',
-                        paddingAngle: pieData.length > 1 ? 6 : 0,
-                        cornerRadius: 10,
-                      },
-                    ]}
-                    width={216}
-                    height={216}
-                    hideLegend
-                    sx={{
-                      '& .MuiPieArc-root': {
-                        stroke: 'none !important',
-                        strokeWidth: 0,
-                        filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.35))',
-                      },
-                    }}
-                  />
-                </div>
-                <ul className="flex flex-wrap justify-center gap-2 sm:flex-col sm:gap-2 sm:pl-1">
-                  {(["ENTERPRISE", "STANDARD", "BASIC"] as SubscriptionTier[]).map((tier) => (
-                    <li key={tier} className="flex items-center gap-1.5 text-xs text-white/80">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ background: PIE_COLORS[tier], boxShadow: `0 0 8px ${PIE_COLORS[tier]}99` }}
+            <div className="flex w-full flex-col gap-6">
+              <div className="flex flex-col lg:flex-row gap-6 items-stretch w-full">
+                
+                {/* Left side: Subscription Rate Donut Chart Container */}
+                <section className="super-admin-card stat-card box-border flex-1 rounded-[22px] border p-5 shadow-inner md:p-6 flex flex-col justify-center items-center min-w-0">
+                  <h2 className="mb-4 w-full text-center text-xs font-bold uppercase tracking-wider text-white/70">
+                    Subscription Rate
+                  </h2>
+                  <div className="flex flex-row items-center gap-4 sm:gap-6 justify-center w-full">
+                    {/* Fixed-size wrapper to prevent MUI Charts layout bugs */}
+                    <div className="w-[160px] h-[160px] shrink-0 flex items-center justify-center">
+                      <PieChart
+                        series={[
+                          {
+                            data: pieData,
+                            innerRadius: "46%",
+                            outerRadius: "92%",
+                            paddingAngle: pieData.length > 1 ? 6 : 0,
+                            cornerRadius: 10,
+                          },
+                        ]}
+                        width={160}
+                        height={160}
+                        hideLegend
+                        sx={{
+                          "& .MuiPieArc-root": {
+                            stroke: "none !important",
+                            strokeWidth: 0,
+                            filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.35))",
+                          },
+                        }}
                       />
-                      {PIE_LABELS[tier]}
-                      {stats && !statsLoading && (
-                        <span className="text-white/45">({stats.subscriptionBreakdown[tier]})</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </section>
+                    </div>
+                    <ul className="flex flex-col gap-2.5">
+                      {(["ENTERPRISE", "STANDARD", "BASIC"] as SubscriptionTier[]).map((tier) => (
+                        <li key={tier} className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-white/80">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ background: PIE_COLORS[tier], boxShadow: `0 0 8px ${PIE_COLORS[tier]}99` }}
+                          />
+                          <span className="whitespace-nowrap">
+                            {PIE_LABELS[tier]}
+                            {stats && !statsLoading && (
+                              <span className="text-white/45"> ({stats.subscriptionBreakdown[tier]})</span>
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </section>
 
-            <div className="flex flex-col gap-4">
-              <article className="super-admin-card stat-card flex items-start gap-4 rounded-[22px] border px-5 py-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(93,68,248,0.15)] text-[#f1f0f3]"><IconBallot className="h-6 w-6" /></div>
-                <div className="min-w-0">
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">
-                    {statsLoading ? "—" : formatCount(stats?.totalBallotsCast ?? 0)}
-                  </p>
-                  <BallotCastAsOfLine className="mt-1 text-xs text-white/45" asOf={stats?.ballotsAsOf} />
+                {/* Right side: 3 Stat Cards Stacked Vertically */}
+                <div className="flex flex-col gap-4 w-full lg:w-[320px] lg:min-w-[320px] shrink-0 justify-center">
+                  
+                  {/* Card 1: Completed Elections */}
+                  <article className="flex flex-col gap-3 w-full rounded-[16px] border border-white/[0.08] bg-white/[0.02] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:bg-white/[0.04] transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(93,68,248,0.15)] border border-[rgba(93,68,248,0.25)] text-[#f1f0f3]">
+                        <IconBallot className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-2xl font-bold tracking-tight text-white">
+                          {statsLoading || completedElectionsLoading
+                            ? "—"
+                            : formatCount(stats?.completedElections ?? 0)}
+                        </p>
+                        <CompletedElectionsAsOfLine
+                          className="mt-0.5 text-xs text-white/50"
+                          asOf={stats?.statsAsOf}
+                          period={stats?.completedElectionsPeriod ?? electionPeriod}
+                        />
+                      </div>
+                    </div>
+                    <div className="border-t border-white/[0.06] my-1" />
+                    <CompletedElectionsPeriodFilter
+                      value={electionPeriod}
+                      onChange={handleElectionPeriodChange}
+                      disabled={statsLoading || completedElectionsLoading}
+                    />
+                  </article>
+
+                  {/* Card 2: Total Registered Tenants */}
+                  <article className="flex flex-col justify-center w-full rounded-[16px] border border-white/[0.08] bg-white/[0.02] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:bg-white/[0.04] transition-all min-h-[88px]">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(150,134,248,0.15)] border border-[rgba(150,134,248,0.25)] text-[#f1f0f3]">
+                        <IconUsers className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-2xl font-bold tracking-tight text-white">
+                          {statsLoading ? "—" : formatCount(stats?.totalTenants ?? 0)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-white/50">Total Registered Tenants</p>
+                      </div>
+                    </div>
+                  </article>
+
+                  {/* Card 3: Pending Tenant Approvals */}
+                  <article className="flex flex-col justify-center w-full rounded-[16px] border border-white/[0.08] bg-white/[0.02] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:bg-white/[0.04] transition-all min-h-[88px]">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(150,134,248,0.15)] border border-[rgba(150,134,248,0.25)] text-[#f1f0f3]">
+                        <IconPendingApproval className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-2xl font-bold tracking-tight text-white">
+                          {statsLoading ? "—" : formatCount(stats?.pendingTenantApprovals ?? 0)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-white/50">Pending Tenant Approvals</p>
+                      </div>
+                    </div>
+                  </article>
+
                 </div>
-              </article>
-              <article className="super-admin-card stat-card flex items-start gap-4 rounded-[22px] border px-5 py-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(150,134,248,0.2)] text-[#f1f0f3]"><IconUsers className="h-6 w-6" /></div>
-                <div>
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">
-                    {statsLoading ? "—" : formatCount(stats?.totalTenants ?? 0)}
-                  </p>
-                  <p className="mt-1 text-xs text-white/45">Total Registered Tenants</p>
-                </div>
-              </article>
-              <article className="super-admin-card stat-card flex items-start gap-4 rounded-[22px] border px-5 py-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(20,184,166,0.18)] text-[#5eead4]"><IconPercent className="h-6 w-6" /></div>
-                <div>
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-white md:text-[1.65rem]">
-                    {statsLoading ? "—" : `${(stats?.activeTenantRate ?? 0).toFixed(2)}%`}
-                  </p>
-                  <p className="mt-1 text-xs text-white/45">Rate of Active Tenants</p>
-                </div>
-              </article>
-            </div>
-            <section className="mt-10 lg:col-span-2 w-full">
-              <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Leading Active Tenants</h2>
-              <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px]">
-                <table className="w-full border-collapse text-left text-sm">
+
+              </div>
+
+              {/* Leading Active Tenants Table Section placed correctly as a full-width sibling in the layout flow */}
+              <section className="mt-6 w-full">
+                <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Leading Active Tenants</h2>
+                <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px]" style={{ minWidth: "100%" }}>
+                  <table className="w-full min-w-[1000px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                      <th className="px-5 py-4">Organization name</th>
-                      <th className="px-5 py-4">Email</th>
-                      <th className="px-5 py-4">Type</th>
-                      <th className="px-5 py-4">Subscription</th>
-                      <th className="px-5 py-4 text-center">Status</th>
+                      <th className="px-6 py-4">Organization name</th>
+                      <th className="px-6 py-4">Email</th>
+                      <th className="px-6 py-4">Type</th>
+                      <th className="px-6 py-4">Subscription</th>
+                      <th className="px-6 py-4 text-center">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td className="px-5 py-6 text-white/60" colSpan={5}>Loading...</td></tr>
+                      <tr><td className="px-6 py-6 text-white/60" colSpan={5}>Loading...</td></tr>
                     ) : leadingTenants.map((row) => (
                       <tr key={row.id} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
-                        <td className="px-5 py-4 font-medium text-white/85">{row.organization}</td>
-                        <td className="px-5 py-4 text-white/55">{row.email}</td>
-                        <td className="px-5 py-4 text-white/60">{row.type}</td>
-                        <td className="px-5 py-4">
+                        <td className="px-6 py-4 font-medium text-white/85">{row.organization}</td>
+                        <td className="px-6 py-4 text-white/55">{row.email}</td>
+                        <td className="px-6 py-4 text-white/60">{row.type}</td>
+                        <td className="px-6 py-4">
                           <span className="inline-flex rounded-full border border-[#5D44F8] bg-[#50C878]/[0.18] px-3 py-1 text-xs font-medium text-[#50C878]/[0.85]">{row.subscription}</span>
                         </td>
-                        <td className="px-5 py-4 text-center">
+                        <td className="px-6 py-4 text-center">
                           <span className={`inline-flex rounded-full border ${row.status === "PENDING" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : row.status === "REJECTED" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : "border-[#5D44F8] bg-[#50C878]/[0.18] text-[#50C878]"} px-3 py-1 text-xs font-medium`}>
                             {row.status}
                           </span>
@@ -320,15 +402,17 @@ export default function SuperAdminDashboardPage() {
                     ))}
                     {(!loading && leadingTenants.length === 0) && (
                       <tr>
-                        <td className="px-5 py-6 text-white/60" colSpan={5}>
+                        <td className="px-6 py-6 text-white/60" colSpan={5}>
                           {error ? `Error: ${error}` : "No tenants found."}
                         </td>
                       </tr>
                     )}
                   </tbody>
-                </table>
-              </div>
-            </section>
+                  </table>
+                </div>
+              </section>
+
+            </div>
           </div>
         </main>
       </div>

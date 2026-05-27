@@ -13,7 +13,9 @@ export function ElectionAuthModule() {
   return (
     <div className="relative z-10 mx-auto w-full max-w-md overflow-hidden rounded-[34px] border border-white/65 bg-white/40 shadow-[0_28px_90px_rgba(15,23,42,0.16)] backdrop-blur-2xl">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
-      <div className="pointer-events-none absolute -right-20 -top-20 h-44 w-44 rounded-full bg-[var(--tenant-primary)]/12 blur-3xl" />
+      {/* Dual brand-colored ambient glows inside the card context */}
+      <div className="pointer-events-none absolute -right-20 -top-20 h-44 w-44 rounded-full bg-[var(--tenant-primary)]/12 blur-3xl animate-pulse" />
+      <div className="pointer-events-none absolute -left-20 -bottom-20 h-44 w-44 rounded-full bg-[var(--tenant-secondary)]/12 blur-3xl animate-pulse" />
       <div className="relative p-8 sm:p-10">
         {view === 'select' && (
           <RoleSelector 

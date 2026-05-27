@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { triggerNotification } from '@/lib/server/notifications';
 
 export async function POST(
   request: Request,
@@ -60,6 +61,10 @@ export async function POST(
 
     if (updateError) {
        console.error('Update results config error:', updateError);
+    } else {
+      // Trigger notification asynchronously
+      triggerNotification('Results Published', election.tenantID, election_id)
+        .catch(err => console.error('[Publish Results API] Notification trigger error:', err));
     }
 
     return NextResponse.json({ success: true, message: 'Results computed and published successfully' });

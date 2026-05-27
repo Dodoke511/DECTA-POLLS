@@ -30,10 +30,10 @@ export function RoleSelector({ onSelect, config, phases }: RoleSelectorProps) {
       <div className="space-y-4">
         <button
           onClick={() => onSelect('user-login')}
-          className="group relative w-full overflow-hidden rounded-2xl border border-white/55 bg-[var(--tenant-primary)] px-6 py-4 shadow-[0_18px_45px_rgba(15,23,42,0.16)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(15,23,42,0.22)]"
+          className="group relative w-full overflow-hidden rounded-2xl border border-white/55 bg-[var(--tenant-primary)] hover:bg-[var(--tenant-primary)]/90 px-6 py-4 shadow-[0_18px_45px_rgba(15,23,42,0.16)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(15,23,42,0.22)]"
         >
           <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/80" />
-          <span className="relative text-sm font-black uppercase tracking-wider text-white">
+          <span className="relative text-sm font-black uppercase tracking-wider text-slate-950">
             {config?.voter_login_label || 'I am a Voter'}
           </span>
         </button>

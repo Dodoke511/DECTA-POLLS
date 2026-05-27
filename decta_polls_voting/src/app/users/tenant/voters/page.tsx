@@ -26,7 +26,6 @@ interface Voter {
 
 export default function TenantVotersPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -89,13 +88,11 @@ export default function TenantVotersPage() {
       fetchVoters(storedTenantId);
     } else {
       console.warn('No tenant ID found in session storage');
-      setLoading(false);
     }
   }, [router]);
 
   const fetchVoters = async (tenantId: string) => {
     try {
-      setLoading(true);
       const response = await fetch(`/api/get_tenant_voters?tenantId=${tenantId}`);
       const result = await response.json();
 
@@ -108,8 +105,6 @@ export default function TenantVotersPage() {
     } catch (error) {
       console.error("Error fetching voters:", error);
       setVoters([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -221,10 +216,6 @@ export default function TenantVotersPage() {
     setIsUploading(false);
     setShowUploadModal(false);
   };
-
-  if (loading) {
-    return <div className="min-h-screen bg-[#03070f] flex items-center justify-center text-white">Loading...</div>;
-  }
 
   // Calculate stats based on active filter tab
   const getFilteredCount = (role: string) => {

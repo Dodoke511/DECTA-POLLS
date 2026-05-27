@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
+import { canUseAppeals, normalizeSubscription } from '@/lib/subscription-limits';
 import {
   isPhaseActive,
   isPhaseReachable,
@@ -65,6 +66,7 @@ interface CandidateRecord {
   status: string;
   filedDate: string;
   position?: string;
+  political_party?: string;
 }
 
 interface FormField {
@@ -145,6 +147,7 @@ export default function CandidateDashboardPage() {
 
   // Phase flags
   const isFilingActive = isPhaseActive(phases, 'filing');
+  const isScreeningActive = isPhaseActive(phases, 'screening');
   const isAppealActive = isPhaseActive(phases, 'appeal');
   const isVotingActive = isPhaseActive(phases, 'voting');
   const isPublicationReachable = isPhaseReachable(phases, 'publication');
@@ -167,8 +170,17 @@ export default function CandidateDashboardPage() {
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab') as TabId | null;
-    setActiveTab(requestedTab && VALID_TABS.includes(requestedTab) ? requestedTab : 'candidacy');
-  }, [searchParams]);
+    const subscriptionTier = normalizeSubscription(tenant.subscription as string | null);
+    const appealsAllowed = canUseAppeals(subscriptionTier);
+
+    let finalTab: TabId = requestedTab && VALID_TABS.includes(requestedTab) ? requestedTab : 'candidacy';
+    if (finalTab === 'appeals' && !appealsAllowed) {
+      finalTab = 'candidacy';
+    } else if (finalTab === 'candidates' && subscriptionTier !== 'ENTERPRISE') {
+      finalTab = 'candidacy';
+    }
+    setActiveTab(finalTab);
+  }, [searchParams, tenant.subscription]);
 
   // ── Guard & initial load ───────────────────────────────────────────────────
 
@@ -185,7 +197,7 @@ export default function CandidateDashboardPage() {
     async function loadCandidate() {
       const { data } = await supabase
         .from('candidate')
-        .select('id, status, filedDate')
+        .select('id, status, filedDate, political_party')
         .eq('userID', userContext!.userId)
         .eq('electionID', election.id)
         .maybeSingle();
@@ -406,6 +418,9 @@ export default function CandidateDashboardPage() {
               {candidate?.position && (
                 <p className="text-slate-500 font-semibold">Running for: <span className="text-slate-800">{candidate.position}</span></p>
               )}
+              {candidate?.political_party && (
+                <p className="text-slate-500 font-semibold text-sm mt-1">Political Party: <span className="text-[var(--tenant-primary)]">{candidate.political_party}</span></p>
+              )}
             </div>
             <div className="flex flex-col items-start sm:items-end gap-3">
               {candidate ? <StatusBadge status={candidate.status} /> : <StatusBadge status="DRAFT" />}
@@ -471,7 +486,7 @@ export default function CandidateDashboardPage() {
 
           {showCOC && (
             <div className="border-t border-slate-100 px-6 pb-6">
-              {failedRules.length > 0 && (
+              {(isScreeningActive && failedRules.length > 0) && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 mt-6 mb-2">
                   <div className="flex items-center gap-3 mb-2">
                     <ShieldAlert className="w-5 h-5 text-red-500" />
@@ -564,6 +579,10 @@ export default function CandidateDashboardPage() {
         {(() => {
           if (!candidate) return null;
           if (hasPendingAppeal) return null;
+
+          const subscriptionTier = normalizeSubscription(tenant.subscription as string | null);
+          const appealsAllowed = canUseAppeals(subscriptionTier);
+          if (!appealsAllowed) return null;
 
           const s = candidate.status;
           if (s === 'PENDING_VERIFICATION' || s === 'DRAFT' || s === 'DISQUALIFIED') return null;

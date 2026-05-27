@@ -16,6 +16,20 @@ export async function POST(request: Request) {
       );
     }
 
+    // Ballots reference positions, so clear generated ballots before replacing positions.
+    const { error: ballotDelError } = await supabase
+      .from('ballots')
+      .delete()
+      .eq('election_id', electionId);
+
+    if (ballotDelError) {
+      console.error('API Error: Failed to delete previous ballots:', ballotDelError);
+      return NextResponse.json(
+        { error: 'Failed to clear generated ballots.' },
+        { status: 500 }
+      );
+    }
+
     // Clean existing records to avoid duplicates when rapidly testing format
     const { error: delError } = await supabase
       .from('positions')

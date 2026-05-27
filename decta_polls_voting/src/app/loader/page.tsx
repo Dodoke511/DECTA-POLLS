@@ -8,15 +8,18 @@ function LoadingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const destination = searchParams.get('destination') || '/auth/login_form';
+  const requestedDuration = Number(searchParams.get('duration'));
+  const duration = Number.isFinite(requestedDuration)
+    ? Math.min(Math.max(requestedDuration, 300), 2500)
+    : 900;
 
   useEffect(() => {
-    // Navigate to destination after 2.5 seconds - shows most of one animation cycle
     const timer = setTimeout(() => {
       router.push(destination);
-    }, 2500);
+    }, duration);
 
     return () => clearTimeout(timer);
-  }, [router, destination]);
+  }, [router, destination, duration]);
 
   return (
     <div className="min-h-screen relative text-decta-text font-source-sans overflow-hidden selection:bg-decta-brand selection:text-white flex items-center justify-center">
