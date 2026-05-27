@@ -53,8 +53,8 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
     };
 
     return (
-        <div className="overflow-x-auto w-full" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-            <table className="w-full whitespace-nowrap text-left text-sm">
+        <div className="overflow-x-auto decta-scrollbar w-full" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+            <table className="w-full whitespace-nowrap text-left text-sm min-w-[700px] md:min-w-0">
                 <thead>
                     <tr className="border-b border-white/[0.05]">
                         <th className="py-2 text-[11px] font-bold uppercase tracking-wider text-white/45 md:pr-8">

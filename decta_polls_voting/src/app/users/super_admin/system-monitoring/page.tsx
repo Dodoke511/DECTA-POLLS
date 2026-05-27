@@ -75,9 +75,9 @@ function AuditLogTable({
 }) {
   const colCount = 4;
   return (
-    <div className="super-admin-table w-full rounded-[22px] border border-white/[0.10] overflow-hidden mb-8">
+    <div className="super-admin-table w-full rounded-[22px] border border-white/[0.10] overflow-x-auto decta-scrollbar mb-8">
       <div className="w-full">
-        <table className="w-full border-collapse text-left text-sm">
+        <table className="w-full border-collapse text-left text-sm min-w-[700px] md:min-w-0">
           <thead>
             <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
               <th className="px-6 py-4">TIMESTAMP</th>

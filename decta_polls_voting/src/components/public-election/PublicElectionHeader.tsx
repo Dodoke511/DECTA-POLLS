@@ -4,7 +4,7 @@ import { useState, useEffect, type ElementType } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { BarChart3, CheckSquare, FileText, Home, Loader2, LogOut, Scale, UsersRound, UserCircle, CheckCircle2 } from 'lucide-react';
+import { BarChart3, CheckSquare, FileText, Home, Loader2, LogOut, Scale, UsersRound, UserCircle, CheckCircle2, Menu, X } from 'lucide-react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { createClient } from '@supabase/supabase-js';
 import { isPhaseActive } from '@/lib/public-election/phase-utils';
@@ -18,6 +18,12 @@ export function PublicElectionHeader() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [hasVoted, setHasVoted] = useState<boolean | null>(null);
   const [showAlreadyVotedModal, setShowAlreadyVotedModal] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on routing changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     if (userContext?.isVoter && tenant?.slug && election?.slug) {
@@ -190,43 +196,125 @@ export function PublicElectionHeader() {
 
           <div className="flex items-center gap-4">
             {userContext && (
-              <div className="flex items-center gap-2">
-                {userContext.isVoter && !userContext.isCandidate && (
-                  renderIconNav(voterNavItems, 'Voter navigation')
-                )}
-                {userContext.isCandidate && (
-                  renderIconNav(candidateNavItems, 'Candidate navigation')
-                )}
+              <>
+                {/* Desktop Menu layout */}
+                <div className="hidden md:flex items-center gap-2">
+                  {userContext.isVoter && !userContext.isCandidate && (
+                    renderIconNav(voterNavItems, 'Voter navigation')
+                  )}
+                  {userContext.isCandidate && (
+                    renderIconNav(candidateNavItems, 'Candidate navigation')
+                  )}
 
-                <div className="mx-1 shrink-0">
-                  <NotificationBell electionId={election.id} />
+                  <div className="mx-1 shrink-0">
+                    <NotificationBell electionId={election.id} />
+                  </div>
+
+                  <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2 py-2 shadow-sm backdrop-blur-md">
+                    <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white">
+                      <UserCircle className="h-5 w-5" />
+                    </div>
+                    <div className="hidden md:flex flex-col pr-1">
+                      <span className="max-w-40 truncate text-xs font-bold text-white">{userContext.name}</span>
+                      <span className="text-[9px] font-black text-white/70 uppercase tracking-wider">
+                        {userContext.userType}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                      className="h-10 rounded-full bg-white px-3 sm:px-4 text-sm font-black text-[var(--tenant-primary)] shadow-md transition-all hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-70 flex items-center gap-2"
+                      title="Log Out"
+                    >
+                      {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                      <span className="hidden sm:inline">Log Out</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2 py-2 shadow-sm backdrop-blur-md">
-                  <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white">
-                    <UserCircle className="h-5 w-5" />
-                  </div>
-                  <div className="hidden md:flex flex-col pr-1">
-                    <span className="max-w-40 truncate text-xs font-bold text-white">{userContext.name}</span>
-                    <span className="text-[9px] font-black text-white/70 uppercase tracking-wider">
-                      {userContext.userType}
-                    </span>
+                {/* Mobile controls layout */}
+                <div className="flex md:hidden items-center gap-2">
+                  <div className="shrink-0">
+                    <NotificationBell electionId={election.id} />
                   </div>
                   <button
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                    className="h-10 rounded-full bg-white px-3 sm:px-4 text-sm font-black text-[var(--tenant-primary)] shadow-md transition-all hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-70 flex items-center gap-2"
-                    title="Log Out"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    aria-label="Toggle navigation menu"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white shadow-sm backdrop-blur-md transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
                   >
-                    {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-                    <span className="hidden sm:inline">Log Out</span>
+                    {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                   </button>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>
         <div className="h-[2px] w-full bg-gradient-to-r from-[var(--tenant-primary)] via-[var(--tenant-third)] to-[var(--tenant-secondary)]" />
+
+        {/* Mobile slide-down navigation overlay */}
+        {isMobileMenuOpen && userContext && (
+          <div className="absolute top-[82px] left-0 right-0 z-40 border-b border-white/15 bg-[var(--tenant-primary)]/95 backdrop-blur-2xl py-6 px-5 flex flex-col gap-4 shadow-[0_24px_70px_rgba(15,23,42,0.35)] md:hidden animate-in slide-in-from-top-4 duration-300">
+            <nav className="flex flex-col gap-1.5" aria-label="Mobile navigation">
+              {(userContext.isVoter && !userContext.isCandidate ? voterNavItems : candidateNavItems).map(({ label, href, icon: Icon }) => {
+                const [itemPath, itemQuery] = href.split('?');
+                const itemSearchParams = new URLSearchParams(itemQuery);
+                const isActive =
+                  pathname === itemPath &&
+                  (!itemQuery ||
+                    Array.from(itemSearchParams.entries()).every(([key, value]) => searchParams.get(key) === value));
+
+                const isVoteItem = label.toLowerCase().includes('vote');
+
+                const handleClick = (e: React.MouseEvent) => {
+                  if (isVoteItem && hasVoted === true) {
+                    e.preventDefault();
+                    setShowAlreadyVotedModal(true);
+                  }
+                  setIsMobileMenuOpen(false);
+                };
+
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={handleClick}
+                    className={`flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-white font-extrabold text-sm transition-all ${
+                      isActive 
+                        ? 'bg-white text-[var(--tenant-primary)] shadow-md' 
+                        : 'bg-white/10 hover:bg-white/15'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" style={{ color: isActive ? 'var(--tenant-primary)' : undefined }} />
+                    <span>{label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="h-px w-full bg-white/15 my-1" />
+
+            <div className="flex items-center gap-3 px-4.5 py-1">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-white">
+                <UserCircle className="h-6 w-6" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="truncate text-sm font-black text-white leading-tight">{userContext.name}</span>
+                <span className="text-[9px] font-black text-white/70 uppercase tracking-widest mt-1">
+                  {userContext.userType}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="w-full h-12 shrink-0 rounded-2xl bg-white px-4 text-sm font-black text-[var(--tenant-primary)] shadow-md transition-all hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-70 flex items-center justify-center gap-2 mt-2"
+            >
+              {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+              <span>Log Out</span>
+            </button>
+          </div>
+        )}
       </header>
 
       {showAlreadyVotedModal && (

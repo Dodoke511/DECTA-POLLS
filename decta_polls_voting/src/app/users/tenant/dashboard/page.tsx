@@ -258,28 +258,30 @@ export default function TenantDashboardPage() {
 
             {/* User Limits Tracking Widget */}
             {userLimits && (
-              <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">Account Usage</p>
-                  <h2 className="mt-1 text-lg font-semibold text-white/90">Registered Users</h2>
-                </div>
-                <div className="flex flex-col items-end">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-[#D0C8FF]">{userLimits.currentCount}</span>
-                    <span className="text-sm text-white/40">/ {userLimits.limit === null ? "Unlimited" : userLimits.limit}</span>
+              <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:p-6 flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45 text-left">Account Usage</p>
+                    <h2 className="mt-1 text-lg font-semibold text-white/90 truncate">Registered Users</h2>
                   </div>
-                  {userLimits.limit !== null && (
-                    <div className="mt-2 h-1.5 w-32 rounded-full bg-white/10">
-                      <div
-                        className={`h-full rounded-full ${(userLimits.currentCount / userLimits.limit) > 0.9
-                            ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]'
-                            : 'bg-gradient-to-r from-emerald-400 to-cyan-300'
-                          }`}
-                        style={{ width: `${Math.min(100, (userLimits.currentCount / userLimits.limit) * 100)}%` }}
-                      />
-                    </div>
-                  )}
+                  <div className="flex items-baseline gap-0.5 shrink-0 ">
+                    <span className="text-3xl font-bold tabular-nums text-[#D0C8FF]">{userLimits.currentCount}</span>
+                    <span className="text-base font-semibold text-white/25 ml-1">
+                      / {userLimits.limit === null ? "∞" : userLimits.limit}
+                    </span>
+                  </div>
                 </div>
+                {userLimits.limit !== null && (
+                  <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${(userLimits.currentCount / userLimits.limit) > 0.9
+                        ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]'
+                        : 'bg-gradient-to-r from-emerald-400 to-cyan-300'
+                        }`}
+                      style={{ width: `${Math.min(100, (userLimits.currentCount / userLimits.limit) * 100)}%` }}
+                    />
+                  </div>
+                )}
               </section>
             )}
 

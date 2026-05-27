@@ -155,8 +155,8 @@ export default function TenantsMonitoringPage() {
                     }}>
                         Tenants Monitoring
                     </h1>
-                    <div className="super-admin-table relative overflow-x-auto rounded-[22px]">
-                        <table className="w-full border-collapse text-left text-sm">
+                    <div className="super-admin-table relative overflow-x-auto decta-scrollbar rounded-[22px]">
+                        <table className="w-full border-collapse text-left text-sm min-w-[850px] md:min-w-0">
                             <thead>
                                 <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
                                     <th className="px-5 py-4">Organization name</th>

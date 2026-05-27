@@ -545,13 +545,13 @@ export default function TenantVotersPage() {
             background: "rgba(255, 255, 255, 0.05)",
             border: "1px solid rgba(255, 255, 255, 0.1)"
           }}>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto decta-scrollbar">
               {filteredVoters.length === 0 ? (
                 <div className="p-8 text-center text-white/60">
                   No voters found
                 </div>
               ) : (
-                <table className="w-full">
+                <table className="w-full min-w-[850px] md:min-w-0">
                   <thead>
                     <tr className="border-b border-white/10">
                       <th className="text-left p-4 text-white/60 font-semibold">Voter Name</th>

@@ -123,81 +123,105 @@ function SidebarInner({
   getLoaderUrl: (path: string) => string;
 }) {
   const { canAccess, isLoaded } = usePermissions();
+  const [isOpen, setIsOpen] = React.useState(false);
 
   return (
-    <aside className="super-admin-sidebar flex w-full shrink-0 flex-col rounded-3xl border md:w-[220px] lg:w-[260px] md:rounded-r-none py-6 md:py-8 pl-4 md:pl-5 pr-3 md:pr-4">
-      <div className="mb-8 md:mb-10 px-2 text-center">
-        <p className="plan-title-gradient" style={{
-          margin: 0,
-          fontFamily: "var(--font-montserrat), Montserrat, sans-serif",
-          fontSize: 'clamp(18px, 4vw, 24px)',
-          fontWeight: 700,
-          lineHeight: 1.1,
-          display: "inline-block",
-          whiteSpace: "nowrap",
-        }}>
-          WELCOME!
-        </p>
-        <p style={{
-          color: "var(--color-decta-text)",
-          fontSize: 'clamp(11px, 2.5vw, 13px)',
-          fontFamily: "var(--font-source-sans), 'Source Sans Pro', sans-serif",
-          margin: "6px 0 0",
-          opacity: 0.8,
-        }}>
-          {isRestricted ? 'Account Pending' : 'Tenant Admin'}
-        </p>
+    <aside className={`super-admin-sidebar flex w-full shrink-0 flex-col rounded-3xl border md:w-[220px] lg:w-[260px] md:rounded-r-none pl-4 md:pl-5 pr-4 md:pr-4 transition-all duration-300 ${isOpen ? 'py-5' : 'py-3.5 md:py-8'}`}>
+      <div className="flex items-center justify-between md:flex-col md:items-center md:justify-center px-2 mb-0 md:mb-10">
+        <div className="text-left md:text-center">
+          <p className="plan-title-gradient" style={{
+            margin: 0,
+            fontFamily: "var(--font-montserrat), Montserrat, sans-serif",
+            fontSize: 'clamp(16px, 4vw, 24px)',
+            fontWeight: 700,
+            lineHeight: 1.1,
+            display: "inline-block",
+            whiteSpace: "nowrap",
+          }}>
+            WELCOME!
+          </p>
+          <p style={{
+            color: "var(--color-decta-text)",
+            fontSize: 'clamp(10px, 2.5vw, 13px)',
+            fontFamily: "var(--font-source-sans), 'Source Sans Pro', sans-serif",
+            margin: "2px 0 0",
+            opacity: 0.8,
+          }} className="md:mt-1.5">
+            {isRestricted ? 'Account Pending' : 'Tenant Admin'}
+          </p>
+        </div>
+
+        {/* Hamburger Menu Button (Mobile Only) */}
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-white/75 transition hover:text-white md:hidden"
+          aria-label="Toggle navigation menu"
+        >
+          {isOpen ? (
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          )}
+        </button>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 md:gap-2.5" role="navigation" aria-label="Main Navigation">
-        {/* Dashboard — always visible */}
-        <TenantNavLink href="/users/tenant/dashboard" path="/users/tenant/dashboard" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
-          <IconDashboard className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
-          <span className="hidden sm:inline">Dashboard</span>
-        </TenantNavLink>
-
-        {/* Elections */}
-        {(!isLoaded || canAccess("/users/tenant/elections")) && (
-          <TenantNavLink href="/users/tenant/elections" path="/users/tenant/elections" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
-            <IconElections className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
-            <span className="hidden sm:inline">Elections</span>
+      {/* Collapsible content (links + logout button) */}
+      <div className={`${isOpen ? "flex animate-in fade-in slide-in-from-top-2 duration-200" : "hidden"} md:flex flex-col flex-1 gap-2 md:gap-2.5 mt-4 md:mt-0`}>
+        <div className="flex flex-col gap-2 md:gap-2.5" role="navigation" aria-label="Main Navigation">
+          {/* Dashboard — always visible */}
+          <TenantNavLink href="/users/tenant/dashboard" path="/users/tenant/dashboard" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
+            <IconDashboard className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+            <span>Dashboard</span>
           </TenantNavLink>
-        )}
 
-        {/* Candidates */}
-        {(!isLoaded || canAccess("/users/tenant/candidates")) && (
-          <TenantNavLink href="/users/tenant/candidates" path="/users/tenant/candidates" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
-            <IconCandidates className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
-            <span className="hidden sm:inline">Candidates</span>
-          </TenantNavLink>
-        )}
+          {/* Elections */}
+          {(!isLoaded || canAccess("/users/tenant/elections")) && (
+            <TenantNavLink href="/users/tenant/elections" path="/users/tenant/elections" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
+              <IconElections className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+              <span>Elections</span>
+            </TenantNavLink>
+          )}
 
-        {/* Voters */}
-        {(!isLoaded || canAccess("/users/tenant/voters")) && (
-          <TenantNavLink href="/users/tenant/voters" path="/users/tenant/voters" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
-            <IconVoters className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
-            <span className="hidden sm:inline">Voters</span>
-          </TenantNavLink>
-        )}
+          {/* Candidates */}
+          {(!isLoaded || canAccess("/users/tenant/candidates")) && (
+            <TenantNavLink href="/users/tenant/candidates" path="/users/tenant/candidates" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
+              <IconCandidates className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+              <span>Candidates</span>
+            </TenantNavLink>
+          )}
 
-        {/* Settings */}
-        {(!isLoaded || canAccess("/users/tenant/settings")) && (
-          <TenantNavLink href="/users/tenant/settings" path="/users/tenant/settings" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
-            <IconSettings className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
-            <span className="hidden sm:inline">Settings</span>
-          </TenantNavLink>
-        )}
+          {/* Voters */}
+          {(!isLoaded || canAccess("/users/tenant/voters")) && (
+            <TenantNavLink href="/users/tenant/voters" path="/users/tenant/voters" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
+              <IconVoters className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+              <span>Voters</span>
+            </TenantNavLink>
+          )}
+
+          {/* Settings */}
+          {(!isLoaded || canAccess("/users/tenant/settings")) && (
+            <TenantNavLink href="/users/tenant/settings" path="/users/tenant/settings" isRestricted={isRestricted} getItemStyle={getItemStyle} getTextStyle={getTextStyle} getLoaderUrl={getLoaderUrl}>
+              <IconSettings className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+              <span>Settings</span>
+            </TenantNavLink>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="super-admin-logout-button mt-4 md:mt-6 flex items-center justify-center gap-2 rounded-lg border px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-medium text-white/65 transition hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <IconSignOut className="h-4 w-4 md:h-5 md:w-5" />
+          <span>{isLoggingOut ? 'Signing Out...' : 'Sign Out'}</span>
+        </button>
       </div>
-
-      <button
-        type="button"
-        onClick={handleLogout}
-        disabled={isLoggingOut}
-        className="super-admin-logout-button mt-4 md:mt-6 flex items-center justify-center gap-2 rounded-lg border px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-medium text-white/65 transition hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <IconSignOut className="h-4 w-4 md:h-5 md:w-5" />
-        <span className="hidden sm:inline">{isLoggingOut ? 'Signing Out...' : 'Sign Out'}</span>
-      </button>
     </aside>
   );
 }
