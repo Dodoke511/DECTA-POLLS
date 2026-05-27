@@ -159,9 +159,9 @@ export default function CandidateDashboardPage() {
   // - Candidate is PENDING_VERIFICATION (awaiting initial review)
   // - Candidate has a pending appeal already under review
   const isAppealTabTemporarilyLocked =
-    !candidate ||
-    ['DRAFT', 'PENDING_VERIFICATION'].includes(candidate.status) ||
-    hasPendingAppeal;
+    (!candidate ||
+    ['DRAFT', 'PENDING_VERIFICATION'].includes(candidate.status)) &&
+    !hasPendingAppeal;
 
   const supabase = React.useMemo(() => createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

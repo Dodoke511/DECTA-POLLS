@@ -139,15 +139,15 @@ export default function AppealPage() {
                 if (appeal.status !== 'pending') {
                   const { data: decisions, error: decisionError } = await supabase
                     .from('appeal decisions')
-                    .select('reason, created_at')
+                    .select('reason, createdAt')
                     .eq('appealID', appeal.id)
-                    .order('created_at', { ascending: false })
+                    .order('createdAt', { ascending: false })
                     .limit(1)
                     .maybeSingle();
 
                   if (!decisionError && decisions) {
                     decisionReason = decisions.reason;
-                    decisionDate = decisions.created_at;
+                    decisionDate = decisions.createdAt;
                   }
                 }
 
@@ -587,7 +587,7 @@ export default function AppealPage() {
                     </p>
                   </div>
 
-                  <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left">
+                  <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-center">
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
                       Committee Response
                     </p>
@@ -941,15 +941,15 @@ export default function AppealPage() {
       {/* Decision Response Modal */}
       {selectedDecisionAppeal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <GlassPanel className="max-w-md w-full p-8 relative">
+          <div className="relative max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
             <button
               onClick={() => setSelectedDecisionAppeal(null)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Close modal"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
-            <div className="text-center">
+            <div className="text-center flex flex-col items-center">
               <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center" style={{
                 backgroundColor: selectedDecisionAppeal.status === 'approved' ? '#d1fae5' : '#fee2e2'
               }}>
@@ -965,10 +965,11 @@ export default function AppealPage() {
               <p className="text-sm text-slate-500 mb-6">
                 Decision made on {selectedDecisionAppeal.decisionDate 
                   ? new Date(selectedDecisionAppeal.decisionDate).toLocaleString() 
-                  : 'Date not available'}              </p>
-              <div className="bg-white/35 border border-white/65 rounded-2xl p-5 text-left mb-6">
-                <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Committee Response</p>
-                <p className="text-slate-800 font-medium leading-relaxed">
+                  : 'Date not available'}
+              </p>
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-center mb-6">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Committee Response</p>
+                <p className="text-slate-800 font-medium leading-relaxed text-sm">
                   {selectedDecisionAppeal.decisionReason || 'No reason provided.'}
                 </p>
               </div>
@@ -979,7 +980,7 @@ export default function AppealPage() {
                 Close
               </button>
             </div>
-          </GlassPanel>
+          </div>
         </div>
       )}
       </div>
