@@ -276,7 +276,7 @@ export default function LogInPage() {
         setFpLoading(true);
         setFpError('');
         try {
-            if (Date.now() > otpExpires) {
+            if (timeLeft === 0) {
                 setFpError('OTP has expired. Please request a new code.');
                 setFpLoading(false);
                 return;

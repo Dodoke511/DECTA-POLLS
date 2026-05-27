@@ -51,13 +51,11 @@ export default function Home() {
                 body: JSON.stringify({ email })
             });
             const resData = await response.json();
-
             if (!response.ok) throw new Error(resData.error || 'Failed to send OTP');
 
-            const timeLeftSeconds = Math.max(Math.round((resData.expires - Date.now()) / 1000), 0);
             setOtpHash(resData.hash);
             setOtpExpires(resData.expires);
-            setTimeLeft(timeLeftSeconds);
+            setTimeLeft(60);
             setStep(4); // Move to OTP verification step
         } catch (error: any) {
             console.error("API Call Error:", error);

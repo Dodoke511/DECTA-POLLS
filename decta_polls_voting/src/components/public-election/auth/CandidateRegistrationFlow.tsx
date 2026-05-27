@@ -99,7 +99,7 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
       if (!res.ok) throw new Error(data.error || 'Failed to send verification code.');
       setOtpHash(data.hash);
       setOtpExpires(data.expires);
-      setTimeLeft(90);
+      setTimeLeft(60);
       setStep('otp');
     } catch (err: any) {
       setError(err.message);
@@ -165,7 +165,7 @@ export function CandidateRegistrationFlow({ onBack, onSwitchToLogin }: Props) {
       if (!res.ok) throw new Error(data.error || 'Failed to resend code.');
       setOtpHash(data.hash);
       setOtpExpires(data.expires);
-      setTimeLeft(90);
+      setTimeLeft(60);
     } catch (err: any) {
       setError(err.message);
     } finally {
