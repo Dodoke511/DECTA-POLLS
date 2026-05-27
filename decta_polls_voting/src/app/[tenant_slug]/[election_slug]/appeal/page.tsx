@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useElectionPublic } from '@/contexts/ElectionPublicContext';
 import { isPhaseActive } from '@/lib/public-election/phase-utils';
 import { createClient } from '@supabase/supabase-js';
-import { Loader2, ArrowRight, AlertCircle, Lock, Clock, Info } from 'lucide-react';
+import { Loader2, ArrowRight, AlertCircle, Lock, Clock, Info, CheckCircle2, XCircle, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getPublicElectionBackgroundImage, PublicElectionBackgroundLayer } from '@/components/public-election/PublicElectionBackground';
 
@@ -60,6 +60,8 @@ type AppealRecord = {
   id: string;
   status: string;
   submittedAt: string;
+  decisionReason?: string;
+  decisionDate?: string;
 };
 
 type PositionRecord = {
@@ -92,6 +94,7 @@ export default function AppealPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedAppealType, setSelectedAppealType] = useState<string>('');
   const [positions, setPositions] = useState<PositionRecord[]>([]);
+  const [selectedDecisionAppeal, setSelectedDecisionAppeal] = useState<AppealRecord | null>(null);
 
   const supabase = useMemo(
     () => createClient(
@@ -127,8 +130,37 @@ export default function AppealPage() {
             .order('submittedAt', { ascending: false });
 
           if (!appealFetchError && Array.isArray(appealData)) {
-            setAllAppeals(appealData);
-            const pendingAppeal = appealData.find((appeal: AppealRecord) => appeal.status === 'pending');
+            // Fetch decision details for each appeal
+            const appealsWithDecisions = await Promise.all(
+              appealData.map(async (appeal) => {
+                let decisionReason = undefined;
+                let decisionDate = undefined;
+
+                if (appeal.status !== 'pending') {
+                  const { data: decisions, error: decisionError } = await supabase
+                    .from('appeal decisions')
+                    .select('reason, created_at')
+                    .eq('appealID', appeal.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                  if (!decisionError && decisions) {
+                    decisionReason = decisions.reason;
+                    decisionDate = decisions.created_at;
+                  }
+                }
+
+                return {
+                  ...appeal,
+                  decisionReason,
+                  decisionDate,
+                };
+              })
+            );
+
+            setAllAppeals(appealsWithDecisions);
+            const pendingAppeal = appealsWithDecisions.find((appeal: AppealRecord) => appeal.status === 'pending');
             setHasPendingAppeal(Boolean(pendingAppeal));
           }
         }
@@ -454,34 +486,126 @@ export default function AppealPage() {
     );
   }
 
-  // ── Pending appeal: show read-only waiting state, no form ─────────────────
+  // ── Pending appeal: show read-only waiting state, but keep appeals history visible ─────────────────
   if (hasPendingAppeal) {
     return (
       <div className="relative min-h-[calc(100vh-80px)] overflow-hidden px-4 py-10 sm:px-6 lg:py-14">
         <PublicElectionBackgroundLayer imageUrl={backgroundImage} />
         <div className="relative z-10 mx-auto max-w-4xl">
-        <div className="mb-8 rounded-[28px] border border-white/55 bg-white/35 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
-          <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Submit an Appeal</h1>
-          <p className="text-slate-500 text-lg">
-            If your application was rejected, you may submit a formal appeal to the election committee for review.
-          </p>
-        </div>
-        <GlassPanel className="p-8 md:p-12 flex flex-col items-center text-center gap-6">
-          <div className="w-20 h-20 rounded-3xl bg-amber-50 border border-amber-100 flex items-center justify-center">
-            <Clock className="w-9 h-9 text-amber-500" />
-          </div>
-          <div>
-            <p className="text-xl font-black text-slate-900 mb-2">Your Appeal is Being Reviewed</p>
-            <p className="text-slate-500 text-sm max-w-sm">
-              Your appeal has been submitted and is currently being reviewed by the election committee. Please wait for their decision — you will be notified of the outcome.
+          <div className="mb-8 rounded-[28px] border border-white/55 bg-white/35 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
+            <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Submit an Appeal</h1>
+            <p className="text-slate-500 text-lg">
+              If your application was rejected, you may submit a formal appeal to the election committee for review.
             </p>
           </div>
-          <div className="w-full max-w-sm p-4 bg-amber-50 border border-amber-100 rounded-2xl">
-            <p className="text-amber-700 text-sm font-semibold">
-              You cannot submit another appeal while one is already under review.
-            </p>
-          </div>
-        </GlassPanel>
+
+          {/* Appeals History - Now visible even with pending appeal */}
+          {allAppeals.length > 0 && (
+            <GlassPanel className="mb-8 p-6 md:p-8">
+              <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight">Your Submitted Appeals</h3>
+              <div className="space-y-4">
+                {allAppeals.map(appeal => (
+                  <div key={appeal.id} className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-white/65 bg-white/45 shadow-sm backdrop-blur-xl hover:shadow-md hover:bg-white/60 transition-all cursor-pointer">
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">Appeal Submitted</p>
+                      <p className="text-xs text-slate-500 mt-1">{new Date(appeal.submittedAt).toLocaleString()}</p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-3">
+                      <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider w-fit ${appeal.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                          appeal.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            appeal.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-slate-200 text-slate-700'
+                        }`}>
+                        {appeal.status}
+                      </span>
+                      {(appeal.status === 'approved' || appeal.status === 'rejected') && appeal.decisionReason && (
+                        <button
+                          onClick={() => setSelectedDecisionAppeal(appeal)}
+                          className="text-sm font-bold text-[var(--tenant-primary)] hover:opacity-70 transition-opacity opacity-0 sm:opacity-0 group-hover:opacity-100 underline whitespace-nowrap"
+                        >
+                          View Details
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </GlassPanel>
+          )}
+
+          <GlassPanel className="p-8 md:p-12 flex flex-col items-center text-center gap-6">
+            <div className="w-20 h-20 rounded-3xl bg-amber-50 border border-amber-100 flex items-center justify-center">
+              <Clock className="w-9 h-9 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-xl font-black text-slate-900 mb-2">Your Appeal is Being Reviewed</p>
+              <p className="text-slate-500 text-sm max-w-sm">
+                Your appeal has been submitted and is currently being reviewed by the election committee. Please wait for their decision — you will be notified of the outcome.
+              </p>
+            </div>
+            <div className="w-full max-w-sm p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+              <p className="text-amber-700 text-sm font-semibold">
+                You cannot submit another appeal while one is already under review.
+              </p>
+            </div>
+          </GlassPanel>
+
+          {/* Decision Modal */}
+          {selectedDecisionAppeal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+              <div className="relative max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
+                <button
+                  onClick={() => setSelectedDecisionAppeal(null)}
+                  className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="flex flex-col items-center text-center gap-4">
+                  <div
+                    className="w-14 h-14 rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundColor: selectedDecisionAppeal.status === 'approved' ? '#d1fae5' : '#fee2e2'
+                    }}
+                  >
+                    {selectedDecisionAppeal.status === 'approved' ? (
+                      <CheckCircle2 className="w-7 h-7 text-green-600" />
+                    ) : (
+                      <XCircle className="w-7 h-7 text-red-600" />
+                    )}
+                  </div>
+
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-900 capitalize">
+                      Appeal {selectedDecisionAppeal.status}
+                    </h2>
+                    <p className="text-sm text-slate-400 mt-1">
+                      {selectedDecisionAppeal.decisionDate
+                        ? `Decision made on ${new Date(selectedDecisionAppeal.decisionDate).toLocaleString()}`
+                        : 'Decision date not available'}
+                    </p>
+                  </div>
+
+                  <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                      Committee Response
+                    </p>
+                    <p className="text-slate-800 font-medium leading-relaxed text-sm">
+                      {selectedDecisionAppeal.decisionReason || 'No reason was provided by the committee.'}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedDecisionAppeal(null)}
+                    className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl transition-all mt-2"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -503,19 +627,26 @@ export default function AppealPage() {
           <h3 className="text-xl font-black text-slate-900 mb-6 tracking-tight">Your Submitted Appeals</h3>
           <div className="space-y-4">
             {allAppeals.map(appeal => (
-              <div key={appeal.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-white/65 bg-white/45 shadow-sm backdrop-blur-xl">
-                <div>
+              <div key={appeal.id} className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-white/65 bg-white/45 shadow-sm backdrop-blur-xl hover:bg-white/60 hover:shadow-md transition-all cursor-pointer">                <div>
                   <p className="text-sm font-bold text-slate-800">Appeal Submitted</p>
                   <p className="text-xs text-slate-500 mt-1">{new Date(appeal.submittedAt).toLocaleString()}</p>
                 </div>
-                <div>
-                  <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${appeal.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-3">
+                  <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider w-fit ${appeal.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                       appeal.status === 'approved' ? 'bg-green-100 text-green-700' :
                         appeal.status === 'rejected' ? 'bg-red-100 text-red-700' :
                           'bg-slate-200 text-slate-700'
                     }`}>
                     {appeal.status}
                   </span>
+                  {(appeal.status === 'approved' || appeal.status === 'rejected') && (
+                    <button
+                      onClick={() => setSelectedDecisionAppeal(appeal)}
+                      className="text-sm font-bold text-[var(--tenant-primary)] hover:opacity-70 transition-opacity underline"
+                    >
+                      View Response
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -806,6 +937,51 @@ export default function AppealPage() {
           </form>
         )}
       </GlassPanel>
+
+      {/* Decision Response Modal */}
+      {selectedDecisionAppeal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+          <GlassPanel className="max-w-md w-full p-8 relative">
+            <button
+              onClick={() => setSelectedDecisionAppeal(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+              aria-label="Close modal"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center" style={{
+                backgroundColor: selectedDecisionAppeal.status === 'approved' ? '#d1fae5' : '#fee2e2'
+              }}>
+                {selectedDecisionAppeal.status === 'approved' ? (
+                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+                ) : (
+                  <XCircle className="w-6 h-6 text-red-600" />
+                )}
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 mb-2 capitalize">
+                Appeal {selectedDecisionAppeal.status}
+              </h2>
+              <p className="text-sm text-slate-500 mb-6">
+                Decision made on {selectedDecisionAppeal.decisionDate 
+                  ? new Date(selectedDecisionAppeal.decisionDate).toLocaleString() 
+                  : 'Date not available'}              </p>
+              <div className="bg-white/35 border border-white/65 rounded-2xl p-5 text-left mb-6">
+                <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Committee Response</p>
+                <p className="text-slate-800 font-medium leading-relaxed">
+                  {selectedDecisionAppeal.decisionReason || 'No reason provided.'}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedDecisionAppeal(null)}
+                className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 px-6 rounded-xl transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </GlassPanel>
+        </div>
+      )}
       </div>
     </div>
   );
