@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { TenantAdminHeader } from "@/components/tenant_admin/Header";
 import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { CreateElectionModal } from "@/components/tenant_admin/CreateElectionModal";
-import { Plus, Link as LinkIcon, Copy, ExternalLink, Check, Rocket, Settings } from "lucide-react";
+import { Plus, Link as LinkIcon, Copy, ExternalLink, Check, Rocket, Settings, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 export default function TenantElectionsPage() {
   const router = useRouter();
@@ -19,6 +19,9 @@ export default function TenantElectionsPage() {
   const [token, setToken] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE'>('BASIC');
+  const [expiredElections, setExpiredElections] = useState<any[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<{ title: string; label: string; onConfirm: () => Promise<void> } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -54,9 +57,14 @@ export default function TenantElectionsPage() {
           }
         })
         .catch(err => console.error("Failed fetching data:", err))
-        .finally(() => {
-          setIsElectionsLoading(false);
-        });
+  .finally(() => {
+    setIsElectionsLoading(false);
+    // Fetch expired elections for retention
+    fetch(`/api/elections/retention/check?tenantId=${storedUserId}`)
+      .then(r => r.json())
+      .then(data => setExpiredElections(data.expired || []))
+      .catch(err => console.error('Retention fetch error:', err));
+  });
     } else {
       setIsElectionsLoading(false);
     }
@@ -167,6 +175,64 @@ export default function TenantElectionsPage() {
 
         <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border border-white/10 p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none">
           <h1 className="mb-10 text-4xl font-bold tracking-tight md:text-5xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Elections</h1>
+{expiredElections.length > 0 && (
+  <div className="mb-8 rounded-[20px] border border-orange-500/20 bg-gradient-to-r from-orange-600/10 to-amber-600/10 p-6 shadow-[0_4px_30px_rgba(217,119,6,0.05)] backdrop-blur-md">
+    <div className="flex items-start gap-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-400">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <h2 className="text-lg font-bold text-[#F1F0F3] tracking-tight">Data Retention Alert</h2>
+        <p className="mt-1 text-sm text-[#F1F0F3]/70">
+          The following completed elections have exceeded the configured retention period and will be permanently removed.
+        </p>
+        
+        <ul className="mt-4 divide-y divide-white/5 border-t border-white/5">
+          {expiredElections.map((e) => (
+            <li key={e.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3">
+              <div className="flex flex-col gap-1 min-w-0">
+                <span className="font-semibold text-white/95 truncate">{e.title || e.name}</span>
+                <span className="text-xs text-orange-300/80 flex items-center gap-1.5 font-medium">
+                  <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-pulse" />
+                  Auto-deleting in {e.remainingHours} {e.remainingHours === 1 ? 'hour' : 'hours'}
+                </span>
+              </div>
+              <button
+                className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 active:scale-[0.97] text-white text-xs font-bold shadow-[0_0_16px_rgba(220,38,38,0.45)] transition-all"
+                onClick={() => {
+                  const capturedId = e.id;
+                  const capturedTitle = e.title || e.name;
+                  setDeleteTarget({
+                    title: capturedTitle,
+                    label: 'Expired',
+                    onConfirm: async () => {
+                      const res = await fetch('/api/elections/retention/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tenantId, electionId: capturedId })
+                      });
+                      if (res.ok) {
+                        setExpiredElections(prev => prev.filter(ev => ev.id !== capturedId));
+                      } else {
+                        const err = await res.json();
+                        throw new Error(err.error ?? 'Deletion failed');
+                      }
+                    }
+                  });
+                }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Now
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+)}
 
           <div className="flex flex-col gap-12">
             <div className="flex flex-col gap-6">
@@ -280,7 +346,7 @@ export default function TenantElectionsPage() {
 
                         {/* Quick Actions (Go to Site / Copy) for Active/Published */}
                         {(activeElections[0].status === 'ACTIVE' || activeElections[0].status === 'PUBLISHED') && (
-                          <div className={`absolute top-4 right-4 flex flex-col items-end gap-2 transition-opacity ${
+                          <div className={`absolute top-4 right-4 z-20 flex flex-col items-end gap-2 transition-opacity ${
                             activeElections[0].status === 'ACTIVE' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                           }`}>
                             <button
@@ -307,6 +373,64 @@ export default function TenantElectionsPage() {
                                   Copied!
                                 </span>
                               )}
+                            </button>
+                            {activeElections[0].status === 'PUBLISHED' && (
+                              <button
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  const capturedId = activeElections[0].id;
+                                  const capturedTitle = activeElections[0].title;
+                                  setDeleteTarget({
+                                    title: capturedTitle,
+                                    label: 'Published',
+                                    onConfirm: async () => {
+                                      const res = await fetch('/api/elections/delete', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ tenantId, electionId: capturedId })
+                                      });
+                                      if (res.ok) { window.location.reload(); }
+                                      else { const e = await res.json(); throw new Error(e.error ?? 'Deletion failed'); }
+                                    }
+                                  });
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 active:scale-95 text-white text-xs font-bold shadow-[0_0_18px_rgba(220,38,38,0.5)] transition-all"
+                                title="Delete election"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Quick Action for DRAFT */}
+                        {activeElections[0].status === 'DRAFT' && (
+                          <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                const capturedId = activeElections[0].id;
+                                const capturedTitle = activeElections[0].title;
+                                setDeleteTarget({
+                                  title: capturedTitle,
+                                  label: 'Draft',
+                                  onConfirm: async () => {
+                                    const res = await fetch('/api/elections/delete', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ tenantId, electionId: capturedId })
+                                    });
+                                    if (res.ok) { window.location.reload(); }
+                                    else { const e = await res.json(); throw new Error(e.error ?? 'Deletion failed'); }
+                                  }
+                                });
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 active:scale-95 text-white text-xs font-bold shadow-[0_0_18px_rgba(220,38,38,0.5)] transition-all"
+                              title="Delete draft election"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete
                             </button>
                           </div>
                         )}
@@ -409,7 +533,7 @@ export default function TenantElectionsPage() {
 
                         {/* Quick Actions (Go to Site / Copy) for Active/Published */}
                         {(election.status === 'ACTIVE' || election.status === 'PUBLISHED') && (
-                          <div className={`absolute top-4 right-4 flex flex-col items-end gap-2 transition-opacity ${
+                          <div className={`absolute top-4 right-4 z-20 flex flex-col items-end gap-2 transition-opacity ${
                             election.status === 'ACTIVE' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                           }`}>
                             <button
@@ -436,6 +560,64 @@ export default function TenantElectionsPage() {
                                   Copied!
                                 </span>
                               )}
+                            </button>
+                            {election.status === 'PUBLISHED' && (
+                              <button
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  const capturedId = election.id;
+                                  const capturedTitle = election.title;
+                                  setDeleteTarget({
+                                    title: capturedTitle,
+                                    label: 'Published',
+                                    onConfirm: async () => {
+                                      const res = await fetch('/api/elections/delete', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ tenantId, electionId: capturedId })
+                                      });
+                                      if (res.ok) { window.location.reload(); }
+                                      else { const e = await res.json(); throw new Error(e.error ?? 'Deletion failed'); }
+                                    }
+                                  });
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 active:scale-95 text-white text-xs font-bold shadow-[0_0_18px_rgba(220,38,38,0.5)] transition-all"
+                                title="Delete election"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Quick Action for DRAFT */}
+                        {election.status === 'DRAFT' && (
+                          <div className="absolute top-4 right-4 z-20 flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                const capturedId = election.id;
+                                const capturedTitle = election.title;
+                                setDeleteTarget({
+                                  title: capturedTitle,
+                                  label: 'Draft',
+                                  onConfirm: async () => {
+                                    const res = await fetch('/api/elections/delete', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ tenantId, electionId: capturedId })
+                                    });
+                                    if (res.ok) { window.location.reload(); }
+                                    else { const e = await res.json(); throw new Error(e.error ?? 'Deletion failed'); }
+                                  }
+                                });
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 active:scale-95 text-white text-xs font-bold shadow-[0_0_18px_rgba(220,38,38,0.5)] transition-all"
+                              title="Delete draft election"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete
                             </button>
                           </div>
                         )}
@@ -524,6 +706,85 @@ export default function TenantElectionsPage() {
           </div>
         </main>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => !isDeleting && setDeleteTarget(null)}
+          />
+          <div className="relative w-full max-w-[420px] rounded-[28px] border border-white/10 bg-[#110820] shadow-[0_32px_80px_rgba(0,0,0,0.6)] overflow-hidden">
+            {/* Red ambient glow */}
+            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-40 bg-red-600/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
+
+            <div className="relative px-8 pt-8 pb-10 flex flex-col items-center text-center gap-6">
+              {/* Icon */}
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/25 shadow-[0_0_32px_rgba(239,68,68,0.2)]">
+                <Trash2 className="w-7 h-7 text-red-400" />
+              </div>
+
+              {/* Copy */}
+              <div className="space-y-1.5">
+                <h3 className="text-xl font-bold text-white tracking-tight">Delete Election?</h3>
+                <p className="text-sm text-white/55 leading-relaxed">
+                  You are about to permanently delete the{' '}
+                  <span className="font-semibold text-white/80">{deleteTarget.label}</span> election:
+                </p>
+                <p className="mt-1 text-base font-bold text-white truncate max-w-[320px]">
+                  &ldquo;{deleteTarget.title}&rdquo;
+                </p>
+              </div>
+
+              {/* Danger notice */}
+              <div className="w-full rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+                <p className="text-xs font-semibold text-red-400 uppercase tracking-wider">
+                  ⚠&nbsp; This action is permanent and cannot be undone.
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex w-full gap-3 pt-1">
+                <button
+                  disabled={isDeleting}
+                  onClick={() => setDeleteTarget(null)}
+                  className="w-28 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm font-bold text-white/70 transition-all hover:bg-white/10 hover:text-white disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={isDeleting}
+                  onClick={async () => {
+                    setIsDeleting(true);
+                    try {
+                      await deleteTarget.onConfirm();
+                      setDeleteTarget(null);
+                    } catch (err: any) {
+                      alert(err.message ?? 'Deletion failed. Please try again.');
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-red-600 py-3 px-4 text-sm font-bold text-white whitespace-nowrap shadow-[0_0_24px_rgba(220,38,38,0.4)] transition-all hover:bg-red-500 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="h-4 w-4 rounded-full border-2 border-white/25 border-t-white animate-spin" />
+                      Deleting…
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Delete Permanently
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Launch Confirmation Modal */}
       {launchingElection && (

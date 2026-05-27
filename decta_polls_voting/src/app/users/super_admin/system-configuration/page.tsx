@@ -23,11 +23,6 @@ export function GlobalConfiguration() {
       backup_retention_days: "90",
       auto_backup: true,
       encrypt_backups: true
-    },
-    tenant_defaults: {
-      max_users: "12",
-      max_elections: "100",
-      storage_limit_gb: "5"
     }
   });
   const [isSaving, setIsSaving] = React.useState(false);
