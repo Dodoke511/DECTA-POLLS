@@ -520,7 +520,7 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                                     }
                                     setDraggedSectionIdx(null);
                                 }}
-                                className={`border border-white/10 bg-white/[0.02] rounded-2xl shadow-lg transition-all ring-1 ring-black/5 hover:border-white/20 ${draggedSectionIdx === secIdx ? 'opacity-40 border-[#5B4FD9]' : ''}`}
+                                className={`border border-white/10 bg-white/[0.02] rounded-2xl shadow-lg transition-all ring-1 ring-black/5 hover:border-white/20 relative overflow-visible ${draggedSectionIdx === secIdx ? 'opacity-40 border-[#5B4FD9]' : ''}`}
                             >
                                 {/* Section Header */}
                                 <div className="bg-white/[0.05] p-3 flex items-center gap-3 border-b border-white/5 rounded-t-2xl">
@@ -534,7 +534,7 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                                         placeholder="Section Title..."
                                     />
 
-                                    <div className="relative">
+                                    <div className={`relative ${activeSectionStylePickerIdx === secIdx ? 'z-30' : ''}`}>
                                         <button
                                             type="button"
                                             onClick={() => setActiveSectionStylePickerIdx(activeSectionStylePickerIdx === secIdx ? null : secIdx)}
@@ -638,16 +638,16 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                                         })
                                     )}
 
-                                    {/* Field Picker */}
-                                    <div className="pt-2 relative">
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveSectionFieldPickerIdx(activeSectionFieldPickerIdx === secIdx ? null : secIdx)}
-                                            className="w-full flex items-center justify-between bg-[#110D1E] border border-white/10 rounded-xl text-[12px] text-white/60 p-2.5 hover:bg-white/5 hover:border-white/20 transition-all cursor-pointer"
-                                        >
-                                            <span>+ Assign Field To Section...</span>
-                                            <ChevronDown className="w-3.5 h-3.5 text-white/30" />
-                                        </button>
+                                     {/* Field Picker */}
+                                     <div className={`pt-2 relative ${activeSectionFieldPickerIdx === secIdx ? 'z-30' : ''}`}>
+                                         <button
+                                             type="button"
+                                             onClick={() => setActiveSectionFieldPickerIdx(activeSectionFieldPickerIdx === secIdx ? null : secIdx)}
+                                             className="w-full flex items-center justify-between bg-[#110D1E] border border-white/10 rounded-xl text-[12px] text-white/60 p-2.5 hover:bg-white/5 hover:border-white/20 transition-all cursor-pointer"
+                                         >
+                                             <span>+ Assign Field To Section...</span>
+                                             <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+                                         </button>
                                         
                                         {activeSectionFieldPickerIdx === secIdx && (
                                             <>

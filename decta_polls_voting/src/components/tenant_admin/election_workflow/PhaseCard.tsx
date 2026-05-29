@@ -230,7 +230,7 @@ export const PhaseCard = forwardRef(({
 
       {/* ── Card ── */}
       <div
-        className="rounded-[32px] border border-white/10 bg-[#141026]/60 backdrop-blur-3xl overflow-hidden ring-1 ring-white/5 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.5)]"
+        className="rounded-[32px] border border-white/10 bg-[#141026]/60 backdrop-blur-3xl ring-1 ring-white/5 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.5)] overflow-visible"
         style={{
           background: `linear-gradient(165deg, ${accent}10, rgba(20,16,38,0.95))`,
           borderColor: `${accent}30`,
@@ -314,7 +314,7 @@ export const PhaseCard = forwardRef(({
 
         {/* ─ Body (only when active) ─ */}
         {isActive && (
-          <div className="px-8 pb-10 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
+          <div className="px-8 pb-10 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 overflow-visible">
             <div className="w-full h-px bg-white/[0.05]" />
             {/* ─ Config fields (filing, screening, appeal, publication) ─ */}
             {!metadata.embedModule && !metadata.redirectToSettings && (
