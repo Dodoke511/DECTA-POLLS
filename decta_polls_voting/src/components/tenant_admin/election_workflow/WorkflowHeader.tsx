@@ -14,36 +14,66 @@ interface WorkflowHeaderProps {
 async function updateElectionTitle(electionId: string, title: string) {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('election')
       .update({ title })
       .eq('id', electionId);
     if (error) {
       throw error;
     }
-    return data;
+    return true;
   } catch (error) {
     console.error('Error updating election title:', error);
-    return null;
+    return false;
   }
 }
 
 export function WorkflowHeader({ electionTitle, banner, electionId }: WorkflowHeaderProps) {
   const router = useRouter();
   const [localTitle, setLocalTitle] = useState(electionTitle || "Untitled Election...");
+  const [lastSavedTitle, setLastSavedTitle] = useState(electionTitle || "Untitled Election...");
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishMessage, setPublishMessage] = useState<{ type: 'error' | 'success', text: string, details?: string[] } | null>(null);
 
   useEffect(() => {
     if (electionTitle) {
       setLocalTitle(electionTitle);
+      setLastSavedTitle(electionTitle);
     }
   }, [electionTitle]);
 
-  const handleSave = () => {
-    if (localTitle.trim() && localTitle.trim() !== electionTitle) {
-      updateElectionTitle(electionId, localTitle.trim());
+  const saveTitle = async (title: string) => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle || trimmedTitle === lastSavedTitle) return;
+
+    setSaveStatus('saving');
+    const success = await updateElectionTitle(electionId, trimmedTitle);
+    if (success) {
+      setLastSavedTitle(trimmedTitle);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } else {
+      setSaveStatus('error');
     }
+  };
+
+  // Debounced autosave on typing
+  useEffect(() => {
+    const trimmedTitle = localTitle.trim();
+    if (!trimmedTitle || trimmedTitle === lastSavedTitle) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      saveTitle(localTitle);
+    }, 1000); // 1-second delay of inactivity
+
+    return () => clearTimeout(timer);
+  }, [localTitle, lastSavedTitle]);
+
+  const handleSave = () => {
+    saveTitle(localTitle);
   };
 
   const handlePublish = async () => {
@@ -112,20 +142,44 @@ export function WorkflowHeader({ electionTitle, banner, electionId }: WorkflowHe
           <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center overflow-hidden border border-white/20 shadow-inner">
             {banner && <img src={banner} alt="Banner" className="w-full h-full object-cover" />}
           </div>
-          <div className="relative group/header flex items-center h-full">
-            <input
-              type="text"
-              value={localTitle}
-              onChange={(e) => setLocalTitle(e.target.value)}
-              onBlur={handleSave}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.currentTarget.blur();
-                }
-              }}
-              className="bg-transparent border-none text-white/90 text-[1.1rem] font-bold tracking-tight outline-none transition-all duration-500 cursor-text hover:bg-white/5 rounded-lg px-3 py-1.5 -ml-3 placeholder:text-white/20 w-[300px]"
-            />
-            <div className="absolute -bottom-1 left-0 w-0 h-[1.5px] bg-white transform origin-left transition-all duration-500 group-focus-within/header:w-full group-hover/header:w-[40px] opacity-0 group-focus-within/header:opacity-100 group-hover/header:opacity-40" />
+          <div className="relative group/header flex items-center h-full gap-3">
+            <div className="relative">
+              <input
+                type="text"
+                value={localTitle}
+                onChange={(e) => setLocalTitle(e.target.value)}
+                onBlur={handleSave}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                  }
+                }}
+                className="bg-transparent border-none text-white/90 text-[1.1rem] font-bold tracking-tight outline-none transition-all duration-500 cursor-text hover:bg-white/5 rounded-lg px-3 py-1.5 -ml-3 placeholder:text-white/20 w-[300px] pr-8"
+              />
+              <div className="absolute -bottom-1 left-0 w-0 h-[1.5px] bg-white transform origin-left transition-all duration-500 group-focus-within/header:w-full group-hover/header:w-[40px] opacity-0 group-focus-within/header:opacity-100 group-hover/header:opacity-40" />
+            </div>
+
+            {/* Saving Status Indicator */}
+            <div className="flex items-center text-xs transition-all duration-300 min-w-[90px]">
+              {saveStatus === 'saving' && (
+                <span className="flex items-center gap-1.5 text-white/40 animate-pulse">
+                  <Loader2 className="w-3 h-3 animate-spin text-[#6648EB]" />
+                  <span>Saving...</span>
+                </span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="flex items-center gap-1.5 text-emerald-400 font-semibold animate-in fade-in duration-300">
+                  <span className="text-[10px]">✓</span>
+                  <span>Saved</span>
+                </span>
+              )}
+              {saveStatus === 'error' && (
+                <span className="flex items-center gap-1.5 text-red-400 font-semibold animate-in fade-in duration-300">
+                  <span>⚠</span>
+                  <span>Error saving</span>
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

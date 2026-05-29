@@ -491,6 +491,27 @@ export const DynamicFormBuilder = forwardRef(({
           const errorData = await res.json();
           throw new Error(errorData.error || 'Failed to save form');
         }
+
+        // Update the client-side cache immediately with the successfully saved fields
+        // to prevent stale state from overwriting edits on component refresh/remount.
+        const cacheKey = `${electionId}:${toolName}`;
+        formDataCache.set(cacheKey, {
+          fields: payload.map(p => ({
+            id: p.id,
+            fieldName: p.fieldName,
+            label: p.label,
+            fieldType: p.fieldType,
+            required: p.required,
+            rule_checkable: p.ruleCheckable,
+            placeholder: p.placeholder,
+            validationRules: p.validationRules,
+            orderIndex: p.orderIndex,
+          })),
+          form: {
+            custom_logic_meta: customLogicMeta
+          }
+        });
+
         return true;
       } catch (err) {
         console.error("Form save error:", err);

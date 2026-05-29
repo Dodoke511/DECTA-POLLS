@@ -31,13 +31,35 @@ export async function POST(request: Request) {
         const { createClient } = await import('@supabase/supabase-js');
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // Look up user by email
-        const { data: listData, error: listError } = await supabase.auth.admin.listUsers();
-        if (listError) {
-            return NextResponse.json({ error: 'Failed to look up user' }, { status: 500 });
+        // Look up user by email with pagination support to handle lists larger than the default page size (50)
+        let user = null;
+        let page = 1;
+        const perPage = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+            const { data: listData, error: listError } = await supabase.auth.admin.listUsers({
+                page,
+                perPage
+            });
+            
+            if (listError) {
+                return NextResponse.json({ error: 'Failed to look up user' }, { status: 500 });
+            }
+
+            const found = listData.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+            if (found) {
+                user = found;
+                break;
+            }
+
+            if (!listData.users || listData.users.length < perPage) {
+                hasMore = false;
+            } else {
+                page++;
+            }
         }
 
-        const user = listData.users.find((u) => u.email === email);
         if (!user) {
             return NextResponse.json({ error: 'No account found with that email address' }, { status: 404 });
         }
