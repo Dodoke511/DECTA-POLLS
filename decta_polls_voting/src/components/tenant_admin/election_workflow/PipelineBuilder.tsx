@@ -178,23 +178,19 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     const loadInitialData = async () => {
       setIsLoading(true);
       try {
-        // ── Fire subscription + phases in parallel — fastest cold start ──────────
-        // refreshPhases will run with the default 'BASIC' ref, but we immediately
-        // re-apply enforcePhaseAccess once the real tier is known.
-        const [subRes, election] = await Promise.all([
-          fetch(`/api/get_tenant_subscription?electionId=${electionId}`),
-          refreshPhases(true),
-        ]);
-
-        // Resolve subscription and fix any incorrect phase enforcement from BASIC default
+        // 1. Resolve subscription tier first so that refreshPhases runs with the correct tier
+        const subRes = await fetch(`/api/get_tenant_subscription?electionId=${electionId}`);
+        let normalizedSub: SubscriptionTier = 'BASIC';
         if (subRes.ok) {
           const { subscription: fetchedSub } = await subRes.json();
-          const normalizedSub = normalizeSubscription(fetchedSub);
+          normalizedSub = normalizeSubscription(fetchedSub);
           subscriptionRef.current = normalizedSub;
           setSubscription(normalizedSub);
-          // Re-enforce with the real tier to undo any BASIC-default enforcement
-          setPhases(current => enforcePhaseAccess(current, normalizedSub));
         }
+
+        // 2. Fetch phases with the correct subscription tier now populated in subscriptionRef.current
+        const election = await refreshPhases(true);
+
 
         // ── Remaining parallel fetches (needs tenantId from election) ──────────
         const tenantId = election?.tenantID;
@@ -311,7 +307,9 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
     // Persist the choice to DB immediately so it's remembered on refresh
     const success = await handleSave(chosenPhases);
     if (success) {
-      setPhases(chosenPhases);
+      // Re-fetch the saved phases from the DB so that the client state
+      // has the correct database-generated ids, electionId, and timestamps.
+      await refreshPhases(false);
       setIsInitialized(true);
     }
   };
