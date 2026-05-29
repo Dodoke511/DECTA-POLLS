@@ -69,7 +69,10 @@ export async function POST(request: Request) {
     // 3. Send the confirmation email to the assigned person
     const emailUser = process.env.EMAIL_USER;
     const emailPass = process.env.EMAIL_PASS;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    
+    const host = request.headers.get("host") || "localhost:3000";
+    const protocol = request.headers.get("x-forwarded-proto") || (host.includes("localhost") || host.includes("127.0.0.1") ? "http" : "https");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
 
     if (!emailUser || !emailPass) {
       return NextResponse.json(

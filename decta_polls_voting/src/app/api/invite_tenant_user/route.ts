@@ -59,7 +59,10 @@ export async function POST(request: Request) {
     // 4. Send the Invitation Email
     const user = process.env.EMAIL_USER;
     const pass = process.env.EMAIL_PASS;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    
+    const host = request.headers.get("host") || "localhost:3000";
+    const protocol = request.headers.get("x-forwarded-proto") || (host.includes("localhost") || host.includes("127.0.0.1") ? "http" : "https");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
 
     if (!user || !pass) {
         console.error("[invite_tenant_user] Email credentials missing");
