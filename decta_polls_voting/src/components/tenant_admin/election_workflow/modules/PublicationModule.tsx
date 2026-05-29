@@ -520,10 +520,10 @@ export const PublicationModule = forwardRef<{ save: () => Promise<boolean> }, Pu
                                     }
                                     setDraggedSectionIdx(null);
                                 }}
-                                className={`border border-white/10 bg-white/[0.02] rounded-2xl overflow-hidden shadow-lg transition-all ring-1 ring-black/5 hover:border-white/20 ${draggedSectionIdx === secIdx ? 'opacity-40 border-[#5B4FD9]' : ''}`}
+                                className={`border border-white/10 bg-white/[0.02] rounded-2xl shadow-lg transition-all ring-1 ring-black/5 hover:border-white/20 ${draggedSectionIdx === secIdx ? 'opacity-40 border-[#5B4FD9]' : ''}`}
                             >
                                 {/* Section Header */}
-                                <div className="bg-white/[0.05] p-3 flex items-center gap-3 border-b border-white/5">
+                                <div className="bg-white/[0.05] p-3 flex items-center gap-3 border-b border-white/5 rounded-t-2xl">
                                     <div className="flex flex-col gap-0.5 cursor-grab active:cursor-grabbing">
                                         <GripVertical className="w-4 h-4 text-white/20 hover:text-white/60" />
                                     </div>
