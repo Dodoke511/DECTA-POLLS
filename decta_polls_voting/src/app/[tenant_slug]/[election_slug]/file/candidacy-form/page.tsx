@@ -548,7 +548,15 @@ export default function CandidacyFormPage() {
                   <input
                     type="file"
                     required={field.required}
-                    accept={field.validationRules?.allowedTypes ? `.${field.validationRules.allowedTypes.replace(/,/g, ',.')}` : undefined}
+                    accept={field.validationRules?.allowedTypes 
+                      ? field.validationRules.allowedTypes
+                          .split(',')
+                          .map((t: string) => {
+                            const trimmed = t.trim();
+                            return trimmed.startsWith('.') ? trimmed : `.${trimmed}`;
+                          })
+                          .join(',')
+                      : undefined}
                     className="w-full bg-white/50 border border-white/70 rounded-xl px-4 py-3 !text-slate-900 font-semibold shadow-sm backdrop-blur-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-[var(--tenant-primary)] file:text-slate-950 hover:file:opacity-90"
                     style={{ color: '#0f172a' }}
                     onChange={(e) => handleInputChange(field.id, e.target.files?.[0])}
