@@ -397,12 +397,17 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
       }
     }
 
-    // Dependency check: To access step N, all previous steps must be complete
-    for (let i = 0; i < idx; i++) {
-      if (!isStepComplete(i)) return false;
+    // Dependency check: To access step N, all previous steps must be complete.
+    // However, when the election is still a DRAFT (not active), we allow the tenant admin
+    // to navigate and configure phases in any order, so we bypass this dependency check.
+    const isElectionActive = electionStatus === 'ACTIVE';
+    if (isElectionActive) {
+      for (let i = 0; i < idx; i++) {
+        if (!isStepComplete(i)) return false;
+      }
     }
     return true;
-  }, [isStepComplete, isOwner, permsLoaded, hasAnyPermission, subscription]);
+  }, [isStepComplete, isOwner, permsLoaded, hasAnyPermission, subscription, electionStatus]);
 
   // Jump to first accessible step if the current one is locked
   useEffect(() => {
@@ -420,8 +425,9 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
   const goToNext = () => {
     // Navigation only — no auto-save. Use "Sync & Save" button to persist changes.
     const currentStepComplete = isStepComplete(activeStepIndex);
+    const isDraft = electionStatus !== 'ACTIVE';
 
-    if (activeStepIndex < steps.length - 1 && currentStepComplete) {
+    if (activeStepIndex < steps.length - 1 && (isDraft || currentStepComplete)) {
       for (let nextIdx = activeStepIndex + 1; nextIdx < steps.length; nextIdx++) {
         if (canAccessStep(nextIdx)) {
           setActiveStepIndex(nextIdx);
@@ -694,15 +700,16 @@ export function PipelineBuilder({ electionId, authParams }: PipelineBuilderProps
           {/* Next Button */}
           <button
             onClick={goToNext}
-            disabled={!hasNextStep || !isStepComplete(activeStepIndex) || isLoading || isPhaseCardLoading}
+            disabled={!hasNextStep || (electionStatus === 'ACTIVE' && !isStepComplete(activeStepIndex)) || isLoading || isPhaseCardLoading}
             className={`sticky top-48 p-4 rounded-2xl border transition-all hover:scale-110 active:scale-95 z-20 shadow-lg 
-              ${(!isStepComplete(activeStepIndex) || !hasNextStep || isLoading || isPhaseCardLoading)
+              ${((electionStatus === 'ACTIVE' && !isStepComplete(activeStepIndex)) || !hasNextStep || isLoading || isPhaseCardLoading)
                 ? 'bg-amber-500/5 border-amber-500/10 text-amber-500/40 cursor-not-allowed opacity-50'
                 : 'bg-[#6648EB]/10 border-[#6648EB]/20 text-[#6648EB] hover:text-white hover:bg-[#6648EB] shadow-[#6648EB]/10'
               }`}
             title={(() => {
+              const isDraft = electionStatus !== 'ACTIVE';
               if (!hasNextStep) return 'No available next phase for your plan';
-              if (isStepComplete(activeStepIndex)) return 'Go to next step (your changes are not saved yet — use Sync & Save)';
+              if (isDraft || isStepComplete(activeStepIndex)) return 'Go to next step (your changes are not saved yet — use Sync & Save)';
 
               if (activeStepIndex === 0) return 'Please add at least one electoral position to proceed';
 
