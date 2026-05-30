@@ -9,9 +9,22 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false },
 });
 
-/**
- * Check if an election is older than the retention period.
- */
+interface RetentionSettings {
+  audit_log_days: number;
+  election_data_days: number;
+}
+
+function parseRetentionSetting(value: unknown): RetentionSettings {
+  const defaultSettings = { audit_log_days: 30, election_data_days: 30 };
+  if (!value) return defaultSettings;
+
+  const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+  return {
+    audit_log_days: Number(parsed?.audit_log_days ?? defaultSettings.audit_log_days),
+    election_data_days: Number(parsed?.election_data_days ?? defaultSettings.election_data_days),
+  };
+}
+
 export function isElectionExpired(endDate: string, retentionDays: number): boolean {
   const electionEnd = new Date(endDate);
   const cutoff = new Date();
@@ -43,13 +56,8 @@ export async function deleteElectionCascade(electionId: string, tenantId: string
     .eq("key", "retention")
     .maybeSingle();
 
-  let retentionDays = 30;
-  if (setting?.value) {
-    const val = typeof setting.value === "string" ? JSON.parse(setting.value) : setting.value;
-    if (val?.election_data_days) {
-      retentionDays = Number(val.election_data_days);
-    }
-  }
+  const retention = parseRetentionSetting(setting?.value);
+  let retentionDays = retention.election_data_days;
 
   if (!election.endDate) {
     throw new Error("Election has not completed yet");
@@ -79,6 +87,27 @@ export async function deleteElectionCascade(electionId: string, tenantId: string
     action_type: "election_retention_deletion",
     metadata: { reason: "retention period exceeded" },
   });
+}
+
+export async function deleteExpiredAuditLogs() {
+  const { data: setting } = await supabaseAdmin
+    .from("system_settings")
+    .select("value")
+    .eq("key", "retention")
+    .maybeSingle();
+
+  const retention = parseRetentionSetting(setting?.value);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - retention.audit_log_days);
+
+  const { error } = await supabaseAdmin
+    .from("audit_logs")
+    .delete()
+    .lt("created_at", cutoff.toISOString());
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 /**

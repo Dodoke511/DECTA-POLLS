@@ -6,6 +6,7 @@ import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { useRouter } from "next/navigation";
 import { PhaseStatusBadge } from "@/components/tenant_admin/PhaseStatusBadge";
 import { PhaseStatus } from "@/lib/workflow/PhaseResolverService";
+import { isSubscriptionExpiringSoon, isSubscriptionRestricted } from '@/lib/subscription-limits';
 
 type ElectionSummary = {
   id: string;
@@ -88,22 +89,26 @@ const getCandidatesByPosition = (candidatesList: CandidateWithPosition[], totalU
 export default function TenantDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [tenantStatus, setTenantStatus] = useState<string | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [liveElectionsData, setLiveElectionsData] = useState<LiveElectionDetails[]>([]);
   const [userLimits, setUserLimits] = useState<{ currentCount: number, limit: number | null } | null>(null);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(null);
+  const [subscriptionDaysUntilExpiry, setSubscriptionDaysUntilExpiry] = useState<number | null>(null);
+  const [isRestricted, setIsRestricted] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const random = params.get('random');
-    const status = params.get('status') || sessionStorage.getItem('tenantStatus');
     const storedSupabaseToken = sessionStorage.getItem('supabaseToken');
 
     // If we have a token in params, restore sessionStorage for continued access
     if (random) {
       sessionStorage.setItem('tenantToken', random);
+      setToken(random);
     }
 
     // If we still don't have a Supabase token, try to get it from params or storage
@@ -111,7 +116,7 @@ export default function TenantDashboardPage() {
       sessionStorage.setItem('supabaseToken', params.get('token')!);
     }
 
-    setTenantStatus(status);
+    setToken((prev) => prev || sessionStorage.getItem('tenantToken'));
     setLoading(false);
   }, [router]);
 
@@ -184,6 +189,15 @@ export default function TenantDashboardPage() {
           const limitsData = await limitsRes.json();
           setUserLimits(limitsData);
         }
+
+        const subscriptionRes = await fetch(`/api/get_tenant_subscription?tenantId=${tenantId}`);
+        if (subscriptionRes.ok) {
+          const subscriptionData = await subscriptionRes.json();
+          setSubscriptionPlan(subscriptionData.subscription ?? null);
+          setSubscriptionExpiresAt(subscriptionData.subscription_expires_at ?? null);
+          setSubscriptionDaysUntilExpiry(subscriptionData.days_until_expiry ?? null);
+          setIsRestricted(isSubscriptionRestricted(subscriptionData.subscription, subscriptionData.subscription_expires_at));
+        }
       } catch (error) {
         console.error("Failed to load dashboard details:", error);
       } finally {
@@ -196,7 +210,8 @@ export default function TenantDashboardPage() {
     }
   }, [loading]);
 
-  const isPending = tenantStatus === 'PENDING';
+  const isPending = subscriptionPlan === 'PENDING';
+  const shouldShowExpiryBanner = isSubscriptionExpiringSoon(subscriptionExpiresAt, 10);
 
   const totalUsers = userLimits?.currentCount || 0;
   const displayedCandidates = candidates.length > 0
@@ -230,6 +245,23 @@ export default function TenantDashboardPage() {
       `}} />
       <TenantAdminHeader />
 
+      {shouldShowExpiryBanner && !isPending && (
+        <div className="mx-6 mt-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+              <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m2-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-500">Subscription Renewal Reminder</p>
+              <p className="text-xs text-amber-500/60">Your subscription expires in {subscriptionDaysUntilExpiry} day{subscriptionDaysUntilExpiry === 1 ? '' : 's'}. Renew now to avoid account restrictions.</p>
+            </div>
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-500/40 px-3 py-1 rounded-lg border border-amber-500/10">Expiring Soon</p>
+        </div>
+      )}
+
       {isPending && (
         <div className="mx-6 mt-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between animate-in fade-in slide-in-from-top-4">
           <div className="flex items-center gap-4">
@@ -247,11 +279,28 @@ export default function TenantDashboardPage() {
         </div>
       )}
 
-      <div className={`flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6 overflow-hidden ${isPending ? 'grayscale-[0.5]' : ''}`}>
-        <TenantAdminSidebar activePath="/users/tenant/dashboard" isRestricted={isPending} />
+      <div className={`flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6 overflow-hidden ${isRestricted ? 'grayscale-[0.5]' : ''}`}>
+        <TenantAdminSidebar activePath="/users/tenant/dashboard" isRestricted={isRestricted} />
 
-        <main className={`super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none ${isPending ? 'pointer-events-none opacity-60' : ''}`}>
+        <main className={`relative super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none ${isRestricted ? 'pointer-events-none opacity-60' : ''}`}>
           <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Dashboard</h1>
+          {isRestricted && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#05070f]/95 p-6 text-center">
+              <div className="max-w-xl rounded-[28px] border border-white/10 bg-[#090b14] p-8 shadow-[0_0_60px_rgba(0,0,0,0.45)]">
+                <h2 className="text-2xl font-bold text-white">Tenant account access is restricted</h2>
+                <p className="mt-3 text-sm text-white/70">This tenant account is expired or pending approval. All management pages are locked. Please use Settings to manage your subscription or sign out.</p>
+                <button
+                  onClick={() => {
+                    const destination = `/users/tenant/settings?role=tenant&random=${token ?? ''}`;
+                    window.location.href = `/loader?destination=${encodeURIComponent(destination)}&duration=700`;
+                  }}
+                  className="mt-6 inline-flex items-center justify-center rounded-[16px] bg-[#5D44F8] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#7c68ff]"
+                >
+                  Go to Settings
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-6">
             <TimeWidget />

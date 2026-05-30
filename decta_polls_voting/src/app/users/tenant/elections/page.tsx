@@ -6,6 +6,7 @@ import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { CreateElectionModal } from "@/components/tenant_admin/CreateElectionModal";
 import { Plus, Link as LinkIcon, Copy, ExternalLink, Check, Rocket, Settings, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { isSubscriptionRestricted } from '@/lib/subscription-limits';
 export default function TenantElectionsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -18,7 +19,8 @@ export default function TenantElectionsPage() {
   const [tenantSlug, setTenantSlug] = useState("");
   const [token, setToken] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE'>('BASIC');
+  const [subscription, setSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE' | 'PENDING' | 'EXPIRED'>('BASIC');
+  const [isRestricted, setIsRestricted] = useState(false);
   const [expiredElections, setExpiredElections] = useState<any[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<{ title: string; label: string; onConfirm: () => Promise<void> } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -54,6 +56,7 @@ export default function TenantElectionsPage() {
           }
           if (subscriptionData.subscription) {
             setSubscription(subscriptionData.subscription);
+            setIsRestricted(isSubscriptionRestricted(subscriptionData.subscription, subscriptionData.subscription_expires_at));
           }
         })
         .catch(err => console.error("Failed fetching data:", err))
@@ -171,10 +174,27 @@ export default function TenantElectionsPage() {
       <TenantAdminHeader />
 
       <div className="flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6 overflow-hidden">
-        <TenantAdminSidebar activePath="/users/tenant/elections" />
+        <TenantAdminSidebar activePath="/users/tenant/elections" isRestricted={isRestricted} />
 
-        <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border border-white/10 p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none">
+        <main className={`relative super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border border-white/10 p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none ${isRestricted ? 'pointer-events-none opacity-40' : ''}`}>
           <h1 className="mb-10 text-4xl font-bold tracking-tight md:text-5xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Elections</h1>
+          {isRestricted && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#05070f]/95 p-6 text-center">
+              <div className="max-w-xl rounded-[28px] border border-white/10 bg-[#090b14] p-8 shadow-[0_0_60px_rgba(0,0,0,0.45)]">
+                <h2 className="text-2xl font-bold text-white">Tenant account access is restricted</h2>
+                <p className="mt-3 text-sm text-white/70">This tenant account is expired or pending approval. All management pages are locked. Please use Settings to renew or sign out.</p>
+                <button
+                  onClick={() => {
+                    const destination = `/users/tenant/settings?role=tenant&random=${token}`;
+                    window.location.href = `/loader?destination=${encodeURIComponent(destination)}&duration=700`;
+                  }}
+                  className="mt-6 inline-flex items-center justify-center rounded-[16px] bg-[#5D44F8] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#7c68ff]"
+                >
+                  Go to Settings
+                </button>
+              </div>
+            </div>
+          )}
 {expiredElections.length > 0 && (
   <div className="mb-8 rounded-[20px] border border-orange-500/20 bg-gradient-to-r from-orange-600/10 to-amber-600/10 p-6 shadow-[0_4px_30px_rgba(217,119,6,0.05)] backdrop-blur-md">
     <div className="flex items-start gap-4">

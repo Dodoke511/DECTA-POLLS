@@ -44,7 +44,9 @@ export async function POST(request: Request) {
     if (brandingColorSecondary !== undefined) updates.secondary_color = brandingColorSecondary;
     if (brandingColorThird !== undefined) updates.third_color = brandingColorThird;
     if (logoUrl !== undefined) updates.logo_url = logoUrl;
-    if (subscriptionPlan !== undefined) updates.subscription = subscriptionPlan;
+    if (subscriptionPlan !== undefined) {
+      updates.subscription = isSubscriptionRenewed ? 'PENDING' : subscriptionPlan;
+    }
     if (activeTriggers !== undefined) updates.active_triggers = activeTriggers;
     if (isSubscriptionRenewed) {
         const expiresAt = new Date();

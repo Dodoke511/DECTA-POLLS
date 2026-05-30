@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { TenantAdminHeader } from "@/components/tenant_admin/Header";
 import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { useRouter } from "next/navigation";
+import { isSubscriptionRestricted } from '@/lib/subscription-limits';
 import {
   UserCheck, UserX, Clock, Search, Filter, CheckCircle2, XCircle,
   FileText, Eye, ExternalLink, Loader2, Info
@@ -51,7 +52,9 @@ export default function TenantCandidatesPage() {
 
   // Viewer, Subscription, and Screening state
   const [viewerCandidate, setViewerCandidate] = useState<TenantCandidate | null>(null);
-  const [tenantSubscription, setTenantSubscription] = useState('BASIC');
+  const [tenantSubscription, setTenantSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE' | 'PENDING' | 'EXPIRED'>('BASIC');
+  const [isRestricted, setIsRestricted] = useState(false);
+  const [token, setToken] = useState('');
   const [isScreeningEnabled, setIsScreeningEnabled] = useState(false);
   const [undoStack, setUndoStack] = useState<{ candidateId: string; oldStatus: string; timerId: NodeJS.Timeout }[]>([]);
 
@@ -72,6 +75,7 @@ export default function TenantCandidatesPage() {
     }
 
     const storedUserId = sessionStorage.getItem('tenantUserId') || '';
+    setToken(storedToken || '');
 
     if (storedUserId) {
       fetchCandidates(storedUserId);
@@ -88,6 +92,7 @@ export default function TenantCandidatesPage() {
       }
       if (data.subscription) {
         setTenantSubscription(data.subscription);
+        setIsRestricted(isSubscriptionRestricted(data.subscription, data.subscription_expires_at));
       }
     } catch (err) {
       console.error("Failed to fetch candidates:", err);
@@ -243,9 +248,26 @@ export default function TenantCandidatesPage() {
       <TenantAdminHeader />
 
       <div className="flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6 overflow-hidden">
-        <TenantAdminSidebar activePath="/users/tenant/candidates" />
+        <TenantAdminSidebar activePath="/users/tenant/candidates" isRestricted={isRestricted} />
 
-        <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none border-white/10">
+        <main className={`relative super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none border-white/10 ${isRestricted ? 'pointer-events-none opacity-40' : ''}`}>
+          {isRestricted && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#05070f]/95 p-6 text-center">
+              <div className="max-w-xl rounded-[28px] border border-white/10 bg-[#090b14] p-8 shadow-[0_0_60px_rgba(0,0,0,0.45)]">
+                <h2 className="text-2xl font-bold text-white">Tenant account access is restricted</h2>
+                <p className="mt-3 text-sm text-white/70">This tenant account is expired or pending approval. Candidate management is locked until access is restored.</p>
+                <button
+                  onClick={() => {
+                    const destination = `/users/tenant/settings?role=tenant&random=${token}`;
+                    window.location.href = `/loader?destination=${encodeURIComponent(destination)}&duration=700`;
+                  }}
+                  className="mt-6 inline-flex items-center justify-center rounded-[16px] bg-[#5D44F8] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#7c68ff]"
+                >
+                  Go to Settings
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
             <div>
               <div className="flex items-center gap-3">
@@ -336,8 +358,7 @@ export default function TenantCandidatesPage() {
             </div>
           )}
 
-          <div className={`bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-2xl ${(isReadOnly || isTransitionPending) ? 'opacity-60 pointer-events-none' : ''}`}>
-            <div className="overflow-x-auto decta-scrollbar">
+          <div className={`overflow-x-auto decta-scrollbar bg-white/5 rounded-2xl border border-white/10 shadow-2xl ${(isReadOnly || isTransitionPending) ? 'opacity-60 pointer-events-none' : ''}`}>
               <table className="w-full text-left border-collapse min-w-[950px] md:min-w-0">
                 <thead>
                   <tr className="bg-white/5 border-b border-white/10">
@@ -507,7 +528,6 @@ export default function TenantCandidatesPage() {
                 </tbody>
               </table>
             </div>
-          </div>
         </main>
       </div>
 

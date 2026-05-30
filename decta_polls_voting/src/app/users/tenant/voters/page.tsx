@@ -5,6 +5,7 @@ import { TenantAdminHeader } from "@/components/tenant_admin/Header";
 import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Loader2, Search, UserPlus, X, Upload } from "lucide-react";
+import { isSubscriptionRestricted } from '@/lib/subscription-limits';
 
 interface Voter {
   id: string;
@@ -40,6 +41,9 @@ export default function TenantVotersPage() {
   } | null>(null);
   const [voters, setVoters] = useState<Voter[]>([]);
   const [tenantId, setTenantId] = useState<string>("");
+  const [subscriptionPlan, setSubscriptionPlan] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE' | 'EXPIRED' | 'PENDING'>('BASIC');
+  const [isRestricted, setIsRestricted] = useState(false);
+  const [token, setToken] = useState('');
   const [activeTab, setActiveTab] = useState<string>("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,10 +86,13 @@ export default function TenantVotersPage() {
       return;
     }
 
+    setToken(storedToken || '');
+
     if (storedTenantId) {
       setTenantId(storedTenantId);
       console.log('Tenant ID set:', storedTenantId);
       fetchVoters(storedTenantId);
+      fetchSubscription(storedTenantId);
     } else {
       console.warn('No tenant ID found in session storage');
     }
@@ -105,6 +112,19 @@ export default function TenantVotersPage() {
     } catch (error) {
       console.error("Error fetching voters:", error);
       setVoters([]);
+    }
+  };
+
+  const fetchSubscription = async (tenantId: string) => {
+    try {
+      const response = await fetch(`/api/get_tenant_subscription?tenantId=${tenantId}`);
+      const result = await response.json();
+      if (response.ok) {
+        setSubscriptionPlan(result.subscription ?? 'BASIC');
+        setIsRestricted(isSubscriptionRestricted(result.subscription, result.subscription_expires_at));
+      }
+    } catch (error) {
+      console.error("Error fetching subscription status:", error);
     }
   };
 
@@ -475,9 +495,26 @@ export default function TenantVotersPage() {
       <TenantAdminHeader />
 
       <div className="flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6 overflow-hidden">
-        <TenantAdminSidebar activePath="/users/tenant/voters" />
+        <TenantAdminSidebar activePath="/users/tenant/voters" isRestricted={isRestricted} />
 
-        <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none">
+        <main className={`relative super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none ${isRestricted ? 'pointer-events-none opacity-40' : ''}`}>
+          {isRestricted && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#05070f]/95 p-6 text-center">
+              <div className="max-w-xl rounded-[28px] border border-white/10 bg-[#090b14] p-8 shadow-[0_0_60px_rgba(0,0,0,0.45)]">
+                <h2 className="text-2xl font-bold text-white">Tenant account access is restricted</h2>
+                <p className="mt-3 text-sm text-white/70">This tenant account is expired or pending approval. Voter management is locked until access is restored.</p>
+                <button
+                  onClick={() => {
+                    const destination = `/users/tenant/settings?role=tenant&random=${token}`;
+                    window.location.href = `/loader?destination=${encodeURIComponent(destination)}&duration=700`;
+                  }}
+                  className="mt-6 inline-flex items-center justify-center rounded-[16px] bg-[#5D44F8] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#7c68ff]"
+                >
+                  Go to Settings
+                </button>
+              </div>
+            </div>
+          )}
           <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Voters</h1>
 
           {/* Top Section: Stats Card + Search + Add Voter */}

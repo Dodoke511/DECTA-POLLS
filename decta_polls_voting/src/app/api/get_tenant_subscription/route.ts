@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getDisplaySubscription, getDaysUntilExpiry } from '@/lib/subscription-limits';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
       // Then find the subscription for that tenant
       const { data: tenant, error: tenantError } = await supabase
         .from('tenants')
-        .select('subscription')
+        .select('subscription, subscription_expires_at')
         .eq('id', election.tenantID)
         .single();
 
@@ -39,13 +40,17 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Tenant not found.' }, { status: 404 });
       }
 
-      return NextResponse.json({ subscription: tenant.subscription }, { status: 200 });
+      return NextResponse.json({
+        subscription: getDisplaySubscription(tenant.subscription, tenant.subscription_expires_at),
+        subscription_expires_at: tenant.subscription_expires_at ?? null,
+        days_until_expiry: getDaysUntilExpiry(tenant.subscription_expires_at),
+      }, { status: 200 });
     }
 
     if (tenantId) {
       const { data: tenant, error: tenantError } = await supabase
         .from('tenants')
-        .select('subscription')
+        .select('subscription, subscription_expires_at')
         .eq('id', tenantId)
         .single();
 
@@ -53,7 +58,11 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Tenant not found.' }, { status: 404 });
       }
 
-      return NextResponse.json({ subscription: tenant.subscription }, { status: 200 });
+      return NextResponse.json({
+        subscription: getDisplaySubscription(tenant.subscription, tenant.subscription_expires_at),
+        subscription_expires_at: tenant.subscription_expires_at ?? null,
+        days_until_expiry: getDaysUntilExpiry(tenant.subscription_expires_at),
+      }, { status: 200 });
     }
 
   } catch (err: any) {
