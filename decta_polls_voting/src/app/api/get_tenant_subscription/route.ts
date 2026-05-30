@@ -32,7 +32,7 @@ export async function GET(request: Request) {
       // Then find the subscription for that tenant
       const { data: tenant, error: tenantError } = await supabase
         .from('tenants')
-        .select('subscription, subscription_expires_at')
+        .select('subscription, subscription_expires_at, status')
         .eq('id', election.tenantID)
         .single();
 
@@ -44,13 +44,14 @@ export async function GET(request: Request) {
         subscription: getDisplaySubscription(tenant.subscription, tenant.subscription_expires_at),
         subscription_expires_at: tenant.subscription_expires_at ?? null,
         days_until_expiry: getDaysUntilExpiry(tenant.subscription_expires_at),
+        status: (tenant.status ?? 'APPROVED').toString().toUpperCase(),
       }, { status: 200 });
     }
 
     if (tenantId) {
       const { data: tenant, error: tenantError } = await supabase
         .from('tenants')
-        .select('subscription, subscription_expires_at')
+        .select('subscription, subscription_expires_at, status')
         .eq('id', tenantId)
         .single();
 
@@ -62,6 +63,7 @@ export async function GET(request: Request) {
         subscription: getDisplaySubscription(tenant.subscription, tenant.subscription_expires_at),
         subscription_expires_at: tenant.subscription_expires_at ?? null,
         days_until_expiry: getDaysUntilExpiry(tenant.subscription_expires_at),
+        status: (tenant.status ?? 'APPROVED').toString().toUpperCase(),
       }, { status: 200 });
     }
 

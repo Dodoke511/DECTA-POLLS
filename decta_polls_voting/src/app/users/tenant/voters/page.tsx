@@ -42,6 +42,7 @@ export default function TenantVotersPage() {
   const [voters, setVoters] = useState<Voter[]>([]);
   const [tenantId, setTenantId] = useState<string>("");
   const [subscriptionPlan, setSubscriptionPlan] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE' | 'EXPIRED' | 'PENDING'>('BASIC');
+  const [tenantStatus, setTenantStatus] = useState<string | null>(null);
   const [isRestricted, setIsRestricted] = useState(false);
   const [token, setToken] = useState('');
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -121,7 +122,11 @@ export default function TenantVotersPage() {
       const result = await response.json();
       if (response.ok) {
         setSubscriptionPlan(result.subscription ?? 'BASIC');
-        setIsRestricted(isSubscriptionRestricted(result.subscription, result.subscription_expires_at));
+        setTenantStatus(result.status ?? null);
+        setIsRestricted(
+          isSubscriptionRestricted(result.subscription, result.subscription_expires_at) ||
+          result.status === 'PENDING'
+        );
       }
     } catch (error) {
       console.error("Error fetching subscription status:", error);

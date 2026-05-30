@@ -45,7 +45,11 @@ export async function POST(request: Request) {
     if (brandingColorThird !== undefined) updates.third_color = brandingColorThird;
     if (logoUrl !== undefined) updates.logo_url = logoUrl;
     if (subscriptionPlan !== undefined) {
-      updates.subscription = isSubscriptionRenewed ? 'PENDING' : subscriptionPlan;
+      updates.subscription = subscriptionPlan;
+      if (isSubscriptionRenewed) {
+        updates.status = 'PENDING';
+        updates.is_verified = false;
+      }
     }
     if (activeTriggers !== undefined) updates.active_triggers = activeTriggers;
     if (isSubscriptionRenewed) {

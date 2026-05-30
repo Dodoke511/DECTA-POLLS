@@ -95,6 +95,7 @@ export default function TenantDashboardPage() {
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [tenantStatus, setTenantStatus] = useState<string | null>(null);
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(null);
   const [subscriptionDaysUntilExpiry, setSubscriptionDaysUntilExpiry] = useState<number | null>(null);
   const [isRestricted, setIsRestricted] = useState(false);
@@ -194,9 +195,13 @@ export default function TenantDashboardPage() {
         if (subscriptionRes.ok) {
           const subscriptionData = await subscriptionRes.json();
           setSubscriptionPlan(subscriptionData.subscription ?? null);
+          setTenantStatus(subscriptionData.status ?? null);
           setSubscriptionExpiresAt(subscriptionData.subscription_expires_at ?? null);
           setSubscriptionDaysUntilExpiry(subscriptionData.days_until_expiry ?? null);
-          setIsRestricted(isSubscriptionRestricted(subscriptionData.subscription, subscriptionData.subscription_expires_at));
+          setIsRestricted(
+            isSubscriptionRestricted(subscriptionData.subscription, subscriptionData.subscription_expires_at) ||
+            subscriptionData.status === 'PENDING'
+          );
         }
       } catch (error) {
         console.error("Failed to load dashboard details:", error);
@@ -210,7 +215,7 @@ export default function TenantDashboardPage() {
     }
   }, [loading]);
 
-  const isPending = subscriptionPlan === 'PENDING';
+  const isPending = tenantStatus === 'PENDING';
   const shouldShowExpiryBanner = isSubscriptionExpiringSoon(subscriptionExpiresAt, 10);
 
   const totalUsers = userLimits?.currentCount || 0;

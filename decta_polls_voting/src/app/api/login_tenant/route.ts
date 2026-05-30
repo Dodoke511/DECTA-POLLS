@@ -81,7 +81,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized: No tenant configuration found.' }, { status: 403 });
         }
 
-        const tenantStatus = (userData as any).tenants?.status || 'PENDING';
+        const tenantStatus = ((userData as any).tenants?.status ?? 'APPROVED').toString().toUpperCase();
 
         // 1. Block access for REJECTED/DENIED
         if (['REJECTED', 'DENIED'].includes(tenantStatus)) {

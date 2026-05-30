@@ -20,6 +20,7 @@ export default function TenantElectionsPage() {
   const [token, setToken] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE' | 'PENDING' | 'EXPIRED'>('BASIC');
+  const [tenantStatus, setTenantStatus] = useState<string | null>(null);
   const [isRestricted, setIsRestricted] = useState(false);
   const [expiredElections, setExpiredElections] = useState<any[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<{ title: string; label: string; onConfirm: () => Promise<void> } | null>(null);
@@ -56,7 +57,11 @@ export default function TenantElectionsPage() {
           }
           if (subscriptionData.subscription) {
             setSubscription(subscriptionData.subscription);
-            setIsRestricted(isSubscriptionRestricted(subscriptionData.subscription, subscriptionData.subscription_expires_at));
+            setTenantStatus(subscriptionData.status ?? null);
+            setIsRestricted(
+              isSubscriptionRestricted(subscriptionData.subscription, subscriptionData.subscription_expires_at) ||
+              subscriptionData.status === 'PENDING'
+            );
           }
         })
         .catch(err => console.error("Failed fetching data:", err))

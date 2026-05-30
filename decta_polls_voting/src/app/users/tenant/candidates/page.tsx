@@ -53,6 +53,7 @@ export default function TenantCandidatesPage() {
   // Viewer, Subscription, and Screening state
   const [viewerCandidate, setViewerCandidate] = useState<TenantCandidate | null>(null);
   const [tenantSubscription, setTenantSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE' | 'PENDING' | 'EXPIRED'>('BASIC');
+  const [tenantStatus, setTenantStatus] = useState<string | null>(null);
   const [isRestricted, setIsRestricted] = useState(false);
   const [token, setToken] = useState('');
   const [isScreeningEnabled, setIsScreeningEnabled] = useState(false);
@@ -92,7 +93,11 @@ export default function TenantCandidatesPage() {
       }
       if (data.subscription) {
         setTenantSubscription(data.subscription);
-        setIsRestricted(isSubscriptionRestricted(data.subscription, data.subscription_expires_at));
+        setTenantStatus(data.status ?? null);
+        setIsRestricted(
+          isSubscriptionRestricted(data.subscription, data.subscription_expires_at) ||
+          (data.status === 'PENDING')
+        );
       }
     } catch (err) {
       console.error("Failed to fetch candidates:", err);

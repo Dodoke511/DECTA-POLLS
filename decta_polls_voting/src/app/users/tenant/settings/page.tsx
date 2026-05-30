@@ -37,6 +37,7 @@ export default function TenantSettingsPage() {
   const [allowSubstitution, setAllowSubstitution] = useState(false);
   const [allowWithdrawal, setAllowWithdrawal] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [tenantStatus, setTenantStatus] = useState<string | null>(null);
   const [expirationDate, setExpirationDate] = useState<string | null>(null);
   const [tenantEmail, setTenantEmail] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -137,6 +138,7 @@ export default function TenantSettingsPage() {
           if (config.allow_withdrawal !== undefined) setAllowWithdrawal(config.allow_withdrawal);
           if (config.subscription) setSubscriptionPlan(config.subscription);
           if (config.subscription_expires_at) setExpirationDate(config.subscription_expires_at);
+          if (config.status) setTenantStatus(config.status);
         }
       } catch (err) {
         console.error("Error fetching settings:", err);
@@ -224,7 +226,7 @@ export default function TenantSettingsPage() {
   };
 
   const [isCreatingRole, setIsCreatingRole] = useState(false);
-  const isSubscriptionRestricted = subscriptionPlan === 'EXPIRED' || subscriptionPlan === 'PENDING';
+  const isSubscriptionRestricted = subscriptionPlan === 'EXPIRED' || tenantStatus === 'PENDING';
 
   const handleCreateRole = async (roleName: string, permissions: string[], roleDescription: string) => {
     if (!roleName.trim() || permissions.length === 0) return;

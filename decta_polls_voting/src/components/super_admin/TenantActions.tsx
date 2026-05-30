@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { IconDownload, IconCheck } from "./Icons";
-import type { SubscriptionTier } from "@/lib/subscription-limits";
 
 type VerificationActionsProps = {
   tenantId: string;
@@ -115,9 +114,6 @@ export function TenantMonitoringStatusActions({
 }: VerificationActionsProps) {
   const [localVerified, setLocalVerified] = useState(isVerified);
   const [localRejected, setLocalRejected] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<SubscriptionTier>(
-    subscription === "STANDARD" || subscription === "ENTERPRISE" ? subscription as SubscriptionTier : "BASIC"
-  );
   const [acceptStatus, setAcceptStatus] = useState<"idle" | "loading" | "error">("idle");
   const [rejectStatus, setRejectStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -132,7 +128,7 @@ export function TenantMonitoringStatusActions({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           tenantId,
-          subscriptionTier: selectedTier,
+          subscriptionTier: subscription,
         }),
       });
 
@@ -142,7 +138,7 @@ export function TenantMonitoringStatusActions({
       }
 
       setLocalVerified(true);
-      onStatusUpdate?.(tenantId, 'APPROVED', selectedTier);
+      onStatusUpdate?.(tenantId, 'APPROVED', subscription);
     } catch (err) {
       setAcceptStatus("error");
       setMessage(err instanceof Error ? err.message : "Failed to accept.");
@@ -195,22 +191,6 @@ export function TenantMonitoringStatusActions({
 
   return (
     <div className="inline-flex flex-col items-center gap-2">
-      <div className="flex items-center gap-2 text-[11px] text-white/70">
-        <label htmlFor={`subscription-tier-${tenantId}`} className="font-medium">
-          Tier
-        </label>
-        <select
-          id={`subscription-tier-${tenantId}`}
-          value={selectedTier}
-          onChange={(event) => setSelectedTier(event.target.value as SubscriptionTier)}
-          disabled={busy}
-          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white outline-none transition focus:border-[#5D44F8] focus:ring-2 focus:ring-[#5D44F8]/20 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <option value="BASIC">BASIC</option>
-          <option value="STANDARD">STANDARD</option>
-          <option value="ENTERPRISE">ENTERPRISE</option>
-        </select>
-      </div>
       <div className="flex flex-wrap items-center justify-center gap-2">
         <button
           type="button"

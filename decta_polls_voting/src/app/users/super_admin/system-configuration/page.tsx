@@ -160,7 +160,7 @@ export function GlobalConfiguration() {
                 onChange={e => updateNested('security', 'enable_password_expiry', e.target.checked)}
                 className="h-5 w-5 cursor-pointer rounded border-white/[0.2] bg-white/[0.05] accent-[#6B3FF5]"
               />
-              <label className="text-sm font-semibold text-white/70">Enable Password Expiry</label>
+              <label className="text-sm font-semibold text-white/70">Subscription Expiry</label>
             </div>
 
             <div>

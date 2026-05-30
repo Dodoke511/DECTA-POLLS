@@ -249,18 +249,4 @@ export default function TenantsMonitoringPage() {
             </div>
         </div>
     );
-    const status = (row.status ?? "").toString().toUpperCase();
-    const subscription = (row.subscription ?? "").toString().toUpperCase();
-    const rawSubscription = (row.rawSubscription ?? "").toString().toUpperCase();
-
-    // If tenant status is explicitly pending, it's awaiting approval.
-    if (status === "PENDING") return true;
-
-    // If subscription was set to PENDING (tenant requested change), treat as awaiting approval.
-    if (subscription === "PENDING" || rawSubscription === "PENDING") return true;
-
-    // If tenant is not verified but has a verification file, it may also need approval.
-    if (!row.isVerified && row.verificationUrl) return true;
-
-    return false;
 }
