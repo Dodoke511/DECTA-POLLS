@@ -14,7 +14,7 @@ interface RetentionSettings {
   election_data_days: number;
 }
 
-function parseRetentionSetting(value: unknown): RetentionSettings {
+export function parseRetentionSetting(value: unknown): RetentionSettings {
   const defaultSettings = { audit_log_days: 30, election_data_days: 30 };
   if (!value) return defaultSettings;
 
