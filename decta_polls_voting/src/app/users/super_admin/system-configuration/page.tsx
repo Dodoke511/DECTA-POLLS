@@ -86,7 +86,7 @@ export function GlobalConfiguration() {
   };
 
   return (
-    <div className="flex w-full flex-col gap-7 text-[#F1F0F3]">
+    <div className="mx-auto w-full max-w-6xl flex flex-col gap-7 text-[#F1F0F3]">
       <div className="flex justify-end mb-2">
         <button
           onClick={handleSave}
@@ -240,7 +240,7 @@ export default function SystemConfigurationPage() {
         <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none min-h-0">
           <h1 className="mb-8 text-3xl font-bold tracking-tight md:text-4xl" style={{
             color: "#D0C8FF",
-            textShadow: "2px 2px 208,200,255,0.45)",
+            textShadow: "2px 2px 20px rgba(208,200,255,0.45)",
           }}>
             Settings
           </h1>
