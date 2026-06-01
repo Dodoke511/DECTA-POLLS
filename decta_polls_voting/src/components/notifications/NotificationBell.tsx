@@ -40,10 +40,8 @@ export default function NotificationBell({ electionId }: NotificationBellProps) 
       const response = await fetch(url, { headers });
 
       if (response.status === 401 || response.status === 403) {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
+        // Don't clear interval on auth error, keep retrying
+        console.warn("Auth error fetching notifications, will retry");
         return;
       }
 
@@ -59,11 +57,16 @@ export default function NotificationBell({ electionId }: NotificationBellProps) 
   };
 
   useEffect(() => {
-    fetchNotifications();
+    // Initial fetch - add small delay to ensure auth is ready
+    const initialTimer = setTimeout(() => {
+      fetchNotifications();
+    }, 100);
 
-    // Poll every 30 seconds
-    intervalRef.current = setInterval(fetchNotifications, 30000);
+    // Poll every 10 seconds (reduced from 30 to catch updates faster)
+    intervalRef.current = setInterval(fetchNotifications, 10000);
+    
     return () => {
+      clearTimeout(initialTimer);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }

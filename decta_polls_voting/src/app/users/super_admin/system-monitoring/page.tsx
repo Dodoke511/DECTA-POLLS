@@ -304,8 +304,8 @@ export default function SystemMonitoringPage() {
     setRetentionMessage(null);
 
     try {
-      const title = `Election at risk of deletion: ${electionTitle ?? 'Untitled'}`;
-      const message = `Your election \"${electionTitle ?? 'Untitled'}\" has exceeded the configured retention period and will be deleted soon unless you remove it. Please visit your Elections page to review or delete it.`;
+      const title = `Election eligible of deletion: ${electionTitle ?? 'Untitled'}`;
+      const message = `Your election \"${electionTitle ?? 'Untitled'}\" has exceeded the configured retention period and is eligible for deletion. Please visit your Elections page to review and delete it of your choice.`;
 
       const res = await fetch('/api/super_admin/notifications/notify', {
         method: 'POST',

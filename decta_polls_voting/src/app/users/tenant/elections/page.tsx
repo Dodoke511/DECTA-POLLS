@@ -23,6 +23,7 @@ export default function TenantElectionsPage() {
   const [tenantStatus, setTenantStatus] = useState<string | null>(null);
   const [isRestricted, setIsRestricted] = useState(false);
   const [expiredElections, setExpiredElections] = useState<any[]>([]);
+  const [deletableElectionIds, setDeletableElectionIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{ title: string; label: string; onConfirm: () => Promise<void> } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -72,6 +73,11 @@ export default function TenantElectionsPage() {
       .then(r => r.json())
       .then(data => setExpiredElections(data.expired || []))
       .catch(err => console.error('Retention fetch error:', err));
+    // Fetch deletable elections for deletion button visibility
+    fetch(`/api/elections/retention/deletable?tenantId=${storedUserId}`)
+      .then(r => r.json())
+      .then(data => setDeletableElectionIds(new Set(data.deletable || [])))
+      .catch(err => console.error('Deletable elections fetch error:', err));
   });
     } else {
       setIsElectionsLoading(false);
@@ -706,6 +712,32 @@ export default function TenantElectionsPage() {
                               </span>
                             )}
                           </button>
+                          {deletableElectionIds.has(election.id) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const capturedId = election.id;
+                                const capturedTitle = election.title;
+                                setDeleteTarget({
+                                  title: capturedTitle,
+                                  label: 'Completed',
+                                  onConfirm: async () => {
+                                    const res = await fetch('/api/elections/retention/delete', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ tenantId, electionId: capturedId })
+                                    });
+                                    if (res.ok) { window.location.reload(); }
+                                    else { const e = await res.json(); throw new Error(e.error ?? 'Deletion failed'); }
+                                  }
+                                });
+                              }}
+                              className="grid h-9 w-9 place-items-center rounded-lg border border-red-500/30 bg-red-600/20 text-red-400 shadow-[0_8px_24px_rgba(220,38,38,0.2)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-red-600/40 hover:shadow-[0_12px_30px_rgba(220,38,38,0.3)] hover:text-red-300 animate-in slide-in-from-bottom-2 duration-300"
+                              title="Delete completed election"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
 
                         <div className="absolute bottom-4 left-4 z-10">
