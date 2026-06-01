@@ -294,9 +294,9 @@ export default function SystemMonitoringPage() {
     }
   }, [loadRetentionInfo]);
 
-  const deleteRetentionElection = useCallback(async (tenantId: string | null, electionId: string) => {
+  const notifyTenant = useCallback(async (tenantId: string | null, electionId: string, electionTitle?: string) => {
     if (!tenantId) {
-      setRetentionMessage({ text: "Missing tenant ID for retention delete.", type: 'error' });
+      setRetentionMessage({ text: "Missing tenant ID to notify.", type: 'error' });
       return;
     }
 
@@ -304,27 +304,23 @@ export default function SystemMonitoringPage() {
     setRetentionMessage(null);
 
     try {
-      const res = await fetch('/api/elections/retention/delete', {
+      const title = `Election at risk of deletion: ${electionTitle ?? 'Untitled'}`;
+      const message = `Your election \"${electionTitle ?? 'Untitled'}\" has exceeded the configured retention period and will be deleted soon unless you remove it. Please visit your Elections page to review or delete it.`;
+
+      const res = await fetch('/api/super_admin/notifications/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId, electionId }),
+        body: JSON.stringify({ tenantId, electionId, title, message }),
       });
+
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json.error || 'Deletion failed');
+        throw new Error(json.error || 'Notification failed');
       }
 
-      setRetentionInfo((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          deletable: prev.deletable.filter((e) => e.id !== electionId),
-          expiring: prev.expiring.filter((e) => e.id !== electionId),
-        };
-      });
-      setRetentionMessage({ text: 'Election deleted successfully.', type: 'success' });
+      setRetentionMessage({ text: 'Tenant notified successfully.', type: 'success' });
     } catch (err) {
-      setRetentionMessage({ text: err instanceof Error ? err.message : 'Deletion failed.', type: 'error' });
+      setRetentionMessage({ text: err instanceof Error ? err.message : 'Notification failed.', type: 'error' });
     } finally {
       setDeletingElectionId(null);
     }
@@ -457,14 +453,14 @@ export default function SystemMonitoringPage() {
                                 <div>
                                   <p className="font-semibold text-white/90">{election.title}</p>
                                   <p className="text-sm text-white/50">{election.tenant} · Completed {new Date(election.endDate).toLocaleDateString()}</p>
-                                  <p className="text-xs text-white/40 mt-1">Expired {election.daysPast ?? 0} days ago, manual deletion available.</p>
+                                  <p className="text-xs text-white/40 mt-1">Expired {election.daysPast ?? 0} days ago. Tenant is responsible for deletion; you can notify them.</p>
                                 </div>
                                 <button
                                   disabled={deletingElectionId === election.id}
-                                  onClick={() => deleteRetentionElection(election.tenantId, election.id)}
-                                  className="rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50"
+                                  onClick={() => notifyTenant(election.tenantId, election.id, election.title)}
+                                  className="rounded-2xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:opacity-50"
                                 >
-                                  {deletingElectionId === election.id ? 'Deleting...' : 'Delete Now'}
+                                  {deletingElectionId === election.id ? 'Notifying...' : 'Notify Tenant'}
                                 </button>
                               </div>
                             ))}
@@ -481,14 +477,14 @@ export default function SystemMonitoringPage() {
                                 <div>
                                   <p className="font-semibold text-white/90">{election.title}</p>
                                   <p className="text-sm text-white/50">{election.tenant} · Completed {new Date(election.endDate).toLocaleDateString()}</p>
-                                  <p className="text-xs text-white/40 mt-1">Will be auto-deleted in {election.remainingHours} hours unless manually removed.</p>
+                                  <p className="text-xs text-white/40 mt-1">Will be auto-deleted in {election.remainingHours} hours unless the tenant removes it. You can notify the tenant now.</p>
                                 </div>
                                 <button
                                   disabled={deletingElectionId === election.id}
-                                  onClick={() => deleteRetentionElection(election.tenantId, election.id)}
-                                  className="rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50"
+                                  onClick={() => notifyTenant(election.tenantId, election.id, election.title)}
+                                  className="rounded-2xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:opacity-50"
                                 >
-                                  {deletingElectionId === election.id ? 'Deleting...' : 'Delete Now'}
+                                  {deletingElectionId === election.id ? 'Notifying...' : 'Notify Tenant'}
                                 </button>
                               </div>
                             ))}
