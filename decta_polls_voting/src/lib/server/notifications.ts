@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
+import { getDaysUntilExpiry } from '@/lib/subscription-limits';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -9,7 +10,57 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false },
 });
 
-export type NotificationType = 'Election Start' | 'Election End' | 'Candidate Added' | 'Results Published' | 'Vote Cast';
+async function sendMail(to: string, subject: string, html: string) {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn("[Notifications] EMAIL_USER or EMAIL_PASS missing. Skipping email.");
+    return;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"DECTA Polls" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    });
+  } catch (err) {
+    console.error(`[Notifications] Failed to send email to ${to}:`, err);
+  }
+}
+
+async function insertInAppNotification(
+  tenantId: string,
+  title: string,
+  message: string,
+  type: string,
+  roleType: 'tenant_admin' | 'candidate' | 'voter' | 'all',
+  userId?: string | null,
+  electionId?: string | null
+) {
+  const { error } = await supabaseAdmin.from('notifications').insert({
+    tenant_id: tenantId,
+    election_id: electionId || null,
+    user_id: userId || null,
+    role_type: roleType,
+    title,
+    message,
+    type,
+  });
+
+  if (error) {
+    console.error(`[Notifications] Failed to insert in-app notification for ${roleType}:`, error);
+  }
+}
+
+export type NotificationType = 'Election Start' | 'Election End' | 'Candidate Added' | 'Results Published' | 'Vote Cast' | 'Subscription Expiry Warning';
 
 interface TriggerOptions {
   candidateId?: string;
@@ -339,5 +390,57 @@ export async function triggerNotification(
     }
   } catch (err) {
     console.error(`[Notifications] Exception caught in triggerNotification:`, err);
+  }
+}
+
+export async function triggerSubscriptionExpiryWarning(tenantId: string, expiresAt: string) {
+  try {
+    const daysLeft = getDaysUntilExpiry(expiresAt);
+    if (daysLeft === null || daysLeft <= 0) {
+      return;
+    }
+
+    const expirationText = new Date(expiresAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    const { data: tenant, error: tenantError } = await supabaseAdmin
+      .from('tenants')
+      .select('email, organization')
+      .eq('id', tenantId)
+      .single();
+
+    if (tenantError || !tenant) {
+      console.error('[Notifications] Failed to fetch tenant for subscription warning:', tenantError);
+      return;
+    }
+
+    const title = 'Subscription Renewal Reminder';
+    const message = `Your subscription expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'} on ${expirationText}. Renew now to avoid service restrictions.`;
+
+    await insertInAppNotification(
+      tenantId,
+      title,
+      message,
+      'subscription_expiry_warning',
+      'tenant_admin'
+    );
+
+    if (tenant.email) {
+      await sendMail(
+        tenant.email,
+        'Subscription Renewal Reminder - DECTA Polls',
+        `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+           <h2>Subscription Renewal Reminder</h2>
+           <p>Dear ${tenant.organization || 'Tenant Admin'},</p>
+           <p>Your DECTA Polls subscription expires in <strong>${daysLeft} day${daysLeft === 1 ? '' : 's'}</strong> on <strong>${expirationText}</strong>.</p>
+           <p>Please renew your subscription before the expiration date to keep your account active and avoid limitations.</p>
+         </div>`
+      );
+    }
+  } catch (err) {
+    console.error('[Notifications] Failed to trigger subscription expiry warning:', err);
   }
 }

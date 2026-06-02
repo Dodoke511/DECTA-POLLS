@@ -20,6 +20,7 @@ export interface AccountSettingProps {
     setBrandingColorThird: React.Dispatch<React.SetStateAction<string>>;
     setActiveTriggers: React.Dispatch<React.SetStateAction<string[]>>;
     subscriptionPlan?: string | null;
+    isLocked?: boolean;
 }
 
 export function AccountSetting({
@@ -38,10 +39,13 @@ export function AccountSetting({
     setBrandingColorSecondary,
     setBrandingColorThird,
     setActiveTriggers,
-    subscriptionPlan
+    subscriptionPlan,
+    isLocked: isLockedProp = false,
 }: AccountSettingProps) {
     const isBasic = subscriptionPlan === 'BASIC';
+    const isLocked = isLockedProp || subscriptionPlan === 'EXPIRED' || subscriptionPlan === 'PENDING';
     const toggleTrigger = (trigger: string) => {
+        if (isLocked) return;
         if (activeTriggers.includes(trigger)) {
             setActiveTriggers(activeTriggers.filter((t) => t !== trigger));
         } else {
@@ -75,13 +79,12 @@ export function AccountSetting({
                     Global Configurations
                 </h2>
             </div>
-
             <div className="grid grid-cols-1 gap-12 md:grid-cols-[200px_1fr] md:gap-14 items-start">
                 {/* Organization Logo (Left Column) */}
                 <div className="flex flex-col items-center justify-center">
                     <label
                         htmlFor="logo-upload"
-                        className="flex h-[150px] w-[150px] overflow-hidden cursor-pointer items-center justify-center rounded-full bg-[#82839b] shadow-inner text-white/80 transition-all hover:bg-[#9293ad] border border-white/5"
+                        className={`flex h-[150px] w-[150px] overflow-hidden ${isLocked ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} items-center justify-center rounded-full bg-[#82839b] shadow-inner text-white/80 transition-all ${isLocked ? '' : 'hover:bg-[#9293ad]'} border border-white/5`}
                     >
                         {logoPreview && !imgError ? (
                             <img
@@ -100,6 +103,7 @@ export function AccountSetting({
                         accept="image/*"
                         className="hidden"
                         onChange={handleLogoUpload}
+                        disabled={isLocked}
                     />
                     <p className="mt-5 text-[15px] font-medium tracking-wide text-white/80 text-center">
                         Change Your Logo
@@ -116,9 +120,10 @@ export function AccountSetting({
                             <input
                                 type="text"
                                 value={organizationName}
-                                onChange={(e) => setOrganizationName(e.target.value)}
-                                placeholder="Enter organization name"
-                                className="h-[42px] w-full rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none transition-all hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50"
+                                onChange={(e) => !isLocked && setOrganizationName(e.target.value)}
+                                placeholder={isLocked ? "Locked while subscription is pending or expired" : "Enter organization name"}
+                                disabled={isLocked}
+                                className={`h-[42px] w-full rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none transition-all ${isLocked ? 'cursor-not-allowed opacity-60' : 'hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50'}`}
                             />
                         </div>
 
@@ -130,9 +135,10 @@ export function AccountSetting({
                             <input
                                 type="text"
                                 value={tenantSlug}
-                                onChange={(e) => setTenantSlug(e.target.value)}
-                                placeholder="Enter tenant slug"
-                                className="h-[42px] w-full rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none transition-all hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50"
+                                onChange={(e) => !isLocked && setTenantSlug(e.target.value)}
+                                placeholder={isLocked ? "Locked while subscription is pending or expired" : "Enter tenant slug"}
+                                disabled={isLocked}
+                                className={`h-[42px] w-full rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none transition-all ${isLocked ? 'cursor-not-allowed opacity-60' : 'hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50'}`}
                             />
                         </div>
                     </div>
@@ -148,15 +154,20 @@ export function AccountSetting({
                                     Locked (Standard/Enterprise only)
                                 </span>
                             )}
+                            {isLocked && (
+                                <span className="text-[9px] font-bold bg-amber-400/10 text-amber-100 border border-amber-400/20 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                                    Account Locked
+                                </span>
+                            )}
                         </div>
-                        <div className={`flex flex-wrap gap-3 ${isBasic ? 'opacity-40 cursor-not-allowed pointer-events-none' : ''}`}>
-                            <div className="group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
+                        <div className={`flex flex-wrap gap-3 ${isBasic || isLocked ? 'opacity-40 cursor-not-allowed pointer-events-none' : ''}`}>
+                            <div className={`group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] ${isBasic || isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all ${isBasic || isLocked ? '' : 'hover:bg-white/[0.05] hover:border-white/30'} overflow-hidden`}>
                                 <input
                                     type="color"
-                                    disabled={isBasic}
+                                    disabled={isBasic || isLocked}
                                     value={brandingColorPrimary.startsWith('#') ? brandingColorPrimary : `#${brandingColorPrimary}`}
-                                    onChange={(e) => !isBasic && setBrandingColorPrimary(e.target.value)}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    onChange={(e) => !isBasic && !isLocked && setBrandingColorPrimary(e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0"
                                 />
                                 <div
                                     className="h-[18px] w-[18px] rounded-[4px] border border-white/20 shadow-sm"
@@ -166,13 +177,13 @@ export function AccountSetting({
                                     {brandingColorPrimary}
                                 </span>
                             </div>
-                            <div className="group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
+                            <div className={`group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] ${isBasic || isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all ${isBasic || isLocked ? '' : 'hover:bg-white/[0.05] hover:border-white/30'} overflow-hidden`}>
                                 <input
                                     type="color"
-                                    disabled={isBasic}
+                                    disabled={isBasic || isLocked}
                                     value={brandingColorSecondary.startsWith('#') ? brandingColorSecondary : `#${brandingColorSecondary}`}
-                                    onChange={(e) => !isBasic && setBrandingColorSecondary(e.target.value)}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    onChange={(e) => !isBasic && !isLocked && setBrandingColorSecondary(e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0"
                                 />
                                 <div
                                     className="h-[18px] w-[18px] rounded-[4px] border border-white/20 shadow-sm"
@@ -182,13 +193,13 @@ export function AccountSetting({
                                     {brandingColorSecondary}
                                 </span>
                             </div>
-                            <div className="group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] cursor-pointer items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all hover:bg-white/[0.05] hover:border-white/30 overflow-hidden">
+                            <div className={`group relative flex h-[42px] flex-1 min-w-[120px] max-w-[180px] ${isBasic || isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} items-center gap-3 rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-3.5 transition-all ${isBasic || isLocked ? '' : 'hover:bg-white/[0.05] hover:border-white/30'} overflow-hidden`}>
                                 <input
                                     type="color"
-                                    disabled={isBasic}
+                                    disabled={isBasic || isLocked}
                                     value={brandingColorThird.startsWith('#') ? brandingColorThird : `#${brandingColorThird}`}
-                                    onChange={(e) => !isBasic && setBrandingColorThird(e.target.value)}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    onChange={(e) => !isBasic && !isLocked && setBrandingColorThird(e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0"
                                 />
                                 <div
                                     className="h-[18px] w-[18px] rounded-[4px] border border-white/20 shadow-sm"
@@ -217,10 +228,11 @@ export function AccountSetting({
                                 <button
                                     key={trigger}
                                     onClick={() => toggleTrigger(trigger)}
+                                    disabled={isLocked}
                                     className={`rounded-[14px] px-4 py-1.5 text-[13px] font-medium transition-all ${activeTriggers.includes(trigger)
                                         ? "bg-[#35256e] text-[#D0C8FF] border border-[#524199]"
                                         : "bg-transparent text-white/40 border border-white/[0.15] hover:bg-[#35256e]/50 hover:text-[#D0C8FF]/80 hover:border-[#524199]/50"
-                                        }`}
+                                        } ${isLocked ? 'pointer-events-none opacity-50' : ''}`}
                                 >
                                     {trigger}
                                 </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { getDaysUntilExpiry, isSubscriptionExpiringSoon } from '@/lib/subscription-limits';
 
 export interface AccountManagementProps {
     email: string;
@@ -11,6 +12,7 @@ export interface AccountManagementProps {
     setConfirmPassword?: React.Dispatch<React.SetStateAction<string>>;
     subscriptionPlan: string | null;
     expirationDate: string | null;
+    isLocked?: boolean;
     onManageSubscription?: () => void;
 }
 
@@ -23,6 +25,7 @@ export function AccountManagement({
     setConfirmPassword = () => {},
     subscriptionPlan,
     expirationDate,
+    isLocked = false,
     onManageSubscription,
 }: AccountManagementProps) {
     const formatExpirationDate = (dateString: string | null) => {
@@ -32,6 +35,9 @@ export function AccountManagement({
     };
 
     const expireDateFormatted = formatExpirationDate(expirationDate);
+    const daysUntilExpiry = getDaysUntilExpiry(expirationDate);
+    const showExpiryAlert = isSubscriptionExpiringSoon(expirationDate, 10);
+
     return (
         <div className="w-full text-[#f1f0f3]" style={{ fontFamily: "'Montserrat', sans-serif" }}>
             <div className="mb-8 border-b border-white/[0.10] pb-4">
@@ -41,6 +47,11 @@ export function AccountManagement({
             </div>
 
             <div className="flex flex-col gap-10">
+                {showExpiryAlert && (
+                    <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+                        Your subscription expires in {daysUntilExpiry} day{daysUntilExpiry === 1 ? '' : 's'} on {expireDateFormatted}. Please renew now to avoid expiration.
+                    </div>
+                )}
                 {/* Email Field */}
                 <div className="flex flex-col gap-3">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-[#D0C8FF]">
@@ -49,8 +60,10 @@ export function AccountManagement({
                     <input
                         type="email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="h-[42px] w-full max-w-md rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50 transition-all"
+                        onChange={(e) => !isLocked && setEmail(e.target.value)}
+                        placeholder={isLocked ? "Locked while subscription is pending or expired" : undefined}
+                        disabled={isLocked}
+                        className={`h-[42px] w-full max-w-md rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none transition-all ${isLocked ? 'cursor-not-allowed opacity-60' : 'hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50'}`}
                     />
                 </div>
 
@@ -63,8 +76,9 @@ export function AccountManagement({
                         type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Leave blank to keep unchanged"
-                        className="h-[42px] w-full max-w-md rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50 transition-all"
+                        placeholder={isLocked ? "Password changes are locked while subscription is pending/expired" : "Leave blank to keep unchanged"}
+                        disabled={isLocked}
+                        className={`h-[42px] w-full max-w-md rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none transition-all ${isLocked ? 'cursor-not-allowed opacity-60' : 'hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50'}`}
                     />
                 </div>
 
@@ -77,8 +91,9 @@ export function AccountManagement({
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm new password"
-                        className="h-[42px] w-full max-w-md rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50 transition-all"
+                        placeholder={isLocked ? "Password changes are locked while subscription is pending/expired" : "Confirm new password"}
+                        disabled={isLocked}
+                        className={`h-[42px] w-full max-w-md rounded-[10px] border border-white/[0.15] bg-white/[0.03] px-4 text-sm font-medium text-white/80 outline-none transition-all ${isLocked ? 'cursor-not-allowed opacity-60' : 'hover:bg-white/[0.05] focus:border-[#5D44F8] focus:ring-1 focus:ring-[#5D44F8]/50'}`}
                     />
                 </div>
 

@@ -37,6 +37,7 @@ export default function TenantSettingsPage() {
   const [allowSubstitution, setAllowSubstitution] = useState(false);
   const [allowWithdrawal, setAllowWithdrawal] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [tenantStatus, setTenantStatus] = useState<string | null>(null);
   const [expirationDate, setExpirationDate] = useState<string | null>(null);
   const [tenantEmail, setTenantEmail] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -137,6 +138,7 @@ export default function TenantSettingsPage() {
           if (config.allow_withdrawal !== undefined) setAllowWithdrawal(config.allow_withdrawal);
           if (config.subscription) setSubscriptionPlan(config.subscription);
           if (config.subscription_expires_at) setExpirationDate(config.subscription_expires_at);
+          if (config.status) setTenantStatus(config.status);
         }
       } catch (err) {
         console.error("Error fetching settings:", err);
@@ -224,6 +226,8 @@ export default function TenantSettingsPage() {
   };
 
   const [isCreatingRole, setIsCreatingRole] = useState(false);
+  const isSubscriptionRestricted = subscriptionPlan === 'EXPIRED' || tenantStatus === 'PENDING';
+
   const handleCreateRole = async (roleName: string, permissions: string[], roleDescription: string) => {
     if (!roleName.trim() || permissions.length === 0) return;
     setIsCreatingRole(true);
@@ -320,7 +324,7 @@ export default function TenantSettingsPage() {
       <TenantAdminHeader />
 
       <div className="flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6 overflow-hidden">
-        <TenantAdminSidebar activePath="/users/tenant/settings" />
+        <TenantAdminSidebar activePath="/users/tenant/settings" isRestricted={isSubscriptionRestricted} />
 
         <main className="super-admin-dashboard-main min-w-0 flex-1 flex flex-col rounded-[28px] border p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-hidden md:rounded-l-none">
           <h1 className="mb-8 shrink-0 text-3xl font-bold tracking-tight md:text-4xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Settings</h1>
@@ -329,6 +333,11 @@ export default function TenantSettingsPage() {
             <div className="flex flex-col gap-10">
               <PermissionGuard require={["settings.global.view", "settings.global.edit", "settings.global.notifications"]} silent>
                 <div className="flex flex-col gap-1">
+                  {isSubscriptionRestricted && (
+                    <div className="mb-5 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+                      Account settings are locked while your subscription is pending approval or expired.
+                    </div>
+                  )}
                   <h2 className="mb-5 text-xl font-bold md:text-2xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Account Settings</h2>
                   <div className="super-admin-table relative w-full overflow-x-auto rounded-[22px] bg-white/[0.02] p-6 shadow-sm ring-1 ring-white/[0.05] md:p-8">
                     <AccountSetting
@@ -341,15 +350,16 @@ export default function TenantSettingsPage() {
                       brandingColorThird={brandingColorThird} setBrandingColorThird={setBrandingColorThird}
                       activeTriggers={activeTriggers} setActiveTriggers={setActiveTriggers}
                       subscriptionPlan={subscriptionPlan}
+                      isLocked={isSubscriptionRestricted}
                     />
                     <div className="mt-8 flex justify-end border-t border-white/[0.10] pt-6">
                       <button
                         onClick={handleSaveChanges}
-                        disabled={isSaving}
-                        className={`flex h-[48px] min-w-[180px] items-center justify-center rounded-[16px] bg-[#4f35cd] px-8 text-[14px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]'}`}
+                        disabled={isSaving || (isSubscriptionRestricted && !isSubscriptionRenewed)}
+                        className={`flex h-[48px] min-w-[180px] items-center justify-center rounded-[16px] bg-[#4f35cd] px-8 text-[14px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${(isSaving || (isSubscriptionRestricted && !isSubscriptionRenewed)) ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]'}`}
                         style={{ fontFamily: "'Montserrat', sans-serif" }}
                       >
-                        {isSaving ? "Saving..." : "Save Changes"}
+                        {isSaving ? "Saving..." : isSubscriptionRestricted ? (isSubscriptionRenewed ? "Save Subscription" : "Renew to Save") : "Save Changes"}
                       </button>
                     </div>
                   </div>
@@ -368,16 +378,17 @@ export default function TenantSettingsPage() {
                     setConfirmPassword={setConfirmPassword}
                     subscriptionPlan={subscriptionPlan}
                     expirationDate={expirationDate}
+                    isLocked={isSubscriptionRestricted}
                     onManageSubscription={() => setIsManagingSubscription(true)}
                   />
                   <div className="mt-8 flex justify-end border-t border-white/[0.10] pt-6">
                     <button
                       onClick={handleSaveChanges}
-                      disabled={isSaving}
-                      className={`flex h-[48px] min-w-[180px] items-center justify-center rounded-[16px] bg-[#4f35cd] px-8 text-[14px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]'}`}
+                      disabled={isSaving || (isSubscriptionRestricted && !isSubscriptionRenewed)}
+                      className={`flex h-[48px] min-w-[180px] items-center justify-center rounded-[16px] bg-[#4f35cd] px-8 text-[14px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${(isSaving || (isSubscriptionRestricted && !isSubscriptionRenewed)) ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]'}`}
                       style={{ fontFamily: "'Montserrat', sans-serif" }}
                     >
-                      {isSaving ? "Saving..." : "Save Changes"}
+                      {isSaving ? "Saving..." : isSubscriptionRestricted ? (isSubscriptionRenewed ? "Save Subscription" : "Renew to Save") : "Save Changes"}
                     </button>
                   </div>
                 </div>
@@ -390,17 +401,18 @@ export default function TenantSettingsPage() {
                   <ViewAssignedRole
                     onAssignClick={handleOpenAssignModal}
                     onEditClick={handleEditRole}
+                    disabled={isSubscriptionRestricted}
                   />
                   <div className="mt-8 flex justify-end border-t border-white/[0.10] pt-6">
                     <button
                       onClick={() => {
-                        if (subscriptionPlan === 'BASIC') return;
+                        if (subscriptionPlan === 'BASIC' || isSubscriptionRestricted) return;
                         setEditingRole(null);
                         setIsAddRoleModalOpen(true);
                       }}
-                      disabled={subscriptionPlan === 'BASIC'}
-                      title={subscriptionPlan === 'BASIC' ? "Custom roles are not available in the BASIC plan. Please upgrade to Standard or Enterprise." : ""}
-                      className={`flex h-[48px] min-w-[180px] items-center justify-center rounded-[16px] px-8 text-[14px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${subscriptionPlan === 'BASIC'
+                      disabled={subscriptionPlan === 'BASIC' || isSubscriptionRestricted}
+                      title={isSubscriptionRestricted ? "Tenant role management is locked while your subscription is pending approval or expired." : subscriptionPlan === 'BASIC' ? "Custom roles are not available in the BASIC plan. Please upgrade to Standard or Enterprise." : ""}
+                      className={`flex h-[48px] min-w-[180px] items-center justify-center rounded-[16px] px-8 text-[14px] font-bold tracking-wide text-white shadow-[0_8px_30px_rgb(79,53,205,0.3)] transition-all ${(subscriptionPlan === 'BASIC' || isSubscriptionRestricted)
                         ? "bg-white/10 opacity-40 cursor-not-allowed grayscale"
                         : "bg-[#4f35cd] hover:bg-[#5D44F8] hover:scale-[1.02] active:scale-[0.98]"
                         }`}

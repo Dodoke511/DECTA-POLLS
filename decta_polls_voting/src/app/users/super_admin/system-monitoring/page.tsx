@@ -15,6 +15,25 @@ interface AuditLog {
   performedBy: string;
 }
 
+interface RetentionElection {
+  id: string;
+  title: string;
+  tenantId: string | null;
+  tenant: string;
+  endDate: string;
+  expiryDate: string;
+  hardDeleteDate: string;
+  remainingHours?: number;
+  daysPast?: number;
+}
+
+interface RetentionStatus {
+  audit_log_days: number;
+  election_data_days: number;
+  expiring: RetentionElection[];
+  deletable: RetentionElection[];
+}
+
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 function IconUser() {
   return (
@@ -177,6 +196,12 @@ export default function SystemMonitoringPage() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(true);
   const [logsError, setLogsError] = useState<string | null>(null);
+  const [retentionInfo, setRetentionInfo] = useState<RetentionStatus | null>(null);
+  const [retentionLoading, setRetentionLoading] = useState(true);
+  const [retentionError, setRetentionError] = useState<string | null>(null);
+  const [auditCleanupLoading, setAuditCleanupLoading] = useState(false);
+  const [deletingElectionId, setDeletingElectionId] = useState<string | null>(null);
+  const [retentionMessage, setRetentionMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -216,16 +241,102 @@ export default function SystemMonitoringPage() {
     }
   }, []);
 
+  const loadRetentionInfo = useCallback(async (signal?: { cancelled: boolean }) => {
+    setRetentionLoading(true);
+    setRetentionError(null);
+
+    try {
+      const res = await fetch("/api/super_admin/retention/expired");
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to fetch retention status");
+      }
+
+      if (!signal?.cancelled) {
+        setRetentionInfo({
+          audit_log_days: json.retention?.audit_log_days ?? 0,
+          election_data_days: json.retention?.election_data_days ?? 0,
+          expiring: json.expiring ?? [],
+          deletable: json.deletable ?? [],
+        });
+      }
+    } catch (err) {
+      if (!signal?.cancelled) {
+        setRetentionError(err instanceof Error ? err.message : "Failed to fetch retention status");
+        setRetentionInfo(null);
+      }
+    } finally {
+      if (!signal?.cancelled) {
+        setRetentionLoading(false);
+      }
+    }
+  }, []);
+
+  const runAuditLogCleanup = useCallback(async () => {
+    setAuditCleanupLoading(true);
+    setRetentionMessage(null);
+
+    try {
+      const res = await fetch("/api/cron/audit_log_retention", {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Audit log cleanup failed");
+      }
+      setRetentionMessage({ text: "Audit log cleanup completed successfully.", type: 'success' });
+      loadRetentionInfo();
+    } catch (err) {
+      setRetentionMessage({ text: err instanceof Error ? err.message : "Audit log cleanup failed.", type: 'error' });
+    } finally {
+      setAuditCleanupLoading(false);
+    }
+  }, [loadRetentionInfo]);
+
+  const notifyTenant = useCallback(async (tenantId: string | null, electionId: string, electionTitle?: string) => {
+    if (!tenantId) {
+      setRetentionMessage({ text: "Missing tenant ID to notify.", type: 'error' });
+      return;
+    }
+
+    setDeletingElectionId(electionId);
+    setRetentionMessage(null);
+
+    try {
+      const title = `Election eligible of deletion: ${electionTitle ?? 'Untitled'}`;
+      const message = `Your election \"${electionTitle ?? 'Untitled'}\" has exceeded the configured retention period and is eligible for deletion. Please visit your Elections page to review and delete it of your choice.`;
+
+      const res = await fetch('/api/super_admin/notifications/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, electionId, title, message }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Notification failed');
+      }
+
+      setRetentionMessage({ text: 'Tenant notified successfully.', type: 'success' });
+    } catch (err) {
+      setRetentionMessage({ text: err instanceof Error ? err.message : 'Notification failed.', type: 'error' });
+    } finally {
+      setDeletingElectionId(null);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab !== "monitoring") return;
 
     const token = { cancelled: false };
     loadAuditLogs(token);
+    loadRetentionInfo(token);
 
     return () => {
       token.cancelled = true;
     };
-  }, [activeTab, loadAuditLogs]);
+  }, [activeTab, loadAuditLogs, loadRetentionInfo]);
 
   const pageTitle = activeTab === "config" ? "Settings" : "Settings";
 
@@ -278,7 +389,116 @@ export default function SystemMonitoringPage() {
 
             {/* Main Content */}
             {activeTab === "monitoring" ? (
-              <AuditLogTable logs={filtered} loading={logsLoading} error={logsError} />
+              <>
+                <div className="super-admin-card rounded-[22px] border border-white/[0.10] bg-[#090b14]/70 p-6 mb-6">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Retention Overview</p>
+                      <h2 className="mt-2 text-xl font-bold text-white/90">Audit & Election Retention</h2>
+                      <p className="mt-2 text-sm text-white/60 max-w-2xl">
+                        These values are managed by the super admin. Audit log retention is a backend cleanup policy, while election retention identifies completed elections that are eligible for deletion.
+                      </p>
+                    </div>
+                    <button
+                      onClick={runAuditLogCleanup}
+                      disabled={auditCleanupLoading}
+                      className="inline-flex items-center justify-center rounded-2xl bg-[#6B3FF5] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#5833cc] disabled:opacity-50"
+                    >
+                      {auditCleanupLoading ? 'Cleaning up...' : 'Run Audit Log Cleanup'}
+                    </button>
+                  </div>
+
+                  {retentionMessage && (
+                    <div className={`mt-5 rounded-2xl border p-4 ${retentionMessage.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200' : 'bg-red-500/10 border-red-500/20 text-red-200'}`}>
+                      {retentionMessage.text}
+                    </div>
+                  )}
+
+                  <div className="mt-6 grid gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/45">Audit Log Retention</p>
+                      <p className="mt-3 text-3xl font-semibold text-white/90">
+                        {retentionLoading ? '—' : retentionInfo?.audit_log_days ?? '—'}
+                      </p>
+                      <p className="mt-2 text-sm text-white/50">days until old audit logs may be removed.</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/45">Election Data Retention</p>
+                      <p className="mt-3 text-3xl font-semibold text-white/90">
+                        {retentionLoading ? '—' : retentionInfo?.election_data_days ?? '—'}
+                      </p>
+                      <p className="mt-2 text-sm text-white/50">days after completion before election data becomes eligible for deletion.</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/45">Pending Retention Alerts</p>
+                      <p className="mt-3 text-3xl font-semibold text-white/90">
+                        {retentionLoading ? '—' : ((retentionInfo?.expiring.length ?? 0) + (retentionInfo?.deletable.length ?? 0))}
+                      </p>
+                      <p className="mt-2 text-sm text-white/50">completed elections that are expiring or ready for deletion.</p>
+                    </div>
+                  </div>
+
+                  {retentionLoading ? (
+                    <p className="mt-6 text-sm text-white/50">Loading retention candidates...</p>
+                  ) : retentionError ? (
+                    <p className="mt-6 text-sm text-red-300">{retentionError}</p>
+                  ) : (retentionInfo && (retentionInfo.expiring.length > 0 || retentionInfo.deletable.length > 0)) ? (
+                    <div className="mt-6 space-y-4">
+                      {retentionInfo.deletable.length > 0 && (
+                        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                          <p className="text-sm font-semibold text-white/80">Ready to Delete</p>
+                          <div className="mt-3 space-y-3">
+                            {retentionInfo.deletable.map((election) => (
+                              <div key={election.id} className="flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-[#0f0b1c]/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <p className="font-semibold text-white/90">{election.title}</p>
+                                  <p className="text-sm text-white/50">{election.tenant} · Completed {new Date(election.endDate).toLocaleDateString()}</p>
+                                  <p className="text-xs text-white/40 mt-1">Expired {election.daysPast ?? 0} days ago. Tenant is responsible for deletion; you can notify them.</p>
+                                </div>
+                                <button
+                                  disabled={deletingElectionId === election.id}
+                                  onClick={() => notifyTenant(election.tenantId, election.id, election.title)}
+                                  className="rounded-2xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:opacity-50"
+                                >
+                                  {deletingElectionId === election.id ? 'Notifying...' : 'Notify Tenant'}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {retentionInfo.expiring.length > 0 && (
+                        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                          <p className="text-sm font-semibold text-white/80">Expiring Soon</p>
+                          <div className="mt-3 space-y-3">
+                            {retentionInfo.expiring.map((election) => (
+                              <div key={election.id} className="flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-[#0f0b1c]/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <p className="font-semibold text-white/90">{election.title}</p>
+                                  <p className="text-sm text-white/50">{election.tenant} · Completed {new Date(election.endDate).toLocaleDateString()}</p>
+                                  <p className="text-xs text-white/40 mt-1">Will be auto-deleted in {election.remainingHours} hours unless the tenant removes it. You can notify the tenant now.</p>
+                                </div>
+                                <button
+                                  disabled={deletingElectionId === election.id}
+                                  onClick={() => notifyTenant(election.tenantId, election.id, election.title)}
+                                  className="rounded-2xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:opacity-50"
+                                >
+                                  {deletingElectionId === election.id ? 'Notifying...' : 'Notify Tenant'}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-6 text-sm text-white/50">No retention candidates are currently expiring or ready for deletion.</p>
+                  )}
+                </div>
+
+                <AuditLogTable logs={filtered} loading={logsLoading} error={logsError} />
+              </>
             ) : (
               <div className="flex-1">
                 <GlobalConfiguration />

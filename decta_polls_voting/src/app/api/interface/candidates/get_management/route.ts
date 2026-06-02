@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getDisplaySubscription } from '@/lib/subscription-limits';
 
 export async function GET(request: Request) {
   try {
@@ -117,16 +118,24 @@ export async function GET(request: Request) {
     }
 
     let subscription = 'BASIC';
+    let tenantStatus = 'APPROVED';
+    let subscriptionExpiresAt: string | null = null;
     const { data: tenantData } = await supabase
       .from('tenants')
-      .select('subscription')
+      .select('subscription, subscription_expires_at, status')
       .eq('id', tenantId)
       .single();
-    if (tenantData) subscription = tenantData.subscription || 'BASIC';
+    if (tenantData) {
+      subscription = getDisplaySubscription(tenantData.subscription, tenantData.subscription_expires_at);
+      subscriptionExpiresAt = tenantData.subscription_expires_at ?? null;
+      tenantStatus = (tenantData.status ?? 'APPROVED').toString().toUpperCase();
+    }
 
     return NextResponse.json({ 
       candidates: candidatesWithPositions,
-      subscription
+      subscription,
+      subscription_expires_at: subscriptionExpiresAt,
+      status: tenantStatus,
     });
 
   } catch (err: any) {

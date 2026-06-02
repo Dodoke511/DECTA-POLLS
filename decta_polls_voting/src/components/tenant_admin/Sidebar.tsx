@@ -31,7 +31,7 @@ function TenantNavLink({
   getTextStyle,
   getLoaderUrl,
 }: TenantNavLinkProps) {
-  const isLocked = isRestricted && path !== "/users/tenant/dashboard";
+  const isLocked = isRestricted && path !== "/users/tenant/settings";
 
   if (isLocked) {
     return (

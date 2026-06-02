@@ -59,6 +59,7 @@ export type TenantRow = {
   verificationUrl: string | null;
   verificationFileName: string | null;
   subscription: string;
+  rawSubscription: string;
 };
 
 // --- Helper Functions ---
@@ -179,6 +180,7 @@ export default function SuperAdminDashboardPage() {
               verificationUrl,
               verificationFileName,
               subscription: getValueAsString(record.subscription, "Standard"),
+              rawSubscription: getValueAsString(record.subscription, "Standard"),
             };
           })
         );

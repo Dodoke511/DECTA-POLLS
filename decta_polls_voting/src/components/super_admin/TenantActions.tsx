@@ -8,8 +8,9 @@ type VerificationActionsProps = {
   tenantEmail: string;
   tenantOrganization: string;
   verificationUrl: string | null;
+  subscription: string;
   isVerified: boolean;
-  onStatusUpdate?: (tenantId: string, newStatus: 'APPROVED' | 'REJECTED') => void;
+  onStatusUpdate?: (tenantId: string, newStatus: 'APPROVED' | 'REJECTED', newSubscription?: string) => void;
 };
 
 export function VerificationDownloadAction({
@@ -107,6 +108,7 @@ export function TenantMonitoringStatusActions({
   tenantEmail,
   tenantOrganization,
   verificationUrl,
+  subscription,
   isVerified,
   onStatusUpdate,
 }: VerificationActionsProps) {
@@ -121,25 +123,22 @@ export function TenantMonitoringStatusActions({
       setAcceptStatus("loading");
       setMessage("");
 
-      //Approve Tenant verification and send verification email
-      const response = await fetch("/api/send_verification_email", {
+      const response = await fetch("/api/approve_tenant_subscription", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           tenantId,
-          email: tenantEmail,
-          organization: tenantOrganization,
-          verificationUrl,
+          subscriptionTier: subscription,
         }),
       });
 
       const payload = (await response.json()) as { message?: string };
       if (!response.ok) {
-        throw new Error(payload.message || "Failed to accept.");
+        throw new Error(payload.message || "Failed to approve.");
       }
 
       setLocalVerified(true);
-      onStatusUpdate?.(tenantId, 'APPROVED');
+      onStatusUpdate?.(tenantId, 'APPROVED', subscription);
     } catch (err) {
       setAcceptStatus("error");
       setMessage(err instanceof Error ? err.message : "Failed to accept.");
@@ -171,32 +170,47 @@ export function TenantMonitoringStatusActions({
     }
   };
 
-  if (!verificationUrl || localVerified || localRejected) return null;
+  const showActions = !localVerified && !localRejected;
+
+  if (!showActions) {
+    const label = localVerified ? 'APPROVED' : localRejected ? 'REJECTED' : 'PENDING';
+    const badgeClass = label === 'PENDING'
+      ? 'border-amber-300 bg-amber-500/10 text-amber-200'
+      : label === 'REJECTED'
+        ? 'border-red-400 bg-red-500/10 text-red-300'
+        : 'border-[#5D44F8] bg-[#50C878]/18 text-[#50C878]';
+
+    return (
+      <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${badgeClass}`}>
+        {label}
+      </span>
+    );
+  }
 
   const busy = acceptStatus === "loading" || rejectStatus === "loading";
 
   return (
-    <div className="inline-flex flex-col items-center gap-1.5">
+    <div className="inline-flex flex-col items-center gap-2">
       <div className="flex flex-wrap items-center justify-center gap-2">
         <button
           type="button"
           onClick={handleAccept}
           disabled={busy}
-          className="inline-flex items-center justify-center rounded-full border border-[#5D44F8] bg-[#50C878]/[0.18] px-3 py-1 text-xs font-medium text-[#50C878]/[0.85] shadow-[0_0_12px_rgba(80,200,120,0.12)] transition hover:bg-[#50C878]/[0.28] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center justify-center rounded-full border border-[#5D44F8] bg-[#50C878]/18 px-3 py-1 text-xs font-medium text-[#50C878]/85 shadow-[0_0_12px_rgba(80,200,120,0.12)] transition hover:bg-[#50C878]/28 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {acceptStatus === "loading" ? "…" : "Accept"}
+          {acceptStatus === "loading" ? "…" : "Approve"}
         </button>
         <button
           type="button"
           onClick={handleReject}
           disabled={busy}
-          className="inline-flex items-center justify-center rounded-full border border-red-500/55 bg-red-500/[0.15] px-3 py-1 text-xs font-medium text-red-400 shadow-[0_0_12px_rgba(248,113,113,0.12)] transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center justify-center rounded-full border border-red-500/55 bg-red-500/15 px-3 py-1 text-xs font-medium text-red-400 shadow-[0_0_12px_rgba(248,113,113,0.12)] transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {rejectStatus === "loading" ? "…" : "Reject"}
         </button>
       </div>
       {message && (
-        <span className="max-w-[200px] text-center text-[10px] sm:text-[11px] text-red-300">
+        <span className="max-w-50 text-center text-[10px] sm:text-[11px] text-red-300">
           {message}
         </span>
       )}

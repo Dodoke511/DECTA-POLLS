@@ -5,6 +5,7 @@ import { SuperAdminHeader } from "@/components/super_admin/Header";
 import { SuperAdminSidebar } from "@/components/super_admin/Sidebar";
 import { createClient } from "@supabase/supabase-js";
 import { TenantMonitoringStatusActions, VerificationDownloadAction } from "@/components/super_admin/TenantActions";
+import { getDisplaySubscription } from '@/lib/subscription-limits';
 import { type TenantRow } from "../Dashboard/page";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -59,6 +60,21 @@ function toFileName(path: string | null): string | null {
     return parts[parts.length - 1] ?? null;
 }
 
+function isTenantAwaitingApproval(row: { status?: string; subscription?: string; isVerified?: boolean; verificationUrl?: string | null }) {
+    const status = (row.status ?? "").toString().toUpperCase();
+    const subscription = (row.subscription ?? "").toString().toUpperCase();
+
+    // If tenant status is explicitly pending, it's awaiting approval.
+    if (status === "PENDING") return true;
+
+    // If subscription was set to PENDING (tenant requested change), treat as awaiting approval.
+    if (subscription === "PENDING") return true;
+
+    // If tenant is not verified but has a verification file, it may also need approval.
+    if (!row.isVerified && row.verificationUrl) return true;
+
+    return false;
+}
 import { useRouter } from "next/navigation";
 
 export default function TenantsMonitoringPage() {
@@ -67,11 +83,17 @@ export default function TenantsMonitoringPage() {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    const handleStatusUpdate = (tenantId: string, newStatus: 'APPROVED' | 'REJECTED') => {
+    const handleStatusUpdate = (tenantId: string, newStatus: 'APPROVED' | 'REJECTED', newSubscription?: string) => {
         setTenants(prevTenants => 
             prevTenants.map(tenant => 
                 tenant.id === tenantId 
-                    ? { ...tenant, status: newStatus, isVerified: newStatus === 'APPROVED' }
+                    ? { 
+                        ...tenant, 
+                        status: newStatus, 
+                        isVerified: newStatus === 'APPROVED', 
+                        subscription: newSubscription ?? tenant.subscription,
+                        rawSubscription: newSubscription ?? tenant.rawSubscription,
+                    }
                     : tenant
             )
         );
@@ -110,31 +132,39 @@ export default function TenantsMonitoringPage() {
                             verificationUrl = data?.signedUrl ?? null;
                         }
 
+                        const rawSubscription = getValueAsString(record.subscription, "BASIC");
+                        const expiresAt = typeof record.subscription_expires_at === 'string' ? record.subscription_expires_at : null;
+                        const subscriptionState = getDisplaySubscription(rawSubscription, expiresAt);
+                        const rawStatus = getValueAsString(record.status, "PENDING");
+                        const status = rawStatus.toUpperCase();
+
                         return {
                             id: getValueAsString(record.id, `tenant-${index}`),
                             organization: getValueAsString(record.organization ?? record.organization_name, "Unknown Organization"),
                             email: getValueAsString(record.email, "No Email"),
                             type: getValueAsString(record.type, "N/A"),
-                            status: getValueAsString(record.status, "PENDING"),
+                            status,
                             isVerified: typeof verified === "boolean" ? verified : false,
                             verification: verificationValue,
                             verificationUrl,
                             verificationFileName,
-                            subscription: getValueAsString(record.subscription, "Standard"),
+                            subscription: subscriptionState,
+                            rawSubscription: rawSubscription,
                         };
                     })
                 );
 
                 setTenants(fetchedTenants);
+                setLoading(false);
             } catch (err) {
-                setError(err instanceof Error ? err.message : "An error occurred");
-            } finally {
+                console.error(err);
+                setError(err instanceof Error ? err.message : "An unknown error occurred while loading tenants.");
                 setLoading(false);
             }
         }
 
         fetchData();
-    }, []);
+    }, [router]);
 
     return (
         <div className="flex h-screen flex-col text-[#f1f0f3]" style={{ background: "radial-gradient(ellipse at 65% 30%, #2d1570 0%, #180d42 40%, #090215 75%)" }}>
@@ -156,9 +186,9 @@ export default function TenantsMonitoringPage() {
                         Tenants Monitoring
                     </h1>
                     <div className="super-admin-table relative overflow-x-auto decta-scrollbar rounded-[22px]">
-                        <table className="w-full border-collapse text-left text-sm min-w-[850px] md:min-w-0">
+                        <table className="w-full border-collapse text-left text-sm min-w-212.5 md:min-w-0">
                             <thead>
-                                <tr className="border-b border-white/[0.10] text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                                <tr className="border-b border-white/10 text-[11px] font-semibold uppercase tracking-wider text-white/45">
                                     <th className="px-5 py-4">Organization name</th>
                                     <th className="px-5 py-4">Email</th>
                                     <th className="px-5 py-4">Type</th>
@@ -171,12 +201,12 @@ export default function TenantsMonitoringPage() {
                                 {loading ? (
                                     <tr><td className="px-5 py-6 text-white/60" colSpan={5}>Loading...</td></tr>
                                 ) : tenants.map((row) => (
-                                    <tr key={row.id} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
+                                    <tr key={row.id} className="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
                                         <td className="px-5 py-4 font-medium text-white/85">{row.organization}</td>
                                         <td className="px-5 py-4 text-white/55">{row.email}</td>
                                         <td className="px-5 py-4 text-white/60">{row.type}</td>
                                         <td className="py-4 pl-5 pr-10 text-right align-middle md:pr-14">
-                                            <span className="inline-flex rounded-full border border-[#5D44F8] bg-[#50C878]/[0.18] px-3 py-1 text-xs font-medium text-[#50C878]/[0.85]">
+                                            <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${row.subscription === 'EXPIRED' ? 'border-red-400 bg-red-500/10 text-red-300' : row.subscription === 'PENDING' ? 'border-amber-300 bg-amber-500/10 text-amber-200' : 'border-[#5D44F8] bg-[#50C878]/18 text-[#50C878]/85'}`}>
                                                 {row.subscription}
                                             </span>
                                         </td>
@@ -187,17 +217,18 @@ export default function TenantsMonitoringPage() {
                                             />
                                         </td>
                                         <td className="py-4 pl-8 pr-5 text-center align-middle md:pl-10">
-                                            {row.status === "PENDING" ? (
+                                            {isTenantAwaitingApproval(row) ? (
                                                 <TenantMonitoringStatusActions
                                                     tenantId={row.id}
                                                     tenantEmail={row.email}
                                                     tenantOrganization={row.organization}
                                                     verificationUrl={row.verificationUrl}
+                                                    subscription={row.subscription}
                                                     isVerified={row.isVerified}
                                                     onStatusUpdate={handleStatusUpdate}
                                                 />
                                             ) : (
-                                                <span className={`inline-flex rounded-full border ${row.status === "PENDING" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : row.status === "REJECTED" ? "border-[#FF9632] bg-[#FF9632]/[0.20] text-[#FF9632]" : "border-[#5D44F8] bg-[#50C878]/[0.18] text-[#50C878]"} px-3 py-1 text-xs font-medium`}>
+                                                <span className={`inline-flex rounded-full border ${row.status === "PENDING" ? "border-[#FF9632] bg-[#FF9632]/20 text-[#FF9632]" : row.status === "REJECTED" ? "border-[#FF9632] bg-[#FF9632]/20 text-[#FF9632]" : "border-[#5D44F8] bg-[#50C878]/18 text-[#50C878]"} px-3 py-1 text-xs font-medium`}>
                                                     {row.status}
                                                 </span>
                                             )}

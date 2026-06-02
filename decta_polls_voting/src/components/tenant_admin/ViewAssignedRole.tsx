@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 
-export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick?: (roleId: string) => void; onEditClick?: (role: any) => void }) {
+export function ViewAssignedRole({ onAssignClick, onEditClick, disabled }: { onAssignClick?: (roleId: string) => void; onEditClick?: (role: any) => void; disabled?: boolean }) {
     const [assignedRoles, setAssignedRoles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -103,6 +103,7 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
                                 <AssignedPersonCell
                                     roleId={row.id}
                                     assignedEmail={row.assignedEmail}
+                                    disabled={disabled}
                                     onRemoved={() => {
                                         setAssignedRoles(prev =>
                                             prev.map(r => r.id === row.id ? { ...r, assignedEmail: null } : r)
@@ -113,8 +114,9 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
                             <td className="py-4 md:pr-8">
                                 <button
                                     onClick={() => onEditClick?.(row)}
-                                    title="Edit Role Permissions"
-                                    className="inline-flex items-center rounded-full border px-3.5 py-1 text-[11px] font-medium tracking-wide border-[#6c5b96] bg-[#3a2e5d]/60 text-[#a39ec8] hover:bg-[#4f35cd]/40 hover:text-white hover:border-[#4f35cd]/60 transition-all cursor-pointer"
+                                    disabled={disabled}
+                                    title={disabled ? "Role editing is locked while subscription is pending approval or expired." : "Edit Role Permissions"}
+                                    className={`inline-flex items-center rounded-full border px-3.5 py-1 text-[11px] font-medium tracking-wide transition-all ${disabled ? 'border-white/10 bg-white/10 text-white/40 cursor-not-allowed' : 'border-[#6c5b96] bg-[#3a2e5d]/60 text-[#a39ec8] hover:bg-[#4f35cd]/40 hover:text-white hover:border-[#4f35cd]/60'}`}
                                 >
                                     {row.permissions ? `${row.permissions.length} Permissions` : "Custom"}
                                 </button>
@@ -132,14 +134,16 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
                             <td className="py-4 md:pr-8 flex items-center gap-6">
                                 <button
                                     onClick={() => onAssignClick?.(row.id)}
-                                    className="rounded-lg bg-[#4f35cd]/20 px-4 py-1.5 text-[12px] font-bold text-[#D0C8FF] border border-[#4f35cd]/50 hover:bg-[#4f35cd]/40 transition-colors"
+                                    disabled={disabled}
+                                    className={`rounded-lg px-4 py-1.5 text-[12px] font-bold text-[#D0C8FF] border border-[#4f35cd]/50 transition-colors ${disabled ? 'bg-white/10 text-white/40 cursor-not-allowed' : 'bg-[#4f35cd]/20 hover:bg-[#4f35cd]/40'}`}
                                 >
                                     Assign
                                 </button>
                                 <button
                                     onClick={() => handleDeleteRole(row.id, row.roleName)}
-                                    className="rounded-lg bg-red-500/10 px-4 py-1.5 text-[12px] font-bold text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-colors"
-                                    title="Delete Role"
+                                    disabled={disabled}
+                                    className={`rounded-lg px-4 py-1.5 text-[12px] font-bold border transition-colors ${disabled ? 'bg-white/10 text-white/40 border-white/10 cursor-not-allowed' : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'}`}
+                                    title={disabled ? 'Role actions are locked while subscription is pending approval or expired.' : 'Delete Role'}
                                 >
                                     Delete
                                 </button>
@@ -155,10 +159,12 @@ export function ViewAssignedRole({ onAssignClick, onEditClick }: { onAssignClick
 function AssignedPersonCell({
     roleId,
     assignedEmail,
+    disabled,
     onRemoved,
 }: {
     roleId: string;
     assignedEmail: string | null;
+    disabled?: boolean;
     onRemoved: () => void;
 }) {
     const [requesting, setRequesting] = useState(false);
@@ -206,8 +212,8 @@ function AssignedPersonCell({
             <span className="text-[13px] text-white/70">{assignedEmail}</span>
             <button
                 onClick={handleRequestRemoval}
-                disabled={requesting}
-                title="Request removal — a confirmation email will be sent to the assigned person"
+                disabled={requesting || disabled}
+                title={disabled ? "Removing assigned users is locked while the subscription is pending approval or expired." : "Request removal — a confirmation email will be sent to the assigned person"}
                 className="flex items-center justify-center w-4 h-4 rounded-full text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
             >
                 {requesting ? (

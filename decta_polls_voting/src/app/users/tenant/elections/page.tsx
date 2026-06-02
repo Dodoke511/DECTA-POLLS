@@ -6,6 +6,7 @@ import { TenantAdminSidebar } from "@/components/tenant_admin/Sidebar";
 import { CreateElectionModal } from "@/components/tenant_admin/CreateElectionModal";
 import { Plus, Link as LinkIcon, Copy, ExternalLink, Check, Rocket, Settings, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { isSubscriptionRestricted } from '@/lib/subscription-limits';
 export default function TenantElectionsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -18,8 +19,11 @@ export default function TenantElectionsPage() {
   const [tenantSlug, setTenantSlug] = useState("");
   const [token, setToken] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE'>('BASIC');
+  const [subscription, setSubscription] = useState<'BASIC' | 'STANDARD' | 'ENTERPRISE' | 'PENDING' | 'EXPIRED'>('BASIC');
+  const [tenantStatus, setTenantStatus] = useState<string | null>(null);
+  const [isRestricted, setIsRestricted] = useState(false);
   const [expiredElections, setExpiredElections] = useState<any[]>([]);
+  const [deletableElectionIds, setDeletableElectionIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{ title: string; label: string; onConfirm: () => Promise<void> } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -54,6 +58,11 @@ export default function TenantElectionsPage() {
           }
           if (subscriptionData.subscription) {
             setSubscription(subscriptionData.subscription);
+            setTenantStatus(subscriptionData.status ?? null);
+            setIsRestricted(
+              isSubscriptionRestricted(subscriptionData.subscription, subscriptionData.subscription_expires_at) ||
+              subscriptionData.status === 'PENDING'
+            );
           }
         })
         .catch(err => console.error("Failed fetching data:", err))
@@ -64,6 +73,11 @@ export default function TenantElectionsPage() {
       .then(r => r.json())
       .then(data => setExpiredElections(data.expired || []))
       .catch(err => console.error('Retention fetch error:', err));
+    // Fetch deletable elections for deletion button visibility
+    fetch(`/api/elections/retention/deletable?tenantId=${storedUserId}`)
+      .then(r => r.json())
+      .then(data => setDeletableElectionIds(new Set(data.deletable || [])))
+      .catch(err => console.error('Deletable elections fetch error:', err));
   });
     } else {
       setIsElectionsLoading(false);
@@ -171,10 +185,27 @@ export default function TenantElectionsPage() {
       <TenantAdminHeader />
 
       <div className="flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6 overflow-hidden">
-        <TenantAdminSidebar activePath="/users/tenant/elections" />
+        <TenantAdminSidebar activePath="/users/tenant/elections" isRestricted={isRestricted} />
 
-        <main className="super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border border-white/10 p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none">
+        <main className={`relative super-admin-dashboard-main min-w-0 flex-1 rounded-[28px] border border-white/10 p-6 shadow-[0_0_60px_rgba(93,68,248,0.15),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm md:p-8 overflow-y-auto no-scrollbar md:rounded-l-none ${isRestricted ? 'pointer-events-none opacity-40' : ''}`}>
           <h1 className="mb-10 text-4xl font-bold tracking-tight md:text-5xl" style={{ color: "#D0C8FF", textShadow: "2px 2px 20px rgba(208,200,255,0.45)" }}>Elections</h1>
+          {isRestricted && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#05070f]/95 p-6 text-center">
+              <div className="max-w-xl rounded-[28px] border border-white/10 bg-[#090b14] p-8 shadow-[0_0_60px_rgba(0,0,0,0.45)]">
+                <h2 className="text-2xl font-bold text-white">Tenant account access is restricted</h2>
+                <p className="mt-3 text-sm text-white/70">This tenant account is expired or pending approval. All management pages are locked. Please use Settings to renew or sign out.</p>
+                <button
+                  onClick={() => {
+                    const destination = `/users/tenant/settings?role=tenant&random=${token}`;
+                    window.location.href = `/loader?destination=${encodeURIComponent(destination)}&duration=700`;
+                  }}
+                  className="mt-6 inline-flex items-center justify-center rounded-[16px] bg-[#5D44F8] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#7c68ff]"
+                >
+                  Go to Settings
+                </button>
+              </div>
+            </div>
+          )}
 {expiredElections.length > 0 && (
   <div className="mb-8 rounded-[20px] border border-orange-500/20 bg-gradient-to-r from-orange-600/10 to-amber-600/10 p-6 shadow-[0_4px_30px_rgba(217,119,6,0.05)] backdrop-blur-md">
     <div className="flex items-start gap-4">
@@ -681,6 +712,32 @@ export default function TenantElectionsPage() {
                               </span>
                             )}
                           </button>
+                          {deletableElectionIds.has(election.id) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const capturedId = election.id;
+                                const capturedTitle = election.title;
+                                setDeleteTarget({
+                                  title: capturedTitle,
+                                  label: 'Completed',
+                                  onConfirm: async () => {
+                                    const res = await fetch('/api/elections/retention/delete', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ tenantId, electionId: capturedId })
+                                    });
+                                    if (res.ok) { window.location.reload(); }
+                                    else { const e = await res.json(); throw new Error(e.error ?? 'Deletion failed'); }
+                                  }
+                                });
+                              }}
+                              className="grid h-9 w-9 place-items-center rounded-lg border border-red-500/30 bg-red-600/20 text-red-400 shadow-[0_8px_24px_rgba(220,38,38,0.2)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-red-600/40 hover:shadow-[0_12px_30px_rgba(220,38,38,0.3)] hover:text-red-300 animate-in slide-in-from-bottom-2 duration-300"
+                              title="Delete completed election"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
 
                         <div className="absolute bottom-4 left-4 z-10">

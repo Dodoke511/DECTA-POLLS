@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getDisplaySubscription } from '@/lib/subscription-limits';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from("tenants")
-      .select("id, organization, email, type, logo_url, main_color, secondary_color, third_color, subscription, slug, created_at, subscription_expires_at, active_triggers")
+      .select("id, organization, email, type, logo_url, main_color, secondary_color, third_color, subscription, slug, created_at, subscription_expires_at, active_triggers, status, is_verified")
       .eq("id", userData.tenantID)
       .single();
 
@@ -45,6 +46,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
+    const subscriptionState = getDisplaySubscription(data.subscription, data.subscription_expires_at);
+    if (subscriptionState === 'EXPIRED' && data.subscription !== 'EXPIRED') {
+      await supabase
+        .from('tenants')
+        .update({ subscription: 'EXPIRED' })
+        .eq('id', data.id);
+    }
+
     // Fetch the registration mode from the election table
     const { data: electionData } = await supabase
       .from("election")
@@ -58,7 +67,14 @@ export async function POST(request: Request) {
       (data as any).registration_mode = electionData.voterMode;
     }
 
-    return NextResponse.json({ data });
+    return NextResponse.json({
+      data: {
+        ...data,
+        subscription: subscriptionState,
+        status: data.status ?? "APPROVED",
+        is_verified: data.is_verified ?? false,
+      },
+    });
   } catch (err: any) {
     console.error("[get_tenant_info] API error:", err);
     return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
