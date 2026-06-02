@@ -28,6 +28,7 @@ interface Voter {
 export default function TenantVotersPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -46,6 +47,23 @@ export default function TenantVotersPage() {
   const [isRestricted, setIsRestricted] = useState(false);
   const [token, setToken] = useState('');
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [roleCounts, setRoleCounts] = useState<{
+    all: number;
+    admin: number;
+    "sub-admin": number;
+    candidate: number;
+    voter: number;
+  }>({
+    all: 0,
+    admin: 0,
+    "sub-admin": 0,
+    candidate: 0,
+    voter: 0
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatRoleName = (role?: string) => {
@@ -73,6 +91,15 @@ export default function TenantVotersPage() {
     }
   };
 
+  // Debounce search query changes and reset to page 1
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const role = params.get('role');
@@ -92,29 +119,53 @@ export default function TenantVotersPage() {
     if (storedTenantId) {
       setTenantId(storedTenantId);
       console.log('Tenant ID set:', storedTenantId);
-      fetchVoters(storedTenantId);
       fetchSubscription(storedTenantId);
     } else {
       console.warn('No tenant ID found in session storage');
     }
   }, [router]);
 
-  const fetchVoters = async (tenantId: string) => {
+  const fetchVoters = async (
+    id: string,
+    page: number,
+    limit: number,
+    search: string,
+    role: string
+  ) => {
+    setIsLoading(true);
     try {
-      const response = await fetch(`/api/get_tenant_voters?tenantId=${tenantId}`);
+      const response = await fetch(
+        `/api/get_tenant_voters?tenantId=${id}&page=${page}&limit=${limit}&search=${encodeURIComponent(
+          search
+        )}&role=${role}`
+      );
       const result = await response.json();
 
       if (response.ok) {
         setVoters(result.data || []);
+        setTotalCount(result.count || 0);
+        if (result.roleCounts) {
+          setRoleCounts(result.roleCounts);
+        }
       } else {
         console.error("Error fetching voters:", result.error);
         setVoters([]);
+        setTotalCount(0);
       }
     } catch (error) {
       console.error("Error fetching voters:", error);
       setVoters([]);
+      setTotalCount(0);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (tenantId) {
+      fetchVoters(tenantId, currentPage, pageSize, debouncedSearch, activeTab);
+    }
+  }, [tenantId, currentPage, pageSize, debouncedSearch, activeTab]);
 
   const fetchSubscription = async (tenantId: string) => {
     try {
@@ -206,7 +257,7 @@ export default function TenantVotersPage() {
             count,
           });
           setSelectedFile(null);
-          fetchVoters(tenantId);
+          fetchVoters(tenantId, currentPage, pageSize, debouncedSearch, activeTab);
         } else {
           setUploadResult({
             type: "error",
@@ -242,39 +293,25 @@ export default function TenantVotersPage() {
     setShowUploadModal(false);
   };
 
-  // Calculate stats based on active filter tab
-  const getFilteredCount = (role: string) => {
-    if (role === "all") return voters.length;
-    return voters.filter(v => (v.user_type?.toLowerCase() || 'voter') === role).length;
+  // Get count per role tab from roleCounts
+  const getRoleCount = (role: string) => {
+    const normalized = role.toLowerCase();
+    if (normalized === "all") return roleCounts.all;
+    if (normalized === "admin") return roleCounts.admin;
+    if (normalized === "sub-admin") return roleCounts["sub-admin"];
+    if (normalized === "candidate") return roleCounts.candidate;
+    if (normalized === "voter") return roleCounts.voter;
+    return 0;
   };
 
   const stats = {
-    total: getFilteredCount(activeTab),
+    total: totalCount,
     label: activeTab === "all" 
       ? "Total Users" 
       : `Total ${formatRoleName(activeTab)}s`
   };
 
-  // Filter voters based on activeTab and search query
-  const filteredVoters = voters.filter(voter => {
-    const voterRole = voter.user_type?.toLowerCase() || 'voter';
-    
-    // 1. Role filter
-    if (activeTab !== "all" && voterRole !== activeTab) {
-      return false;
-    }
-
-    // 2. Search query filter
-    const searchLower = searchQuery.toLowerCase();
-    const fullName = `${voter.first_name || ''} ${voter.middle_name || ''} ${voter.surname || ''}`.toLowerCase();
-    const roleFormatted = formatRoleName(voter.user_type).toLowerCase();
-    return (
-      fullName.includes(searchLower) ||
-      voter.email?.toLowerCase().includes(searchLower) ||
-      voter.contact?.toLowerCase().includes(searchLower) ||
-      roleFormatted.includes(searchLower)
-    );
-  });
+  const filteredVoters = voters;
 
   return (
     <>
@@ -564,12 +601,15 @@ export default function TenantVotersPage() {
           {/* Role Filter Tabs */}
           <div className="flex flex-wrap gap-2 mb-6">
             {["all", "admin", "sub-admin", "candidate", "voter"].map((role) => {
-              const count = getFilteredCount(role);
+              const count = getRoleCount(role);
               const isActive = activeTab === role;
               return (
                 <button
                   key={role}
-                  onClick={() => setActiveTab(role)}
+                  onClick={() => {
+                    setActiveTab(role);
+                    setCurrentPage(1);
+                  }}
                   className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 border ${
                     isActive
                       ? "bg-[#5D44F8] text-white border-[#5D44F8]/50 shadow-[0_0_20px_rgba(93,68,248,0.25)]"
@@ -588,24 +628,35 @@ export default function TenantVotersPage() {
             border: "1px solid rgba(255, 255, 255, 0.1)"
           }}>
             <div className="overflow-x-auto decta-scrollbar">
-              {filteredVoters.length === 0 ? (
-                <div className="p-8 text-center text-white/60">
-                  No voters found
-                </div>
-              ) : (
-                <table className="w-full min-w-[850px] md:min-w-0">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="text-left p-4 text-white/60 font-semibold">Voter Name</th>
-                      <th className="text-left p-4 text-white/60 font-semibold">Email</th>
-                      <th className="text-left p-4 text-white/60 font-semibold">Contact</th>
-                      <th className="text-left p-4 text-white/60 font-semibold">Role</th>
-                      <th className="text-left p-4 text-white/60 font-semibold">Registration Date</th>
-                      <th className="text-left p-4 text-white/60 font-semibold">Department</th>
+              <table className="w-full min-w-[850px] md:min-w-0">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left p-4 text-white/60 font-semibold">Voter Name</th>
+                    <th className="text-left p-4 text-white/60 font-semibold">Email</th>
+                    <th className="text-left p-4 text-white/60 font-semibold">Contact</th>
+                    <th className="text-left p-4 text-white/60 font-semibold">Role</th>
+                    <th className="text-left p-4 text-white/60 font-semibold">Registration Date</th>
+                    <th className="text-left p-4 text-white/60 font-semibold">Department</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={6} className="p-12 text-center">
+                        <div className="flex items-center justify-center gap-3 text-white/60">
+                          <Loader2 className="h-6 w-6 animate-spin text-[#D0C8FF]" />
+                          <span>Loading users...</span>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredVoters.map((voter) => (
+                  ) : filteredVoters.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-white/60">
+                        No voters found
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredVoters.map((voter) => (
                       <tr key={voter.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                         <td className="p-4 text-white">
                           {`${voter.first_name || ''} ${voter.middle_name || ''} ${voter.surname || ''}`.trim() || 'N/A'}
@@ -622,11 +673,90 @@ export default function TenantVotersPage() {
                         </td>
                         <td className="p-4 text-white/80">{voter.department || 'N/A'}</td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
+            {/* Pagination Controls */}
+            {!isLoading && totalCount > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-white/10 text-sm text-white/60 bg-white/[0.02]">
+                <div>
+                  Showing{" "}
+                  <span className="font-semibold text-white">
+                    {Math.min((currentPage - 1) * pageSize + 1, totalCount)}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-semibold text-white">
+                    {Math.min(currentPage * pageSize, totalCount)}
+                  </span>{" "}
+                  of <span className="font-semibold text-white">{totalCount}</span> entries
+                </div>
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* Page Size Selector */}
+                  <div className="flex items-center gap-2">
+                    <span>Show</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-[#5D44F8]"
+                      style={{ colorScheme: "dark" }}
+                    >
+                      {[10, 25, 50, 100].map((size) => (
+                        <option key={size} value={size} className="bg-[#140B2D]">
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <span>entries</span>
+                  </div>
+                  {/* Navigation Buttons */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1 || isLoading}
+                      className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all"
+                    >
+                      Previous
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.ceil(totalCount / pageSize) })
+                        .map((_, i) => i + 1)
+                        .filter((p) => p === 1 || p === Math.ceil(totalCount / pageSize) || Math.abs(p - currentPage) <= 1)
+                        .map((p, index, arr) => {
+                          const prev = arr[index - 1];
+                          const showEllipsis = prev && p - prev > 1;
+                          return (
+                            <React.Fragment key={p}>
+                              {showEllipsis && <span className="px-1 text-white/40">...</span>}
+                              <button
+                                onClick={() => setCurrentPage(p)}
+                                className={`px-3 py-1.5 rounded-lg transition-all ${
+                                  currentPage === p
+                                    ? "bg-[#5D44F8] text-white border border-[#5D44F8]/50 shadow-[0_0_20px_rgba(93,68,248,0.25)]"
+                                    : "border border-white/10 hover:bg-white/10"
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            </React.Fragment>
+                          );
+                        })}
+                    </div>
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.min(Math.ceil(totalCount / pageSize), p + 1))}
+                      disabled={currentPage === Math.ceil(totalCount / pageSize) || isLoading}
+                      className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>
