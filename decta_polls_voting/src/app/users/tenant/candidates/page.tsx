@@ -228,10 +228,9 @@ export default function TenantCandidatesPage() {
   const isFilingPhase = currentPhaseType === 'filing' && tenantSubscription !== 'BASIC';
   const isScreeningPhase = currentPhaseType === 'screening';
   const isAppealPhase = currentPhaseType === 'appeal' && tenantSubscription !== 'BASIC';
-  const isReadOnly = (currentPhaseType === 'voting' || currentPhaseType === 'results') && tenantSubscription !== 'BASIC';
   const isTransitionPending = phaseStatus === 'for_transition' && tenantSubscription !== 'BASIC';
-
-  const canModifyStatus = tenantSubscription === 'BASIC' || ((!isScreeningEnabled || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly && !isFilingPhase);
+  const isReadOnly = (currentPhaseType === 'voting' || currentPhaseType === 'results') && tenantSubscription !== 'BASIC' && isScreeningEnabled;
+  const canModifyStatus = tenantSubscription !== 'BASIC' && (((!isScreeningEnabled && isFilingPhase) || (isScreeningPhase && phaseStatus === 'active')) && !isReadOnly) || (tenantSubscription === 'BASIC');
 
   // Allow tenant admins to act on candidates returned to PENDING_VERIFICATION
   // by the appeal workflow even during the appeal phase. This keeps the
@@ -328,7 +327,7 @@ export default function TenantCandidatesPage() {
           {isTransitionPending && (
             <PhaseGuardBanner phaseStatus="for_transition" />
           )}
-          {isFilingPhase && (
+          {isFilingPhase || isReadOnly || !canModifyStatus && (
             <div className="mb-6 p-4 rounded-2xl bg-sky-500/5 border border-sky-500/15 flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center flex-shrink-0">
                 <FileText className="w-5 h-5 text-sky-400" />
@@ -364,175 +363,175 @@ export default function TenantCandidatesPage() {
           )}
 
           <div className={`overflow-x-auto decta-scrollbar bg-white/5 rounded-2xl border border-white/10 shadow-2xl ${(isReadOnly || isTransitionPending) ? 'opacity-60 pointer-events-none' : ''}`}>
-              <table className="w-full text-left border-collapse min-w-[950px] md:min-w-0">
-                <thead>
-                  <tr className="bg-white/5 border-b border-white/10">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40">Candidate Details</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40">Position</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40">Election</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40">Filed Date</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40 text-center">Application</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filteredCandidates.length > 0 ? (
-                    filteredCandidates.map((c) => (
-                      <tr key={c.id} className="group hover:bg-white/[0.02] transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--tenant-primary)] to-[#A78BFA] flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/20">
-                              {c.user?.first_name?.[0]}{c.user?.surname?.[0]}
-                            </div>
-                            <div>
-                              <div className="font-bold text-white">{c.user?.first_name} {c.user?.surname}</div>
-                              <div className="text-xs text-white/40">{c.user?.email}</div>
-                            </div>
+            <table className="w-full text-left border-collapse min-w-[950px] md:min-w-0">
+              <thead>
+                <tr className="bg-white/5 border-b border-white/10">
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40">Candidate Details</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40">Position</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40">Election</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40">Filed Date</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40 text-center">Application</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40">Status</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-white/40 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredCandidates.length > 0 ? (
+                  filteredCandidates.map((c) => (
+                    <tr key={c.id} className="group hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--tenant-primary)] to-[#A78BFA] flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/20">
+                            {c.user?.first_name?.[0]}{c.user?.surname?.[0]}
                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-white/70 font-medium">
-                          {c.position || <span className="text-white/20 italic">Not specified</span>}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="inline-flex items-center gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded-lg">
-                            <span className="text-xs font-medium text-white/80">{c.election?.title}</span>
+                          <div>
+                            <div className="font-bold text-white">{c.user?.first_name} {c.user?.surname}</div>
+                            <div className="text-xs text-white/40">{c.user?.email}</div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-white/40">
-                          {c.filedDate ? new Date(c.filedDate).toLocaleDateString() : '—'}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => setViewerCandidate(c)}
-                            className="p-2 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/60 rounded-xl border border-white/10 transition-all inline-flex"
-                            title="View Application"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </td>
-                        <td className="px-6 py-4">
-                          {c.status === 'PENDING_VERIFICATION' && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-500/20">
-                              <Clock className="w-3 h-3" />
-                              Pending
-                            </div>
-                          )}
-                          {c.status === 'APPROVED' && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-500/20">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Verified
-                            </div>
-                          )}
-                          {c.status === 'ACKNOWLEDGED' && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 text-blue-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-blue-500/20">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Acknowledged
-                            </div>
-                          )}
-                          {c.status === 'REJECTED' && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-500/20">
-                              <XCircle className="w-3 h-3" />
-                              Rejected
-                            </div>
-                          )}
-                          {c.status === 'FLAGGED' && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/10 text-orange-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-orange-500/20">
-                              <AlertCircle className="w-3 h-3" />
-                              Flagged
-                            </div>
-                          )}
-                          {c.status === 'DISQUALIFIED' && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-500/20">
-                              <XCircle className="w-3 h-3" />
-                              Disqualified
-                            </div>
-                          )}
-                          {(c.status === 'DRAFT' || !c.status) && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/5 text-white/30 rounded-full text-[10px] font-black uppercase tracking-wider border border-white/10">
-                              <FileEdit className="w-3 h-3" />
-                              To Apply
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-2 items-center">
-  
-                            {/* Action Buttons (Accept/Reject) */}
-                            {(c.status === 'PENDING_VERIFICATION' || c.status === 'ACKNOWLEDGED' || c.status === 'FLAGGED') && (canModifyStatus || ((c.status === 'PENDING_VERIFICATION' || c.status === 'FLAGGED') && canActOnPendingDuringAppeal)) && (
-                              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => handleStatusUpdate(c.id, 'APPROVED')}
-                                  disabled={actionLoading?.startsWith(c.id)}
-                                  className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-xl border border-emerald-500/20 transition-all active:scale-95 disabled:opacity-50"
-                                  title="Approve Candidate"
-                                >
-                                  {actionLoading === `${c.id}-APPROVED` ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
-                                </button>
-                                <button
-                                  onClick={() => isScreeningPhase ? setRejectTarget(c) : handleStatusUpdate(c.id, 'REJECTED')}
-                                  disabled={actionLoading?.startsWith(c.id)}
-                                  className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl border border-red-500/20 transition-all active:scale-95 disabled:opacity-50"
-                                  title="Reject Application"
-                                >
-                                  {actionLoading === `${c.id}-REJECTED` ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-                                </button>
-                              </div>
-                            )}
-  
-                            {/* Disqualify Button for Approved Candidates */}
-                            {c.status === 'APPROVED' && canModifyStatus && !undoStack.find(u => u.candidateId === c.id) && (
-                              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => handleStatusUpdate(c.id, 'DISQUALIFIED')}
-                                  disabled={actionLoading?.startsWith(c.id)}
-                                  className="p-2 bg-red-900/40 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/20 transition-all active:scale-95 disabled:opacity-50"
-                                  title="Disqualify Candidate"
-                                >
-                                  {actionLoading === `${c.id}-DISQUALIFIED` ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-                                </button>
-                              </div>
-                            )}
-  
-                            {/* Undo Button */}
-                            {undoStack.find(u => u.candidateId === c.id) && (
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-white/70 font-medium">
+                        {c.position || <span className="text-white/20 italic">Not specified</span>}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="inline-flex items-center gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded-lg">
+                          <span className="text-xs font-medium text-white/80">{c.election?.title}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-white/40">
+                        {c.filedDate ? new Date(c.filedDate).toLocaleDateString() : '—'}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => setViewerCandidate(c)}
+                          className="p-2 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/60 rounded-xl border border-white/10 transition-all inline-flex"
+                          title="View Application"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        {c.status === 'PENDING_VERIFICATION' && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-500/20">
+                            <Clock className="w-3 h-3" />
+                            Pending
+                          </div>
+                        )}
+                        {c.status === 'APPROVED' && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-500/20">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Verified
+                          </div>
+                        )}
+                        {c.status === 'ACKNOWLEDGED' && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 text-blue-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-blue-500/20">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Acknowledged
+                          </div>
+                        )}
+                        {c.status === 'REJECTED' && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-500/20">
+                            <XCircle className="w-3 h-3" />
+                            Rejected
+                          </div>
+                        )}
+                        {c.status === 'FLAGGED' && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/10 text-orange-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-orange-500/20">
+                            <AlertCircle className="w-3 h-3" />
+                            Flagged
+                          </div>
+                        )}
+                        {c.status === 'DISQUALIFIED' && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-500/20">
+                            <XCircle className="w-3 h-3" />
+                            Disqualified
+                          </div>
+                        )}
+                        {(c.status === 'DRAFT' || !c.status) && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/5 text-white/30 rounded-full text-[10px] font-black uppercase tracking-wider border border-white/10">
+                            <FileEdit className="w-3 h-3" />
+                            To Apply
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2 items-center">
+
+                          {/* Action Buttons (Accept/Reject) */}
+                          {(c.status === 'PENDING_VERIFICATION' || c.status === 'ACKNOWLEDGED' || c.status === 'FLAGGED') && (canModifyStatus || ((c.status === 'PENDING_VERIFICATION' || c.status === 'FLAGGED') && canActOnPendingDuringAppeal)) && (
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
-                                onClick={() => handleUndo(c.id)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-amber-500/20 transition-all"
+                                onClick={() => handleStatusUpdate(c.id, 'APPROVED')}
+                                disabled={actionLoading?.startsWith(c.id)}
+                                className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-xl border border-emerald-500/20 transition-all active:scale-95 disabled:opacity-50"
+                                title="Approve Candidate"
                               >
-                                <Undo2 className="w-3 h-3" />
-                                Undo
+                                {actionLoading === `${c.id}-APPROVED` ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
                               </button>
-                            )}
-  
-                            {/* Reset Status for decided candidates */}
-                            {c.status !== 'PENDING_VERIFICATION' && c.status !== 'ACKNOWLEDGED' && c.status !== 'FLAGGED' && canModifyStatus && !undoStack.find(u => u.candidateId === c.id) && (
                               <button
-                                onClick={() => handleStatusUpdate(c.id, 'PENDING_VERIFICATION')}
-                                className="text-[10px] font-bold text-white/20 hover:text-white/40 transition-colors uppercase tracking-widest ml-2"
+                                onClick={() => isScreeningPhase ? setRejectTarget(c) : handleStatusUpdate(c.id, 'REJECTED')}
+                                disabled={actionLoading?.startsWith(c.id)}
+                                className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl border border-red-500/20 transition-all active:scale-95 disabled:opacity-50"
+                                title="Reject Application"
                               >
-                                Reset
+                                {actionLoading === `${c.id}-REJECTED` ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
                               </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-20 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center border border-white/10 text-white/20">
-                            <Filter className="w-8 h-8" />
-                          </div>
-                          <p className="text-white/40 font-medium">No candidates found matching your criteria.</p>
+                            </div>
+                          )}
+
+                          {/* Disqualify Button for Approved Candidates */}
+                          {c.status === 'APPROVED' && canModifyStatus && !undoStack.find(u => u.candidateId === c.id) && (
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleStatusUpdate(c.id, 'DISQUALIFIED')}
+                                disabled={actionLoading?.startsWith(c.id)}
+                                className="p-2 bg-red-900/40 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/20 transition-all active:scale-95 disabled:opacity-50"
+                                title="Disqualify Candidate"
+                              >
+                                {actionLoading === `${c.id}-DISQUALIFIED` ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Undo Button */}
+                          {undoStack.find(u => u.candidateId === c.id) && (
+                            <button
+                              onClick={() => handleUndo(c.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-amber-500/20 transition-all"
+                            >
+                              <Undo2 className="w-3 h-3" />
+                              Undo
+                            </button>
+                          )}
+
+                          {/* Reset Status for decided candidates */}
+                          {c.status !== 'PENDING_VERIFICATION' && c.status !== 'ACKNOWLEDGED' && c.status !== 'FLAGGED' && canModifyStatus && !undoStack.find(u => u.candidateId === c.id) && (
+                            <button
+                              onClick={() => handleStatusUpdate(c.id, 'PENDING_VERIFICATION')}
+                              className="text-[10px] font-bold text-white/20 hover:text-white/40 transition-colors uppercase tracking-widest ml-2"
+                            >
+                              Reset
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center border border-white/10 text-white/20">
+                          <Filter className="w-8 h-8" />
+                        </div>
+                        <p className="text-white/40 font-medium">No candidates found matching your criteria.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </main>
       </div>
 
