@@ -54,8 +54,8 @@ export function ApplicationViewerModal({
           evaluateRules(parsedFields, data.responseValues || [], data.phaseRules || []);
         }
 
-        // If simple view (no screening or basic), update to ACKNOWLEDGED if PENDING
-        if (!isScreeningEnabled && subscription.toUpperCase() === 'BASIC' && candidate.status === 'PENDING_VERIFICATION') {
+        // If simple view (no screening), update to ACKNOWLEDGED if PENDING
+        if (!isScreeningEnabled && candidate.status === 'PENDING_VERIFICATION') {
           await onStatusUpdate(candidate.id, 'ACKNOWLEDGED');
         }
       }
