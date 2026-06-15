@@ -22,7 +22,7 @@ export async function POST(
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const supabase = createClient(supabaseUrl, supabaseKey);
   const supabaseService = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const temporaryVoterPassword = '12345';
+
 
   try {
     const { email, password } = await request.json();
@@ -158,7 +158,7 @@ export async function POST(
       return NextResponse.json({ error: sessionRegistration.reason || 'An active session already exists for this account.' }, { status: 409 });
     }
 
-    if (userType === 'voter' && password === temporaryVoterPassword) {
+    if (userType === 'voter' && authData.user?.user_metadata?.temporary_password === true) {
       return NextResponse.json({
         success: true,
         requiresPasswordChange: true,

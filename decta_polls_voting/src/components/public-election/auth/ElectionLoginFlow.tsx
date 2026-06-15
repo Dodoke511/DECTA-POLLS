@@ -76,6 +76,10 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
   const [fpError, setFpError] = useState('');
   const [fpLoading, setFpLoading] = useState(false);
 
+  // Voter OTP state
+  const [voterOtpSent, setVoterOtpSent] = useState(false);
+  const [voterOtpLoading, setVoterOtpLoading] = useState(false);
+
   // OTP state
   const [otp, setOtp] = useState('');
   const [otpHash, setOtpHash] = useState('');
@@ -322,6 +326,35 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
     setFpConfirmPassword('');
   };
 
+  // Send temporary OTP password for first-time voter
+  const handleSendVoterOtp = async () => {
+    if (!email.trim()) {
+      setError('Please enter your email address.');
+      return;
+    }
+    setVoterOtpLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/public/${tenant.slug}/${election.slug}/auth/send-temporary-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to send temporary password OTP.');
+        return;
+      }
+      setVoterOtpSent(true);
+      setPassword('');
+      startTimer();
+    } catch (err: any) {
+      setError(err.message || 'Failed to send temporary password OTP.');
+    } finally {
+      setVoterOtpLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -392,9 +425,7 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
         throw new Error('New password and confirmation do not match.');
       }
 
-      if (newPassword === '12345') {
-        throw new Error('Choose a new password different from the temporary password.');
-      }
+
 
       if (!newPasswordPolicy.valid) {
         throw new Error(newPasswordPolicy.errors[0] || 'Please choose a stronger password.');
@@ -695,7 +726,9 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
 
         {role === 'Voter' && !requiresPasswordChange && !returningVoterMode && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm font-medium">
-            Enter temporary password 12345 and change it once entered.
+            {!voterOtpSent 
+              ? "First-time voter? Enter your email address below to receive a temporary password (OTP) via email."
+              : "A temporary password (OTP) has been sent to your email. Enter it below to log in and change your password."}
           </div>
         )}
 
@@ -707,7 +740,7 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
 
         {requiresPasswordChange && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm font-medium">
-            You cannot proceed to vote until you change the temporary password 12345.
+            You cannot proceed to vote until you change the temporary password.
           </div>
         )}
 
@@ -717,32 +750,80 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
               required
               type="email"
               placeholder="Email Address"
-              className="public-election-auth-input w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all"
+              disabled={role === 'Voter' && !returningVoterMode && voterOtpSent}
+              className="public-election-auth-input w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-[var(--tenant-primary)] focus:ring-1 focus:ring-[var(--tenant-primary)] outline-none transition-all disabled:opacity-60"
               value={email}
               onChange={e => setEmail(e.target.value)}
             />
-            <PasswordField
-              placeholder={role === 'Voter' && !returningVoterMode ? 'Temporary Password' : 'Password'}
-              value={password}
-              onChange={setPassword}
-              visible={showPassword}
-              onToggleVisible={() => setShowPassword(value => !value)}
-            />
-            {(role === 'Candidate' || returningVoterMode) && (
-              <div className="flex justify-end pt-1">
+            
+            {role === 'Voter' && !returningVoterMode && !voterOtpSent ? (
+              <div className="pt-2">
                 <button
-                  id="forgot-password-link"
                   type="button"
-                  onClick={() => {
-                    setError('');
-                    setForgotStep('email');
-                    setFpEmail(email);
-                  }}
-                  className="text-sm font-semibold text-[var(--tenant-primary)] hover:underline"
+                  onClick={handleSendVoterOtp}
+                  disabled={voterOtpLoading || !email.trim()}
+                  className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 rounded-lg transition-all shadow-md hover:shadow-lg flex justify-center items-center disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Forgot Password?
+                  {voterOtpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Request Temporary Password (OTP)'}
                 </button>
               </div>
+            ) : (
+              <>
+                <PasswordField
+                  placeholder={role === 'Voter' && !returningVoterMode ? 'Temporary Password (OTP)' : 'Password'}
+                  value={password}
+                  onChange={setPassword}
+                  visible={showPassword}
+                  onToggleVisible={() => setShowPassword(value => !value)}
+                />
+                
+                {role === 'Voter' && !returningVoterMode && (
+                  <div className="text-center text-sm text-slate-500 pt-2 flex justify-between items-center px-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVoterOtpSent(false);
+                        setPassword('');
+                        setError('');
+                      }}
+                      className="text-xs font-semibold text-slate-500 hover:text-slate-800 underline"
+                    >
+                      Change Email
+                    </button>
+                    {timeLeft > 0 ? (
+                      <span>
+                        Resend in <strong className="text-slate-800">{timeLeft}s</strong>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendVoterOtp}
+                        disabled={voterOtpLoading}
+                        className="font-bold text-[var(--tenant-primary)] hover:underline"
+                      >
+                        {voterOtpLoading ? 'Sending...' : 'Resend OTP'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {(role === 'Candidate' || returningVoterMode) && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      id="forgot-password-link"
+                      type="button"
+                      onClick={() => {
+                        setError('');
+                        setForgotStep('email');
+                        setFpEmail(email);
+                      }}
+                      className="text-sm font-semibold text-[var(--tenant-primary)] hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </>
         ) : (
@@ -788,13 +869,15 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
           </>
         )}
 
-        <button
-          type="submit"
-          disabled={loading || cooldownSecondsLeft > 0}
-          className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : requiresPasswordChange ? 'Change Password and Continue' : 'Log In securely'}
-        </button>
+        {(!requiresPasswordChange && role === 'Voter' && !returningVoterMode && !voterOtpSent) ? null : (
+          <button
+            type="submit"
+            disabled={loading || cooldownSecondsLeft > 0}
+            className="w-full bg-[var(--tenant-primary)] hover:opacity-90 text-white font-bold py-3 rounded-lg mt-4 transition-all shadow-md hover:shadow-lg flex justify-center items-center disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : requiresPasswordChange ? 'Change Password and Continue' : 'Log In securely'}
+          </button>
+        )}
 
         {cooldownSecondsLeft > 0 && (
           <div className="text-sm text-center text-slate-500">
@@ -806,17 +889,18 @@ export function ElectionLoginFlow({ onBack, role }: Props) {
           <div className="pt-1 text-center text-sm text-slate-500">
             {returningVoterMode ? (
               <>
-                First time logging in? Use your temporary password{' '}
+                First time logging in?{' '}
                 <button
                   type="button"
                   onClick={() => {
                     setReturningVoterMode(false);
+                    setVoterOtpSent(false);
                     setPassword('');
                     setError('');
                   }}
                   className="font-bold text-[var(--tenant-primary)] underline-offset-4 hover:underline"
                 >
-                  Enter 12345
+                  Request OTP
                 </button>
               </>
             ) : (

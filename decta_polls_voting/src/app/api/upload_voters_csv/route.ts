@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { checkUserLimit } from "@/lib/server/user-limit-check";
 
-const TEMPORARY_VOTER_PASSWORD = "12345";
+
 
 function parseDateString(dateStr: string | null) {
   if (!dateStr) return null;
@@ -218,9 +218,10 @@ export async function POST(request: Request) {
     const insertedVoters: unknown[] = [];
 
     for (const voter of votersToInsert) {
+      const randomPassword = crypto.randomBytes(16).toString('hex');
       const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
         email: voter.email,
-        password: TEMPORARY_VOTER_PASSWORD,
+        password: randomPassword,
         email_confirm: true,
         user_metadata: {
           tenant_id: tenantId,
